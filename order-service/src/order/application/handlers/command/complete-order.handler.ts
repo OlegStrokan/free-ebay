@@ -1,11 +1,11 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import { CompleteOrderCommand } from '../../command/order/complete-order.command';
-import { OrderCommandRepository } from 'src/order/infrastructure/repository/order/order-command.repository';
-import { IOrderCommandRepository } from 'src/order/domain/order/order-command.repository';
+import { CompleteOrderCommand } from '../../command/complete-order.command';
+import { IOrderCommandRepository } from 'src/order/domain/order-command.repository';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { OrderQueryRepository } from 'src/order/infrastructure/repository/order/order-query.repository';
-import { IOrderQueryRepository } from 'src/order/domain/order/order-query.repository';
-import { OrderCompletedEvent } from 'src/order/domain/order/event/order-completed.event';
+import { IOrderQueryRepository } from 'src/order/domain/order-query.repository';
+import { OrderCompletedEvent } from 'src/order/domain/event/order-completed.event';
+import { OrderCommandRepository } from 'src/order/infrastructure/repository/order-command.repository';
+import { OrderQueryRepository } from 'src/order/infrastructure/repository/order-query.repository';
 
 @CommandHandler(CompleteOrderCommand)
 export class CreateOrderHandler implements ICommandHandler<CompleteOrderCommand, void> {

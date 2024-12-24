@@ -1,6 +1,6 @@
-import { OrderStatus } from 'src/order/domain/order/order';
-import { OrderItemDto } from './order-item.dto';
-import { ParcelDto } from './parcel.dto';
+import { OrderItemDto } from 'src/order-item/interface/dto/order-item.dto';
+import { OrderStatus } from 'src/order/domain/order';
+import { ParcelDto } from 'src/parcel/interface/dto/parcel.dto';
 
 export class OrderDto {
     id: string;

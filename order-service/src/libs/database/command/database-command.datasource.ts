@@ -1,10 +1,10 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-import { OrderItemCommand } from 'src/order/infrastructure/entity/order-item/command/order-item-command.entity';
-import { OrderCommand } from 'src/order/infrastructure/entity/order/order-command.entity';
-import { RepaymentPreferencesCommand } from 'src/order/infrastructure/entity/repayment-preferences/repayment-preferences-command.entity';
-import { ParcelCommand } from 'src/order/infrastructure/entity/parcel/parcel-command.entity';
-import { ShippingCostCommand } from 'src/order/infrastructure/entity/shipping-cost/shipping-cost-command.entity';
+import { OrderItemCommand } from 'src/order-item/infrastructure/entity/order-item-command.entity';
+import { OrderCommand } from 'src/order/infrastructure/entity/order-command.entity';
+import { ParcelCommand } from 'src/parcel/infrastructure/entity/parcel-command.entity';
+import { RepaymentPreferencesCommand } from 'src/repayment-preferences/infrastructure/entity/repayment-preferences-command.entity';
+import { ShippingCostCommand } from 'src/shipping-cost/infrastructure/entity/shipping-cost-command.entity';
 
 config();
 

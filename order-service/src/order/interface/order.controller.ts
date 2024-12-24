@@ -1,20 +1,18 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { CommandBus, EventBus, QueryBus } from '@nestjs/cqrs';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { CreateOrderCommand } from '../application/command/order/create-order.command';
+import { CreateOrderCommand } from '../application/command/create-order.command';
 import { AuthorizedHeader } from 'src/libs/auth';
-import { CompleteOrderCommand } from '../application/command/order/complete-order.command';
-import { CancelOrderCommand } from '../application/command/order/cancel-order.command';
-import { ShipOrderDto } from './dto/ship-order.dto';
-import { ShipOrderCommand } from '../application/command/order/ship-order.command';
+import { CompleteOrderCommand } from '../application/command/complete-order.command';
+import { CancelOrderCommand } from '../application/command/cancel-order.command';
+import { ShipOrderCommand } from '../application/command/ship-order.command';
 import { FindOrdersQuery } from '../application/query/find-orders.query';
 import { FindOrderByIdResponseDto } from './response-dto/find-order-response.dto';
 import { FindOrderByIdQuery } from '../application/query/find-order-by-id.query';
-import { GetOrderAnalyticsResponseDto } from './response-dto/get-order-analytics-response.dto';
-import { GetOrderAnalyticsQuery } from '../application/query/get-order-analytics.query';
-import { Order } from '../domain/order/order';
-import { OrderCommandMapper } from '../infrastructure/mapper/order/order-command.mapper';
+import { Order } from '../domain/order';
+import { OrderCommandMapper } from '../infrastructure/mapper/order-command.mapper';
 import { OrderDto } from './dto/order.dto';
+import { ShipOrderDto } from './dto/ship-order.dto';
 
 @Controller('orders')
 export class OrderController {
@@ -53,12 +51,6 @@ export class OrderController {
         const queryInstanse = new FindOrdersQuery(query);
         const orders = await this.queryBus.execute<FindOrdersQuery, Order[]>(queryInstanse);
         return orders.map((order) => OrderCommandMapper.toClient(order));
-    }
-
-    @Get('/analytics')
-    public async getAnalytics(@Query() query: { customerId?: string }): Promise<GetOrderAnalyticsResponseDto> {
-        const queryInstanse = new GetOrderAnalyticsQuery(query);
-        return this.queryBus.execute(queryInstanse);
     }
 
     @Get(':orderId')

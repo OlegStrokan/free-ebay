@@ -1,13 +1,14 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import { CreateOrderCommand } from '../../command/order/create-order.command';
+import { CreateOrderCommand } from '../../command/create-order.command';
 import { Inject, Logger } from '@nestjs/common';
-import { IOrderCommandRepository } from 'src/order/domain/order/order-command.repository';
-import { OrderCommandRepository } from 'src/order/infrastructure/repository/order/order-command.repository';
-import { OrderItem } from 'src/order/domain/order-item/order-item';
-import { IParcelCommandRepository } from 'src/order/domain/parcel/parcel-command.repository';
-import { ParcelCommandRepository } from 'src/order/infrastructure/repository/parcel/parcel-command.repository';
-import { Order } from 'src/order/domain/order/order';
-import { OrderCreatedEvent } from 'src/order/domain/order/event/order-created.event';
+import { IOrderCommandRepository } from 'src/order/domain/order-command.repository';
+
+import { OrderCreatedEvent } from 'src/order/domain/event/order-created.event';
+import { OrderItem } from 'src/order-item/domain/entity/order-item';
+import { Order } from 'src/order/domain/order';
+import { OrderCommandRepository } from 'src/order/infrastructure/repository/order-command.repository';
+import { IParcelCommandRepository } from 'src/parcel/domain/parcel-command.repository';
+import { ParcelCommandRepository } from 'src/parcel/infrastructure/repository/parcel-command.repository';
 
 @CommandHandler(CreateOrderCommand)
 export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand, void> {

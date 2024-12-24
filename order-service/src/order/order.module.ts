@@ -1,33 +1,29 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { OrderCommandRepository } from './infrastructure/repository/order/order-command.repository';
+import { OrderCommandRepository } from './infrastructure/repository/order-command.repository';
 import { Logger, Module } from '@nestjs/common';
 import { CreateOrderHandler } from './application/handlers/command/create-order.handler';
 import { OrderController } from './interface/order.controller';
 import { CqrsModule } from '@nestjs/cqrs';
-import { OrderItemCommand } from './infrastructure/entity/order-item/command/order-item-command.entity';
-import { OrderQuery } from './infrastructure/entity/order/order-query.entity';
-import { OrderItemQuery } from './infrastructure/entity/order-item/query/order-item-query.entity';
-import { OrderItemCommandRepository } from './infrastructure/repository/order-item/order-item-command.repository';
-import { ParcelCommandRepository } from './infrastructure/repository/parcel/parcel-command.repository';
-import { ParcelQueryRepository } from './infrastructure/repository/parcel/parcel-query.repository';
-import { OrderItemQueryRepository } from './infrastructure/repository/order-item/order-query.repository';
-import { ParcelCommand } from './infrastructure/entity/parcel/parcel-command.entity';
-import { OrderQueryRepository } from './infrastructure/repository/order/order-query.repository';
-import { OrderCreatedHandler } from './application/handlers/query/order-created.handler';
-import { FindAllOrdersHandler } from './application/handlers/query/find-all-orders.handler';
-import { OrderCommand } from './infrastructure/entity/order/order-command.entity';
-import { OrderProjection } from './infrastructure/entity/order/order-projection.entity';
-import { OrderProjectionRepository } from './infrastructure/repository/order/order-projection.repository';
-import { GetOrderAnalyticsHandler } from './application/handlers/query/get-order-analytics.handler';
-import { OrderCreatedProjectionHandler } from './application/handlers/event/order-created.handler';
-import { OrderShippeHandler } from './application/handlers/query/order-shipped.handler';
-import { OrderCompletedHandler } from './application/handlers/query/order-completed.handler';
-import { OrderCancelledHandler } from './application/handlers/query/order-canceled.handler';
+import { OrderItemCommand } from 'src/order-item/infrastructure/entity/order-item-command.entity';
+import { OrderItemQuery } from 'src/order-item/infrastructure/entity/order-item-query.entity';
+import { OrderItemCommandRepository } from 'src/order-item/infrastructure/repository/order-item-command.repository';
+import { OrderItemQueryRepository } from 'src/order-item/infrastructure/repository/order-item-query.repository';
+import { ParcelCommand } from 'src/parcel/infrastructure/entity/parcel-command.entity';
+import { ParcelQuery } from 'src/parcel/infrastructure/entity/parcel-query.entity';
+import { ParcelCommandRepository } from 'src/parcel/infrastructure/repository/parcel-command.repository';
+import { ParcelQueryRepository } from 'src/parcel/infrastructure/repository/parcel-query.repository';
+import { ShippingCostCommand } from 'src/shipping-cost/infrastructure/entity/shipping-cost-command.entity';
+import { ShippingCostQuery } from 'src/shipping-cost/infrastructure/entity/shipping-cost-query.entity';
 import { CancelOrderHandler } from './application/handlers/command/cancel-order.handler';
 import { ShipOrderHandler } from './application/handlers/command/ship-order.handler';
-import { ShippingCostCommand } from './infrastructure/entity/shipping-cost/shipping-cost-command.entity';
-import { ShippingCostQuery } from './infrastructure/entity/shipping-cost/shipping-cost-query.entity';
-import { ParcelQuery } from './infrastructure/entity/parcel/parcel-query.entity';
+import { FindAllOrdersHandler } from './application/handlers/query/find-all-orders.handler';
+import { OrderCancelledHandler } from './application/handlers/query/order-canceled.handler';
+import { OrderCompletedHandler } from './application/handlers/query/order-completed.handler';
+import { OrderCreatedHandler } from './application/handlers/query/order-created.handler';
+import { OrderShippeHandler } from './application/handlers/query/order-shipped.handler';
+import { OrderCommand } from './infrastructure/entity/order-command.entity';
+import { OrderQuery } from './infrastructure/entity/order-query.entity';
+import { OrderQueryRepository } from './infrastructure/repository/order-query.repository';
 
 @Module({
     imports: [
@@ -35,10 +31,7 @@ import { ParcelQuery } from './infrastructure/entity/parcel/parcel-query.entity'
             [OrderCommand, OrderItemCommand, ParcelCommand, ShippingCostCommand],
             'commandConnection'
         ),
-        TypeOrmModule.forFeature(
-            [OrderQuery, OrderItemQuery, ParcelQuery, OrderProjection, ShippingCostQuery],
-            'queryConnection'
-        ),
+        TypeOrmModule.forFeature([OrderQuery, OrderItemQuery, ParcelQuery, ShippingCostQuery], 'queryConnection'),
         CqrsModule,
     ],
     controllers: [OrderController],
@@ -48,7 +41,6 @@ import { ParcelQuery } from './infrastructure/entity/parcel/parcel-query.entity'
         OrderQueryRepository,
         ParcelQueryRepository,
         OrderItemQueryRepository,
-        OrderProjectionRepository,
         OrderItemCommandRepository,
         ParcelCommandRepository,
         CreateOrderHandler,
@@ -59,15 +51,12 @@ import { ParcelQuery } from './infrastructure/entity/parcel/parcel-query.entity'
         OrderShippeHandler,
         OrderCompletedHandler,
         FindAllOrdersHandler,
-        OrderCreatedProjectionHandler,
-        GetOrderAnalyticsHandler,
     ],
     exports: [
         OrderCommandRepository,
         OrderQueryRepository,
         ParcelQueryRepository,
         OrderItemQueryRepository,
-        OrderProjectionRepository,
         OrderItemCommandRepository,
         ParcelCommandRepository,
         CreateOrderHandler,
@@ -77,9 +66,7 @@ import { ParcelQuery } from './infrastructure/entity/parcel/parcel-query.entity'
         OrderCancelledHandler,
         OrderShippeHandler,
         OrderCompletedHandler,
-        OrderCreatedProjectionHandler,
         FindAllOrdersHandler,
-        GetOrderAnalyticsHandler,
     ],
 })
 export class OrderModule {}

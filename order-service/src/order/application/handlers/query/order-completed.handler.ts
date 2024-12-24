@@ -1,7 +1,7 @@
 import { Inject, NotFoundException } from '@nestjs/common';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { OrderCompletedEvent } from 'src/order/domain/order/event/order-completed.event';
-import { OrderQueryRepository } from 'src/order/infrastructure/repository/order/order-query.repository';
+import { OrderCompletedEvent } from 'src/order/domain/event/order-completed.event';
+import { OrderQueryRepository } from 'src/order/infrastructure/repository/order-query.repository';
 
 @EventsHandler(OrderCompletedEvent)
 export class OrderCompletedHandler implements IEventHandler<OrderCompletedEvent> {

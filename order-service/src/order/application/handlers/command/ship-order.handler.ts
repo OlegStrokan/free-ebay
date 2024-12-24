@@ -1,11 +1,11 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { ShipOrderCommand } from '../../command/order/ship-order.command';
+import { ShipOrderCommand } from '../../command/ship-order.command';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { IOrderCommandRepository } from 'src/order/domain/order/order-command.repository';
+import { IOrderCommandRepository } from 'src/order/domain/order-command.repository';
 import { EventBus } from '@nestjs/cqrs';
-import { OrderQueryRepository } from 'src/order/infrastructure/repository/order/order-query.repository';
-import { OrderCommandRepository } from 'src/order/infrastructure/repository/order/order-command.repository';
-import { OrderShippedEvent } from 'src/order/domain/order/event/order-shipped.event';
+import { OrderShippedEvent } from 'src/order/domain/event/order-shipped.event';
+import { OrderCommandRepository } from 'src/order/infrastructure/repository/order-command.repository';
+import { OrderQueryRepository } from 'src/order/infrastructure/repository/order-query.repository';
 
 @CommandHandler(ShipOrderCommand)
 export class ShipOrderHandler implements ICommandHandler<ShipOrderCommand, void> {
