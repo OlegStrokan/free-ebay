@@ -1,0 +1,16 @@
+services:
+  exchange_db:
+    container_name: exchange_db
+    image: postgres:13
+    environment:
+      POSTGRES_USER: stroka01
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: exchange
+    ports:
+      - '6433:5432'
+    volumes:
+      - exchange:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  exchange: {}
