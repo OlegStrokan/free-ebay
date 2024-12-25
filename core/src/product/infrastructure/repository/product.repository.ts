@@ -6,6 +6,7 @@ import { IProductRepository } from 'src/product/core/product/repository/product.
 import { Money } from 'src/shared/types/money';
 import { Repository } from 'typeorm';
 import { ProductDb } from '../entity/product.entity';
+import { ProductMapper } from '../mappers/product.mapper';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
@@ -22,12 +23,12 @@ export class ProductRepository implements IProductRepository {
 
   async findById(id: string): Promise<Product | null> {
     const productDb = await this.productRepository.findOneBy({ id });
-    return productDb;
+    return ProductMapper.toDomain(productDb);
   }
 
   async findBySku(sku: string): Promise<Product | null> {
     const productDb = await this.productRepository.findOne({ where: { sku } });
-    return productDb;
+    return ProductMapper.toDomain(productDb);
   }
 
   async findAll(page: number, limit: number): Promise<Product[]> {
@@ -35,7 +36,7 @@ export class ProductRepository implements IProductRepository {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return productDbs.map((productDb) => new Product(productDb));
+    return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
   }
 
   async deleteById(id: string): Promise<void> {
@@ -52,7 +53,7 @@ export class ProductRepository implements IProductRepository {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return productDbs.map((productDb) => new Product(productDb));
+    return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
   }
 
   async updatePrice(id: string, newPrice: Money): Promise<Product> {
@@ -71,19 +72,6 @@ export class ProductRepository implements IProductRepository {
     return this.save(discontinuedProduct);
   }
 
-  async findByCategory(
-    category: string,
-    page: number,
-    limit: number,
-  ): Promise<Product[]> {
-    const [productDbs] = await this.productRepository.findAndCount({
-      where: { category },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-    return productDbs.map((productDb) => new Product(productDb));
-  }
-
   async findByAvailability(
     isAvailable: boolean,
     page: number,
@@ -97,6 +85,6 @@ export class ProductRepository implements IProductRepository {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return productDbs.map((productDb) => new Product(productDb));
+    return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
   }
 }

@@ -3,22 +3,21 @@ import { ProductStatus } from './product-status';
 import { Money, ZERO_AMOUNT_MONEY } from 'src/shared/types/money';
 import { ProductData } from './product.interface';
 import { InvalidProductStatusError } from '../error';
-import { toISO8601UTC } from 'src/shared/types/dates';
+import { generateUlid } from 'src/shared/types/generate-ulid';
 
 export class Product implements Clonable<Product> {
   constructor(public product: ProductData) {}
 
-  static create = (productData: Omit<ProductData, 'id' | 'status'>) =>
+  static create = (
+    productData: Omit<ProductData, 'id' | 'status' | 'updatedAt' | 'createdAt'>,
+  ) =>
     new Product({
       ...productData,
-      id: this.generateProductId(productData.sku, productData.createdAt),
+      id: generateUlid(),
       status: Product.getInitialStatus(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
-
-  static generateProductId = (
-    sku: string,
-    createdAt: ProductData['createdAt'],
-  ) => `${sku.trim()}-${createdAt.trim()}`;
 
   static getInitialStatus = () => ProductStatus.Available;
 
@@ -36,6 +35,14 @@ export class Product implements Clonable<Product> {
 
   get price(): Money {
     return this.product.price ?? ZERO_AMOUNT_MONEY;
+  }
+
+  get name(): string {
+    return this.product.name;
+  }
+
+  get description(): string {
+    return this.product.description;
   }
 
   isAvailable = () => {
@@ -73,7 +80,7 @@ export class Product implements Clonable<Product> {
     }
     const clone = this.clone();
     clone.product.status = ProductStatus.Discontinued;
-    clone.product.discontinuedAt = toISO8601UTC(new Date());
+    clone.product.discontinuedAt = new Date();
     return clone;
   };
 

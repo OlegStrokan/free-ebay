@@ -61,3 +61,5 @@ export type Awaitable<T> = T | Promise<T>;
 
 export type OptionalKeys<T, TKeys extends keyof T> = Partial<Pick<T, TKeys>> &
   Omit<T, TKeys>;
+
+export type Ulid = string;

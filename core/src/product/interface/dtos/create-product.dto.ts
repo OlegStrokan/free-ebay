@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
-  IsDate,
   IsNumber,
 } from 'class-validator';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
@@ -28,12 +27,4 @@ export class CreateProductDto {
 
   @IsNumber()
   price: Money;
-
-  @IsString()
-  @IsNotEmpty()
-  category: string;
-
-  @IsDate()
-  @IsNotEmpty()
-  createdAt: Date;
 }

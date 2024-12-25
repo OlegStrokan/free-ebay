@@ -8,7 +8,7 @@ export interface ProductData {
   description: string;
   price: Money;
   status: ProductStatus;
-  createdAt: string;
-  updatedAt: string;
-  discontinuedAt?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  discontinuedAt?: Date;
 }

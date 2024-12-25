@@ -1,17 +1,11 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  BaseEntity,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
-import { Money } from 'src/shared/types/Money';
+import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Money } from 'src/shared/types/money';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
+import { BaseEntity } from 'src/shared/database/base.entity';
 
 @Entity('products')
 export class ProductDb extends BaseEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn()
   id: string;
 
   @Column({ type: 'varchar', length: 100, unique: true })
@@ -27,15 +21,12 @@ export class ProductDb extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price: Money;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  category: string;
+  @Column({ type: 'varchar', length: 255 })
+  name: string;
+
+  @Column({ type: 'text' })
+  description: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  discontinuedAt: string | null;
-
-  @CreateDateColumn()
-  createdAt: string;
-
-  @UpdateDateColumn()
-  updatedAt: string;
+  discontinuedAt: Date | null;
 }

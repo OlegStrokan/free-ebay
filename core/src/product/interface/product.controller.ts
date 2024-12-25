@@ -1,46 +1,16 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  Param,
-  NotFoundException,
-  Put,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
+import { CreateProductDto } from './dtos/create-product.dto';
+import { IUseCase } from 'src/shared/types/use-case.interface';
+import { Product } from '../core/product/entity/product';
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: IProductService) {}
+  constructor(
+    private readonly createProductUseCase: IUseCase<CreateProductDto, Product>,
+  ) {}
 
   @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.createProduct(createProductDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.productsService.getProducts();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    const product = this.productsService.getProductById(id);
-    if (!product) throw new NotFoundException('Product not found');
-    return product;
-  }
-
-  @Put(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    const updated = this.productsService.updateProduct(id, updateProductDto);
-    if (!updated) throw new NotFoundException('Product not found');
-    return updated;
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    const deleted = this.productsService.deleteProduct(id);
-    if (!deleted) throw new NotFoundException('Product not found');
-    return { message: 'Product deleted' };
+  create(@Body() dto: CreateProductDto) {
+    return this.createProductUseCase.execute(dto);
   }
 }
