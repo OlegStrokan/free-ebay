@@ -1,5 +1,6 @@
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductDb } from '../entity/product.entity';
+import { Money } from 'src/shared/types/money';
 
 export class ProductMapper {
   static toDb(product: Product): ProductDb {
@@ -10,7 +11,9 @@ export class ProductMapper {
     productDb.name;
     productDb.sku = productData.sku;
     productDb.status = productData.status;
-    productDb.price = productData.price;
+    productDb.price = productData.price
+      ? MoneyMapper.toDb(productData.price)
+      : null;
     productDb.discontinuedAt = productData.discontinuedAt;
     productDb.createdAt = productData.createdAt;
     productDb.updatedAt = productData.updatedAt;
@@ -25,7 +28,7 @@ export class ProductMapper {
       id: productDb.id,
       sku: productDb.sku,
       status: productDb.status,
-      price: productDb.price,
+      price: productDb.price ? (JSON.parse(productDb.price) as Money) : null,
       discontinuedAt: productDb.discontinuedAt,
       createdAt: productDb.createdAt,
       updatedAt: productDb.updatedAt,
@@ -34,5 +37,15 @@ export class ProductMapper {
     };
 
     return new Product(productData);
+  }
+}
+
+export class MoneyMapper {
+  static toDb(money: Money): string {
+    return JSON.stringify(money);
+  }
+
+  static toDomain(moneyString: string | null): Money | null {
+    return moneyString ? (JSON.parse(moneyString) as Money) : null;
   }
 }
