@@ -10,7 +10,7 @@ export interface Money {
   /**
    * Has to be divided by the fraction to get the base currency units
    */
-  amount: bigint;
+  amount: number;
   currency: Currency;
   /**
    * A number by which we should divide the amount to get it in the Currency base units
@@ -30,7 +30,7 @@ export type MoneyFormat = Pick<Money, 'currency' | 'fraction'>;
 export type Currency = ISO4217;
 
 export const ZERO_AMOUNT_MONEY: Money = Object.freeze({
-  amount: 0n,
+  amount: 0,
   currency: CZK_CURRENCY,
   fraction: 100,
 });

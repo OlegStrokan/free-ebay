@@ -18,7 +18,13 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typeorm": "ts-node --require tsconfig-paths/register ./node_modules/typeorm/cli",
+    "migration:run": "yarn typeorm migration:run -- -d ./src/shared/database/database.datasource.ts",
+    "migration:generate": "yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:generate ./src/shared/database/migrations/$npm_config_name",
+    "migration:create": "yarn typeorm -- migration:create ./src/shared/database/migrations/$npm_config_name",
+    "migration:revert": "yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:revert",
+    "migration:show": "yarn typeorm migration:show -- -d ./src/shared/database/database.datasource.ts"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
@@ -27,6 +33,7 @@
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/typeorm": "^10.0.2",
     "class-validator": "^0.14.1",
+    "pg": "^8.13.1",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0",
