@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
-import { Money } from 'src/shared/types/money';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { BaseEntity } from 'src/shared/database/base.entity';
 
@@ -18,8 +17,8 @@ export class ProductDb extends BaseEntity {
   })
   status: ProductStatus;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  price: Money;
+  @Column({ type: 'jsonb' })
+  price: string;
 
   @Column({ type: 'varchar', length: 255 })
   name: string;

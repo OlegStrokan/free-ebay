@@ -16,9 +16,10 @@ export class ProductRepository implements IProductRepository {
   ) {}
 
   async save(product: Product): Promise<Product> {
-    const productData = product.data;
-    const savedProduct = await this.productRepository.save(productData);
-    return new Product(savedProduct);
+    const productDb = ProductMapper.toDb(product);
+    await this.productRepository.save(productDb);
+
+    return await this.findById(productDb.id);
   }
 
   async findById(id: string): Promise<Product | null> {
