@@ -90,4 +90,8 @@ export class ProductRepository implements IProductRepository {
     });
     return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
   }
+
+  async clear(): Promise<void> {
+    await this.productRepository.clear();
+  }
 }

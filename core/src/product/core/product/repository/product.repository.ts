@@ -1,8 +1,8 @@
-import { Money } from 'src/shared/types/money';
+import { IClearableRepository } from 'src/shared/types/clearable';
 import { Product } from '../entity/product';
 import { ProductStatus } from '../entity/product-status';
 
-export interface IProductRepository {
+export interface IProductRepository extends IClearableRepository {
   // Create or update a product
   save(product: Product): Promise<Product>;
   // Find a product by its unique ID

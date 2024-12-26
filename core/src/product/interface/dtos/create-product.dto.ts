@@ -23,7 +23,7 @@ export class CreateProductDto {
 
   @IsEnum(ProductStatus)
   @IsOptional()
-  status: ProductStatus = ProductStatus.Available;
+  status?: ProductStatus = ProductStatus.Available;
 
   @IsNumber()
   price: Money;

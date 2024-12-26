@@ -3,10 +3,10 @@ import { Product } from 'src/product/core/product/entity/product';
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
 import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
 import { CreateProductDto } from 'src/product/interface/dtos/create-product.dto';
-import { IUseCase } from 'src/shared/types/use-case.interface';
+import { ICreateProductUseCase } from './create-product.interface';
 
 @Injectable()
-export class CreateProductUseCase implements IUseCase<CreateProductDto, void> {
+export class CreateProductUseCase implements ICreateProductUseCase {
   constructor(
     @Inject(ProductRepository)
     private readonly productsRepo: IProductRepository,
