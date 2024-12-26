@@ -21,6 +21,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "ts-node --require tsconfig-paths/register ./node_modules/typeorm/cli",
     "migration:run": "yarn typeorm migration:run -- -d ./src/shared/database/database.datasource.ts",
+    "migration:test:run": "yarn typeorm migration:run -- -d ./src/shared/database/test/database.datasource.ts",
+    "migration:test:generate": "yarn typeorm -- -d ./src/shared/database/test/database.datasource.ts migration:generate ./src/shared/database/test/migrations/$npm_config_name",
     "migration:generate": "yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:generate ./src/shared/database/migrations/$npm_config_name",
     "migration:create": "yarn typeorm -- migration:create ./src/shared/database/migrations/$npm_config_name",
     "migration:revert": "yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:revert",
@@ -41,11 +43,12 @@
     "ulid": "^2.3.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.3.0",
     "@nestjs/cli": "^9.0.0",
     "@nestjs/schematics": "^9.0.0",
     "@nestjs/testing": "^9.0.0",
     "@types/express": "^4.17.13",
-    "@types/jest": "28.1.8",
+    "@types/jest": "^29.5.14",
     "@types/node": "^16.0.0",
     "@types/supertest": "^2.0.11",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
@@ -71,6 +74,10 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "preset": "ts-jest",
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
+    },
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
