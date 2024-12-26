@@ -12,5 +12,18 @@ services:
       - exchange:/var/lib/postgresql/data
     restart: always
 
+  test_exchange_db:
+    container_name: test_exchange_db
+    image: postgres:13
+    environment:
+      POSTGRES_USER: stroka01
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test_exchange_db
+    ports:
+      - '6434:5432'
+    volumes:
+      - test_exchange_db:/var/lib/postgresql/data
+    restart: always
 volumes:
   exchange: {}
+  test_exchange_db: {}
