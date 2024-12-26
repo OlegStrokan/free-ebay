@@ -20,7 +20,7 @@ export interface IProductRepository {
     limit: number,
   ): Promise<Product[]>;
   // Update the price of a product
-  updatePrice(id: string, newPrice: Money): Promise<Product>;
+  update(product: Product): Promise<Product>;
   // Mark a product as discontinued
   discontinue(id: string): Promise<Product>;
   // Find products based on their availability (Available, OutOfStock, etc.)

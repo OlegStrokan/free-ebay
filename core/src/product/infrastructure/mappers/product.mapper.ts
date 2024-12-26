@@ -1,6 +1,7 @@
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductDb } from '../entity/product.entity';
 import { Money } from 'src/shared/types/money';
+import { ProductData } from 'src/product/core/product/entity/product.interface';
 
 export class ProductMapper {
   static toDb(product: Product): ProductDb {
@@ -37,6 +38,10 @@ export class ProductMapper {
     };
 
     return new Product(productData);
+  }
+
+  static toClient(product: Product): ProductData {
+    return { ...product.data };
   }
 }
 

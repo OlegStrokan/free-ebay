@@ -3,10 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
-import { Money } from 'src/shared/types/money';
 import { Repository } from 'typeorm';
 import { ProductDb } from '../entity/product.entity';
 import { ProductMapper } from '../mappers/product.mapper';
+import { ProductNotFoundError } from 'src/product/core/product/error';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
@@ -24,6 +24,10 @@ export class ProductRepository implements IProductRepository {
 
   async findById(id: string): Promise<Product | null> {
     const productDb = await this.productRepository.findOneBy({ id });
+
+    if (!productDb) {
+      throw new ProductNotFoundError(`Product with id ${id} not found`);
+    }
     return ProductMapper.toDomain(productDb);
   }
 
@@ -57,18 +61,16 @@ export class ProductRepository implements IProductRepository {
     return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
   }
 
-  async updatePrice(id: string, newPrice: Money): Promise<Product> {
-    const product = await this.findById(id);
-    if (!product) throw new Error(`Product with id ${id} not found`);
+  async update(product: Product): Promise<Product> {
+    await this.findById(product.id);
+    const dbProduct = ProductMapper.toDb(product);
+    await this.productRepository.update(product.id, dbProduct);
 
-    const updatedProduct = product.updatePrice(newPrice);
-    return this.save(updatedProduct);
+    return await this.findById(product.id);
   }
 
   async discontinue(id: string): Promise<Product> {
     const product = await this.findById(id);
-    if (!product) throw new Error(`Product with id ${id} not found`);
-
     const discontinuedProduct = product.discontinue();
     return this.save(discontinuedProduct);
   }

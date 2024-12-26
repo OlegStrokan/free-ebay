@@ -75,7 +75,6 @@ export class Product implements Clonable<Product> {
     if (!this.isAvailable()) {
       throw new InvalidProductStatusError(
         'Cannot discontinue a product that is not available.',
-        this.data,
       );
     }
     const clone = this.clone();
