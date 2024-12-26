@@ -4,9 +4,10 @@ import { faker } from '@faker-js/faker';
 import { Product } from 'src/product/core/product/entity/product';
 import { Money } from 'src/shared/types/money';
 import { CreateProductDto } from 'src/product/interface/dtos/create-product.dto';
+import { IProductMockService } from './product-mock.interface';
 
 @Injectable()
-export class ProductMockService {
+export class ProductMockService implements IProductMockService {
   constructor(private readonly productRepository: ProductRepository) {}
 
   getOneToCreate(): CreateProductDto {
