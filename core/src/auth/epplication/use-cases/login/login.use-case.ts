@@ -1,38 +1,40 @@
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
-import { ILoginUseCase } from './login.interface';
-import { Injectable } from '@nestjs/common';
-import { TokenRepository } from 'src/auth/infrastructure/repository/token.repository';
-import { UserRepository } from 'src/auth/infrastructure/repository/user.repository';
 import { LoginDto } from 'src/auth/interface/dtos/login.dto';
+import { TokenService } from '../../service/token.service';
+import { IUserRepository } from 'src/user/core/repository/user.repository';
+import { UserRepository } from 'src/user/infrastructure/repository/user.repository';
 
 @Injectable()
-export class LoginUseCase implements ILoginUseCase {
+export class LoginUseCase {
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly tokenRepository: TokenRepository,
+    @Inject(UserRepository)
+    private readonly userRepository: IUserRepository,
+    private readonly tokenService: TokenService,
   ) {}
 
-  async execute(dto: LoginDto): Promise<any> {
-    const user = await this.userRepository.findByUsername(dto.username);
-    if (!user) {
-      throw new Error('User not found');
-    }
+  async execute(dto: LoginDto) {
+    const user = await this.validateUser(dto);
+    const accessToken = this.tokenService.createAccessToken(user);
+    const refreshToken = this.tokenService.createAccessToken(user);
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    return { user, accessToken, refreshToken };
+  }
+
+  private async validateUser(dto: LoginDto) {
+    const alreadyExistingUser = await this.userRepository.findByEmail(
+      dto.email,
+    );
+    if (!alreadyExistingUser) throw new UnauthorizedException('Fuck you');
+
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      alreadyExistingUser.password,
+    );
     if (!isPasswordValid) {
-      throw new Error('Invalid password');
+      throw new UnauthorizedException('Fuck you again');
     }
-
-    const accessToken = jwt.sign({ userId: user.id }, 'access_secret', {
-      expiresIn: '1h',
-    });
-    const refreshToken = jwt.sign({ userId: user.id }, 'refresh_secret', {
-      expiresIn: '7d',
-    });
-
-    await this.tokenRepository.createToken(user.id, accessToken, refreshToken);
-
-    return { accessToken, refreshToken };
+    // map to domain (maybe)
+    return alreadyExistingUser;
   }
 }
