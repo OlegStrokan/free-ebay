@@ -1,3 +1,11 @@
+import { Controller, Inject, Post, Body } from '@nestjs/common';
+import { ILoginUseCase } from '../epplication/use-cases/login/login.interface';
+import { LoginUseCase } from '../epplication/use-cases/login/login.use-case';
+import { IRegisterUseCase } from '../epplication/use-cases/register/register.interface';
+import { RegisterUseCase } from '../epplication/use-cases/register/register.use-case';
+import { LoginDto } from './dtos/login.dto';
+import { CreateUserDto } from './dtos/register.dto';
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -6,31 +14,15 @@ export class AuthController {
 
     @Inject(LoginUseCase)
     private readonly loginUseCase: ILoginUseCase,
-
-    @Inject(AccessTokenUseCase)
-    private readonly accessTokenUseCase: IAccessTokenUseCase,
-
-    @Inject(RefreshTokenUseCase)
-    private readonly refreshTokenUseCase: IRefreshTokenUseCase,
   ) {}
 
   @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
+  async register(@Body() registerDto: CreateUserDto) {
     return await this.registerUseCase.execute(registerDto);
   }
 
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     return await this.loginUseCase.execute(loginDto);
-  }
-
-  @Post('access_token')
-  async accessToken(@Body() tokenDto: TokenDto) {
-    return await this.accessTokenUseCase.execute(tokenDto);
-  }
-
-  @Post('refresh_token')
-  async refreshToken(@Body() tokenDto: TokenDto) {
-    return await this.refreshTokenUseCase.execute(tokenDto);
   }
 }
