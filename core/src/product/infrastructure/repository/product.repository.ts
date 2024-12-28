@@ -1,39 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
-import { Repository } from 'typeorm';
 import { ProductDb } from '../entity/product.entity';
-import { ProductMapper } from '../mappers/product.mapper';
+import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { ProductNotFoundError } from 'src/product/core/product/error';
+import { IProductMapper } from '../mappers/product/product.mapper.interface';
+import { ProductMapper } from '../mappers/product/product.mapper';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
   constructor(
     @InjectRepository(ProductDb)
     private readonly productRepository: Repository<ProductDb>,
+    @Inject(ProductMapper)
+    private readonly mapper: IProductMapper<ProductData, Product, ProductDb>,
   ) {}
 
   async save(product: Product): Promise<Product> {
-    const productDb = ProductMapper.toDb(product);
+    const productDb = this.mapper.toDb(product);
     await this.productRepository.save(productDb);
-
     return await this.findById(productDb.id);
   }
 
   async findById(id: string): Promise<Product | null> {
     const productDb = await this.productRepository.findOneBy({ id });
-
     if (!productDb) {
       throw new ProductNotFoundError(`Product with id ${id} not found`);
     }
-    return ProductMapper.toDomain(productDb);
+    return this.mapper.toDomain(productDb);
   }
 
   async findBySku(sku: string): Promise<Product | null> {
     const productDb = await this.productRepository.findOne({ where: { sku } });
-    return ProductMapper.toDomain(productDb);
+    return this.mapper.toDomain(productDb);
   }
 
   async findAll(page: number, limit: number): Promise<Product[]> {
@@ -41,7 +43,7 @@ export class ProductRepository implements IProductRepository {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
+    return productDbs.map((productDb) => this.mapper.toDomain(productDb));
   }
 
   async deleteById(id: string): Promise<void> {
@@ -58,14 +60,13 @@ export class ProductRepository implements IProductRepository {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
+    return productDbs.map((productDb) => this.mapper.toDomain(productDb));
   }
 
   async update(product: Product): Promise<Product> {
     await this.findById(product.id);
-    const dbProduct = ProductMapper.toDb(product);
+    const dbProduct = this.mapper.toDb(product);
     await this.productRepository.update(product.id, dbProduct);
-
     return await this.findById(product.id);
   }
 
@@ -88,7 +89,7 @@ export class ProductRepository implements IProductRepository {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return productDbs.map((productDb) => ProductMapper.toDomain(productDb));
+    return productDbs.map((productDb) => this.mapper.toDomain(productDb));
   }
 
   async clear(): Promise<void> {
