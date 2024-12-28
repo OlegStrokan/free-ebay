@@ -1,5 +1,5 @@
-export interface IProductMapper<TGraphQL, TDomain, TDatabase> {
+export interface IProductMapper<TClient, TDomain, TDatabase> {
   toDb(domain: TDomain): TDatabase;
   toDomain(db: TDatabase): TDomain;
-  toClient(domain: TDomain): TGraphQL;
+  toClient(domain: TDomain): TClient;
 }

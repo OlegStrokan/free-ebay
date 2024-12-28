@@ -5,10 +5,11 @@ import { Product } from 'src/product/core/product/entity/product';
 import { Money } from 'src/shared/types/money';
 import { CreateProductDto } from 'src/product/interface/dtos/create-product.dto';
 import { IProductMockService } from './product-mock.interface';
+import { IProductRepository } from '../../repository/product.repository';
 
 @Injectable()
 export class ProductMockService implements IProductMockService {
-  constructor(private readonly productRepository: ProductRepository) {}
+  constructor(private readonly productRepository: IProductRepository) {}
 
   getOneToCreate(): CreateProductDto {
     const randomPrice: Money = {
@@ -25,28 +26,33 @@ export class ProductMockService implements IProductMockService {
       sku: sku,
     };
   }
-  getOne(): Product {
+  getOne(overrides: Partial<Product>): Product {
     const randomPrice: Money = {
-      amount: faker.number.int({ min: 1, max: 1000 }),
-      currency: 'USD',
-      fraction: 100,
+      amount:
+        overrides.product.price.amount ??
+        faker.number.int({ min: 1, max: 1000 }),
+      currency: overrides.product.price.currency ?? 'USD',
+      fraction: overrides.product.price.fraction ?? 100,
     };
 
-    const sku = faker.string.uuid();
+    const sku = overrides.product.sku ?? faker.string.uuid();
 
-    const discontinuedAt = faker.datatype.boolean() ? faker.date.past() : null;
+    const discontinuedAt =
+      overrides.product.discontinuedAt ?? faker.datatype.boolean()
+        ? faker.date.past()
+        : null;
 
     return Product.create({
-      name: faker.commerce.productName(),
-      description: faker.commerce.productDescription(),
+      name: overrides.name ?? faker.commerce.productName(),
+      description: overrides.description ?? faker.commerce.productDescription(),
       price: randomPrice,
       sku: sku,
       discontinuedAt: discontinuedAt,
     });
   }
 
-  async createOne(): Promise<Product> {
-    const product = this.getOne();
+  async createOne(overrides: Partial<Product>): Promise<Product> {
+    const product = this.getOne(overrides);
     return await this.productRepository.save(product);
   }
 }

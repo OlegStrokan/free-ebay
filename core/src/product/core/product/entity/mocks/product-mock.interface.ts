@@ -4,6 +4,6 @@ import { ProductData } from '../product.interface';
 
 export interface IProductMockService {
   getOneToCreate(): CreateProductDto;
-  getOne(): Product;
+  getOne(overrides?: Partial<ProductData>): Product;
   createOne(overrides?: Partial<ProductData>): Promise<Product>;
 }
