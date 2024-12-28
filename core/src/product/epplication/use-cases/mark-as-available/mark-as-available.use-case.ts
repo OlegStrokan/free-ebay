@@ -2,10 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Product } from 'src/product/core/product/entity/product';
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
 import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
-import { IUseCase } from 'src/shared/types/use-case.interface';
+import { IMarkAsAvailableUseCase } from './mark-as-available.interface';
 
 @Injectable()
-export class MarkAsAvailableUseCase implements IUseCase<string, Product> {
+export class MarkAsAvailableUseCase implements IMarkAsAvailableUseCase {
   constructor(
     @Inject(ProductRepository)
     private readonly productsRepo: IProductRepository,
