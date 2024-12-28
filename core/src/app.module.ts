@@ -4,6 +4,9 @@ import { DbConfig } from './shared/database/database.config';
 import { Module } from '@nestjs/common';
 import { ProductModule } from './product/product.module';
 import { ProductDb } from './product/infrastructure/entity/product.entity';
+import { UserDb } from './user/infrastructure/entity/user.entity';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -20,8 +23,10 @@ import { ProductDb } from './product/infrastructure/entity/product.entity';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([ProductDb]),
+    TypeOrmModule.forFeature([UserDb, ProductDb]),
     ProductModule,
+    AuthModule,
+    UserModule,
   ],
   exports: [],
   providers: [],

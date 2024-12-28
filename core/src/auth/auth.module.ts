@@ -1,23 +1,16 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AccessTokenUseCase } from './epplication/use-cases/access-token/access-token.use-case';
 import { LoginUseCase } from './epplication/use-cases/login/login.use-case';
-import { RefreshTokenUseCase } from './epplication/use-cases/refresh-token/refresh-token.use-case';
 import { RegisterUseCase } from './epplication/use-cases/register/register.use-case';
 import { Module } from '@nestjs/common';
-import { TokenRepository } from './infrastructure/repository/token.repository';
-import { UserRepository } from './infrastructure/repository/user.repository';
-import { UserDb } from './infrastructure/entity/user.entity';
-import { TokenDb } from './infrastructure/entity/token.entity';
+import { UserRepository } from '../user/infrastructure/repository/user.repository';
+import { UserDb } from '../user/infrastructure/entity/user.entity';
+import { TokenService } from './epplication/service/token.service';
+import { AuthController } from './interface/auth.controller';
+import { UserModule } from 'src/user/user.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserDb, TokenDb])],
-  providers: [
-    UserRepository,
-    TokenRepository,
-    RegisterUseCase,
-    LoginUseCase,
-    AccessTokenUseCase,
-    RefreshTokenUseCase,
-  ],
+  imports: [TypeOrmModule.forFeature([UserDb]), UserModule],
+  providers: [UserRepository, RegisterUseCase, LoginUseCase, TokenService],
+  controllers: [AuthController],
 })
 export class AuthModule {}
