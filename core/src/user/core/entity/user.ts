@@ -10,7 +10,7 @@ export interface UserData {
 }
 
 export class User implements Clonable<User> {
-  constructor(public user: UserData) {}
+  constructor(private user: UserData) {}
 
   static create = (
     userData: Omit<UserData, 'id' | 'createdAt' | 'updatedAt'>,
@@ -22,6 +22,26 @@ export class User implements Clonable<User> {
       ...userData,
     });
   };
+
+  get id(): string {
+    return this.user.id;
+  }
+
+  get email(): string {
+    return this.user.email;
+  }
+
+  get password(): string {
+    return this.user.password;
+  }
+
+  get createdAt(): Date {
+    return this.user.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.user.updatedAt;
+  }
 
   get data(): UserData {
     return { ...this.user };
