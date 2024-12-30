@@ -4,6 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TestDbConfig } from '../database/test/database.config';
 import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
 import { ProductModule } from 'src/product/product.module';
+import { UserModule } from 'src/user/user.module';
+import { AuthModule } from 'src/auth/auth.module';
+import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 
 export const createTestingModule = async () => {
   return await Test.createTestingModule({
@@ -21,8 +24,10 @@ export const createTestingModule = async () => {
         }),
         inject: [ConfigService],
       }),
-      TypeOrmModule.forFeature([ProductDb]),
+      TypeOrmModule.forFeature([ProductDb, UserDb]),
       ProductModule,
+      AuthModule,
+      UserModule,
     ],
     exports: [],
     providers: [],
