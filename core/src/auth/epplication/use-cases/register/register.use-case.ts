@@ -1,26 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { IRegisterUseCase } from './register.interface';
-import { UserRepository } from 'src/auth/infrastructure/repository/user.repository';
-import { IUserRepository } from 'src/auth/core/repository/user.repository';
-import { RegisterDto } from 'src/auth/interface/dtos/register.dto';
+import { Inject, Injectable } from '@nestjs/common';
+import { CreateUserDto } from 'src/auth/interface/dtos/register.dto';
+import { CreateUserUseCase } from 'src/user/epplication/use-cases/create-user/create-user.use-case';
+import { ICreateUserUseCase } from 'src/user/epplication/use-cases/create-user/create-user.interface';
 
 @Injectable()
-export class RegisterUseCase implements IRegisterUseCase {
-  constructor(private readonly userRepository: IUserRepository) {}
+export class RegisterUseCase {
+  constructor(
+    @Inject(CreateUserUseCase)
+    private readonly createUserUseCase: ICreateUserUseCase,
+  ) {}
 
-  async execute(dto: RegisterDto): Promise<any> {
-    const existingUser = await this.userRepository.findByUsername(dto.username);
-    if (existingUser) {
-      throw new Error('Username already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.userRepository.createUser(
-      dto.username,
-      hashedPassword,
-    );
-
-    return { message: 'User registered successfully', userId: user.id };
+  async execute(dto: CreateUserDto): Promise<string> {
+    return await this.createUserUseCase.execute(dto);
   }
 }
