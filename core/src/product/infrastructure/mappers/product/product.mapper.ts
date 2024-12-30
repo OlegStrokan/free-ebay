@@ -35,7 +35,7 @@ export class ProductMapper
   }
 
   toDomain(productDb: ProductDb): Product {
-    const productData = {
+    const productData: ProductData = {
       id: productDb.id,
       sku: productDb.sku,
       status: productDb.status,

@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
-import { BaseEntity } from 'src/shared/database/base.entity';
+import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
 
 @Entity('products')
 export class ProductDb extends BaseEntity {
