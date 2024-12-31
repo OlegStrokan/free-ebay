@@ -12,5 +12,6 @@ import { UserModule } from 'src/user/user.module';
   imports: [TypeOrmModule.forFeature([UserDb]), UserModule],
   providers: [UserRepository, RegisterUseCase, LoginUseCase, TokenService],
   controllers: [AuthController],
+  exports: [TokenService],
 })
 export class AuthModule {}
