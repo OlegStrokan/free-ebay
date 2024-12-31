@@ -23,7 +23,7 @@ const validateProductDataStructure = (productData: ProductData | undefined) => {
           fraction: expect.any(Number),
         }
       : null,
-    discontinuedAt: productData.discontinuedAt ? expect.any(Date) : null,
+    discontinuedAt: productData.discontinuedAt ? expect.any(Date) : undefined,
     createdAt: expect.any(Date),
     updatedAt: expect.any(Date),
     name: expect.any(String),
@@ -67,7 +67,7 @@ describe('ProductMapperTest', () => {
       currency: 'USD',
       fraction: 2,
     });
-    dbProduct.discontinuedAt = null;
+    dbProduct.discontinuedAt = new Date();
     dbProduct.createdAt = new Date();
     dbProduct.updatedAt = new Date();
     dbProduct.name = 'Product 1';

@@ -9,6 +9,7 @@ import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { IProductMapper } from '../mappers/product/product.mapper.interface';
 import { ProductMapper } from '../mappers/product/product.mapper';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
+import { FailedToRetrieveProductException } from 'src/product/core/product/exceptions/failed-to-retrieve-product';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
@@ -22,27 +23,28 @@ export class ProductRepository implements IProductRepository {
   async save(product: Product): Promise<Product> {
     const productDb = this.mapper.toDb(product);
     await this.productRepository.save(productDb);
-    return await this.findById(productDb.id);
+    const savedProduct = await this.findById(productDb.id);
+    if (!savedProduct) {
+      throw new FailedToRetrieveProductException(productDb.id);
+    }
+    return savedProduct;
   }
 
-  async findById(id: string): Promise<Product> {
+  async findById(id: string): Promise<Product | null> {
     const productDb = await this.productRepository.findOneBy({ id });
-    if (!productDb) {
-      throw new ProductNotFoundException(id);
-    }
-    return this.mapper.toDomain(productDb);
+    return productDb ? this.mapper.toDomain(productDb) : null;
   }
 
   async findBySku(sku: string): Promise<Product | null> {
     const productDb = await this.productRepository.findOne({ where: { sku } });
-    return this.mapper.toDomain(productDb);
+    return productDb ? this.mapper.toDomain(productDb) : null;
   }
 
   async deleteById(id: string): Promise<void> {
     const result = await this.productRepository.delete(id);
 
     if (result.affected === 0) {
-      throw new ProductNotFoundException(`Product with id ${id} not found`);
+      throw new ProductNotFoundException('id', id);
     }
   }
 
@@ -68,16 +70,30 @@ export class ProductRepository implements IProductRepository {
   }
 
   async update(product: Product): Promise<Product> {
-    await this.findById(product.id);
+    const foundedProduct = await this.findById(product.id);
+    if (!foundedProduct) {
+      throw new ProductNotFoundException('id', product.id);
+    }
     const dbProduct = this.mapper.toDb(product);
     await this.productRepository.update(product.id, dbProduct);
-    return await this.findById(product.id);
+    const updatedProduct = await this.findById(product.id);
+    if (!updatedProduct) {
+      throw new Error('neco se posralo');
+    }
+    return updatedProduct;
   }
 
-  async discontinue(id: string): Promise<Product> {
-    const product = await this.findById(id);
-    const discontinuedProduct = product.discontinue();
-    return this.save(discontinuedProduct);
+  async discontinue(productData: ProductData): Promise<Product> {
+    const foundedProduct = await this.findById(productData.id);
+    if (!foundedProduct) {
+      throw new ProductNotFoundException('id', productData.id);
+    }
+    const discontinuedProduct = foundedProduct.discontinue();
+    const updatedProduct = this.save(discontinuedProduct);
+    if (!updatedProduct) {
+      throw new Error('neco se posralo');
+    }
+    return updatedProduct;
   }
 
   async findByAvailability(

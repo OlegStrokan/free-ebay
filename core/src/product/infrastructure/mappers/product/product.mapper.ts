@@ -5,6 +5,7 @@ import { ProductDb } from '../../entity/product.entity';
 import { IMoneyMapper } from '../money/money.mapper.interface';
 import { IProductMapper } from './product.mapper.interface';
 import { MoneyMapper } from '../money/money.mapper';
+import { Money } from 'src/shared/types/money';
 
 @Injectable()
 export class ProductMapper
@@ -24,7 +25,7 @@ export class ProductMapper
     productDb.status = productData.status;
     productDb.price = productData.price
       ? this.moneyMapper.toDb(productData.price)
-      : null;
+      : '';
     productDb.discontinuedAt = productData.discontinuedAt;
     productDb.createdAt = productData.createdAt;
     productDb.updatedAt = productData.updatedAt;
@@ -39,7 +40,8 @@ export class ProductMapper
       id: productDb.id,
       sku: productDb.sku,
       status: productDb.status,
-      price: this.moneyMapper.toDomain(productDb.price),
+      price:
+        this.moneyMapper.toDomain(productDb.price) || this.getDefaultMoney(),
       discontinuedAt: productDb.discontinuedAt,
       createdAt: productDb.createdAt,
       updatedAt: productDb.updatedAt,
@@ -52,5 +54,12 @@ export class ProductMapper
 
   toClient(product: Product): ProductData {
     return product.data;
+  }
+  private getDefaultMoney(): Money {
+    return {
+      amount: 0,
+      currency: 'USD',
+      fraction: 100,
+    };
   }
 }
