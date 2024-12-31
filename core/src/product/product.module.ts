@@ -10,6 +10,8 @@ import { MarkAsOutOfStockUseCase } from './epplication/use-cases/mark-as-out-of-
 import { ProductMockService } from './core/product/entity/mocks/product-mock.service';
 import { MoneyMapper } from './infrastructure/mappers/money/money.mapper';
 import { ProductMapper } from './infrastructure/mappers/product/product.mapper';
+import { FindProductUseCase } from './epplication/use-cases/find-product/find-product.use-case';
+import { DeleteProductUseCase } from './epplication/use-cases/delete-product/delete-product.use-case';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProductDb])],
@@ -18,8 +20,10 @@ import { ProductMapper } from './infrastructure/mappers/product/product.mapper';
     MoneyMapper,
     CreateProductUseCase,
     FindProductsUseCase,
+    FindProductUseCase,
     MarkAsOutOfStockUseCase,
     MarkAsAvailableUseCase,
+    DeleteProductUseCase,
     ProductRepository,
     ProductMockService,
   ],

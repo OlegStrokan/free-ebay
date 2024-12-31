@@ -6,6 +6,7 @@ import {
   Get,
   Patch,
   Param,
+  Query,
 } from '@nestjs/common';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { Product } from '../core/product/entity/product';
@@ -21,6 +22,10 @@ import { ProductDb } from '../infrastructure/entity/product.entity';
 import { IFindProductsUseCase } from '../epplication/use-cases/find-products/find-product.interface';
 import { IMarkAsOutOfStockUseCase } from '../epplication/use-cases/mark-as-out-of-stock/mark-as-out-of-stock.interface';
 import { IMarkAsAvailableUseCase } from '../epplication/use-cases/mark-as-available/mark-as-available.interface';
+import { FindProductUseCase } from '../epplication/use-cases/find-product/find-product.use-case';
+import { IFindProductUseCase } from '../epplication/use-cases/find-product/find-product.interface';
+import { IDeleteProductUseCase } from '../epplication/use-cases/delete-product/delete-product.interface';
+import { DeleteProductUseCase } from '../epplication/use-cases/delete-product/delete-product.use-case';
 
 @Controller('products')
 export class ProductsController {
@@ -29,10 +34,14 @@ export class ProductsController {
     private readonly createProductUseCase: ICreateProductUseCase,
     @Inject(FindProductsUseCase)
     private readonly findProductsUseCase: IFindProductsUseCase,
+    @Inject(FindProductUseCase)
+    private readonly findProductUseCase: IFindProductUseCase,
     @Inject(MarkAsOutOfStockUseCase)
     private readonly markAsOutOfStockUseCae: IMarkAsOutOfStockUseCase,
     @Inject(MarkAsAvailableUseCase)
     private readonly markAsAvailableUseCase: IMarkAsAvailableUseCase,
+    @Inject(DeleteProductUseCase)
+    private readonly deleteProductUseCase: IDeleteProductUseCase,
     @Inject(ProductMapper)
     private readonly mapper: IProductMapper<ProductData, Product, ProductDb>,
   ) {}
@@ -47,16 +56,26 @@ export class ProductsController {
     const products = await this.findProductsUseCase.execute();
     return products.map((product) => this.mapper.toClient(product));
   }
+  @Get(':id')
+  public async findOne(@Param('id') id: string): Promise<ProductData> {
+    const product = await this.findProductUseCase.execute(id);
+    return this.mapper.toClient(product);
+  }
 
-  @Patch('/:id/closed')
+  @Patch(':id/closed')
   public async markAsOutOfStock(@Param('id') id: string): Promise<ProductData> {
     const product = await this.markAsOutOfStockUseCae.execute(id);
     return this.mapper.toClient(product);
   }
 
-  @Patch('/:id/open')
+  @Patch(':id/open')
   public async markAsAvailable(@Param('id') id: string): Promise<ProductData> {
     const product = await this.markAsAvailableUseCase.execute(id);
     return this.mapper.toClient(product);
+  }
+
+  @Patch(':id/delete')
+  public async delete(@Param('id') id: string): Promise<void> {
+    await this.deleteProductUseCase.execute(id);
   }
 }
