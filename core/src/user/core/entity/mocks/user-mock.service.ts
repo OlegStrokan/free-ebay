@@ -24,8 +24,8 @@ export class UserMockService implements IUserMockService {
 
   getOne(overrides?: Partial<UserData>): User {
     const user = User.create({
-      email: overrides.email ?? faker.internet.email(),
-      password: overrides.password ?? faker.internet.password({ length: 8 }),
+      email: overrides?.email ?? faker.internet.email(),
+      password: overrides?.password ?? faker.internet.password({ length: 8 }),
     });
 
     return user;

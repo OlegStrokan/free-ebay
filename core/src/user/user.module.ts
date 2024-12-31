@@ -12,6 +12,9 @@ import {
   USER_REPOSITORY,
 } from './core/repository/user.repository';
 import { UserMockService } from './core/entity/mocks/user-mock.service';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { MetricsInterceptor } from 'src/shared/interceptors/metrics.interceptor';
+import { GetUsersUseCase } from './epplication/use-cases/get-users/get-users.use-case';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserDb])],
@@ -24,20 +27,25 @@ import { UserMockService } from './core/entity/mocks/user-mock.service';
       provide: USER_MAPPER,
       useClass: UserMapper,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
+    },
+    UserMapper,
+    UserMockService,
     GetUserByEmailUseCase,
     GetUserByIdUseCase,
     CreateUserUseCase,
-    UserMapper,
-    UserMockService,
+    GetUsersUseCase,
   ],
   controllers: [UserController],
   exports: [
     GetUserByEmailUseCase,
     GetUserByIdUseCase,
     CreateUserUseCase,
+    UserMapper,
     USER_REPOSITORY,
     USER_MAPPER,
-    UserMapper,
   ],
 })
 export class UserModule {}
