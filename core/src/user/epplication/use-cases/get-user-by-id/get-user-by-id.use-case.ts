@@ -6,6 +6,7 @@ import {
   USER_REPOSITORY,
 } from 'src/user/core/repository/user.repository';
 import { IGetUserByIdUseCase } from './get-user-by-id.interface';
+import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
 
 @Injectable()
 export class GetUserByIdUseCase implements IGetUserByIdUseCase {
@@ -15,6 +16,10 @@ export class GetUserByIdUseCase implements IGetUserByIdUseCase {
   ) {}
 
   async execute(userId: UserData['id']) {
-    return this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new UserNotFoundException('id', userId);
+    }
+    return user;
   }
 }
