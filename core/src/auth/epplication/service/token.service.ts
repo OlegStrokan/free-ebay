@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { ITokenService } from './token.service.interface';
 import { UserData } from 'src/user/core/entity/user';
@@ -13,5 +13,13 @@ export class TokenService implements ITokenService {
 
   createRefreshToken(user: UserData): string {
     return jwt.sign({ id: user.id }, 'refresh_secret', { expiresIn: '7d' });
+  }
+
+  verifyAccessToken(token: string): any {
+    try {
+      return jwt.verify(token, 'access_secret');
+    } catch (error) {
+      throw new UnauthorizedException('Invalid access token');
+    }
   }
 }
