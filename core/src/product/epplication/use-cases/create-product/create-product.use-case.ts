@@ -4,6 +4,7 @@ import { IProductRepository } from 'src/product/core/product/repository/product.
 import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
 import { CreateProductDto } from 'src/product/interface/dtos/create-product.dto';
 import { ICreateProductUseCase } from './create-product.interface';
+import { ProductAlreadyExistsException } from 'src/product/core/product/exceptions/product-already-exists.exception';
 
 @Injectable()
 export class CreateProductUseCase implements ICreateProductUseCase {
@@ -13,6 +14,10 @@ export class CreateProductUseCase implements ICreateProductUseCase {
   ) {}
 
   async execute(dto: CreateProductDto): Promise<void> {
+    const existedProduct = this.productsRepo.findBySku(dto.sku);
+    if (!existedProduct) {
+      throw new ProductAlreadyExistsException(dto.sku);
+    }
     const product = Product.create({ ...dto });
     await this.productsRepo.save(product);
   }

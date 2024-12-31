@@ -26,11 +26,12 @@ describe('FindProductsUseCaseTest', () => {
     await clearRepos(module);
   });
 
-  it('should succesfully retrieve product', async () => {
+  it('should succesfully retrieve products', async () => {
+    await productMockService.createOne();
     await productMockService.createOne();
     const retrievedProducts = await findProductsUseCase.execute();
 
     expect(retrievedProducts).toBeDefined();
-    expect(retrievedProducts).toHaveLength(1);
+    expect(retrievedProducts).toHaveLength(2);
   });
 });

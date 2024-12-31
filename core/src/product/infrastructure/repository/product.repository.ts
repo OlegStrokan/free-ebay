@@ -6,9 +6,9 @@ import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
 import { ProductDb } from '../entity/product.entity';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
-import { ProductNotFoundError } from 'src/product/core/product/error';
 import { IProductMapper } from '../mappers/product/product.mapper.interface';
 import { ProductMapper } from '../mappers/product/product.mapper';
+import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
@@ -25,10 +25,10 @@ export class ProductRepository implements IProductRepository {
     return await this.findById(productDb.id);
   }
 
-  async findById(id: string): Promise<Product | null> {
+  async findById(id: string): Promise<Product> {
     const productDb = await this.productRepository.findOneBy({ id });
     if (!productDb) {
-      throw new ProductNotFoundError(`Product with id ${id} not found`);
+      throw new ProductNotFoundException(id);
     }
     return this.mapper.toDomain(productDb);
   }
@@ -38,16 +38,20 @@ export class ProductRepository implements IProductRepository {
     return this.mapper.toDomain(productDb);
   }
 
+  async deleteById(id: string): Promise<void> {
+    const result = await this.productRepository.delete(id);
+
+    if (result.affected === 0) {
+      throw new ProductNotFoundException(`Product with id ${id} not found`);
+    }
+  }
+
   async findAll(page: number, limit: number): Promise<Product[]> {
     const [productDbs] = await this.productRepository.findAndCount({
       skip: (page - 1) * limit,
       take: limit,
     });
     return productDbs.map((productDb) => this.mapper.toDomain(productDb));
-  }
-
-  async deleteById(id: string): Promise<void> {
-    await this.productRepository.delete(id);
   }
 
   async findByStatus(
