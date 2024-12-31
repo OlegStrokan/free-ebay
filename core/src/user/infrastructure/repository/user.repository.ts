@@ -8,9 +8,11 @@ import {
   USER_MAPPER,
 } from 'src/user/core/repository/user.repository';
 import { IUserMapper } from '../mappers/user.mapper.interface';
+import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
+import { IClearableRepository } from 'src/shared/types/clearable';
 
 @Injectable()
-export class UserRepository implements IUserRepository {
+export class UserRepository implements IUserRepository, IClearableRepository {
   constructor(
     @InjectRepository(UserDb)
     private readonly userRepository: Repository<UserDb>,
@@ -23,15 +25,40 @@ export class UserRepository implements IUserRepository {
     await this.userRepository.save(userDb);
   }
 
-  async findByEmail(email: UserData['email']): Promise<User> {
+  async findByEmail(email: UserData['email']): Promise<User | null> {
     const userDb = await this.userRepository.findOne({ where: { email } });
-    if (userDb) {
-      return this.userMapper.toDomain(userDb);
+    return userDb ? this.userMapper.toDomain(userDb) : null;
+  }
+
+  async findById(id: UserData['id']): Promise<User | null> {
+    const userDb = await this.userRepository.findOne({ where: { id } });
+    return userDb ? this.userMapper.toDomain(userDb) : null;
+  }
+
+  async findAll(): Promise<User[]> {
+    const usersDb = await this.userRepository.find();
+    return usersDb.map((userDb) => this.userMapper.toDomain(userDb));
+  }
+
+  async updateById(id: UserData['id'], user: User): Promise<User> {
+    // refactor it
+    const userDb = await this.userRepository.findOne({ where: { id } });
+    if (!userDb) {
+      throw new UserNotFoundException('id', id);
+    }
+    const updatedUserDb = this.userMapper.toDb(user);
+    await this.userRepository.update(id, updatedUserDb);
+    return this.userMapper.toDomain(updatedUserDb);
+  }
+
+  async deleteById(id: UserData['id']): Promise<void> {
+    const result = await this.userRepository.delete(id);
+    if (result.affected === 0) {
+      throw new UserNotFoundException('id', id);
     }
   }
 
-  async findById(id: UserData['id']): Promise<User> {
-    const userDb = await this.userRepository.findOne({ where: { id } });
-    return this.userMapper.toDomain(userDb);
+  async clear(): Promise<void> {
+    await this.userRepository.clear();
   }
 }

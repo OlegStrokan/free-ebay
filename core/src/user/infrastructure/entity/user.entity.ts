@@ -4,11 +4,11 @@ import { Entity, Column, PrimaryColumn } from 'typeorm';
 @Entity('users')
 export class UserDb extends BaseEntity {
   @PrimaryColumn()
-  id: string;
+  id!: string;
 
   @Column()
-  email: string;
+  email!: string;
 
   @Column()
-  password: string;
+  password!: string;
 }
