@@ -51,7 +51,7 @@ export class ProductMockService implements IProductMockService {
         overrides?.description ?? faker.commerce.productDescription(),
       price: randomPrice,
       sku: sku,
-      discontinuedAt: discontinuedAt,
+      discontinuedAt: discontinuedAt ?? undefined,
     });
   }
 

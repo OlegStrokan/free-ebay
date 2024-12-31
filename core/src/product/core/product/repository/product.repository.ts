@@ -1,6 +1,7 @@
 import { IClearableRepository } from 'src/shared/types/clearable';
 import { Product } from '../entity/product';
 import { ProductStatus } from '../entity/product-status';
+import { ProductData } from '../entity/product.interface';
 
 export interface IProductRepository extends IClearableRepository {
   // Create or update a product
@@ -22,7 +23,7 @@ export interface IProductRepository extends IClearableRepository {
   // Update the price of a product
   update(product: Product): Promise<Product>;
   // Mark a product as discontinued
-  discontinue(id: string): Promise<Product>;
+  discontinue(productData: ProductData): Promise<Product>;
   // Find products based on their availability (Available, OutOfStock, etc.)
   findByAvailability(
     isAvailable: boolean,

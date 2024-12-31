@@ -12,9 +12,11 @@ import { MoneyMapper } from './infrastructure/mappers/money/money.mapper';
 import { ProductMapper } from './infrastructure/mappers/product/product.mapper';
 import { FindProductUseCase } from './epplication/use-cases/find-product/find-product.use-case';
 import { DeleteProductUseCase } from './epplication/use-cases/delete-product/delete-product.use-case';
+import { AuthModule } from 'src/auth/auth.module';
+import { TokenService } from 'src/auth/epplication/service/token.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ProductDb])],
+  imports: [TypeOrmModule.forFeature([ProductDb]), AuthModule],
   providers: [
     ProductMapper,
     MoneyMapper,
