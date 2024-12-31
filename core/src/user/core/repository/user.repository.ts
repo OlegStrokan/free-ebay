@@ -5,6 +5,9 @@ export const USER_MAPPER = Symbol('USER_MAPPER');
 
 export interface IUserRepository {
   save(userData: User): Promise<void>;
-  findByEmail(email: string): Promise<User>;
-  findById(id: string): Promise<User>;
+  findByEmail(email: string): Promise<User | null>;
+  findById(id: string): Promise<User | null>;
+  findAll(): Promise<User[]>;
+  updateById(id: string, user: User): Promise<User>;
+  deleteById(id: string): Promise<void>;
 }

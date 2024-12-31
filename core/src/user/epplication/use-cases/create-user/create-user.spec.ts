@@ -41,6 +41,6 @@ describe('CreateUserUseCaseTest', () => {
     const user = await userRepository.findByEmail(userDto.email);
 
     expect(user).toBeDefined();
-    expect(user.email).toBe(userDto.email);
+    expect(user?.email).toBe(userDto.email);
   });
 });
