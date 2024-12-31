@@ -11,20 +11,20 @@ import { Money } from 'src/shared/types/money';
 export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
-  sku: string;
+  sku!: string;
 
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @IsString()
   @IsNotEmpty()
-  description: string;
+  description!: string;
 
   @IsEnum(ProductStatus)
   @IsOptional()
   status?: ProductStatus = ProductStatus.Available;
 
-  @IsNumber()
-  price: Money;
+  @IsNotEmpty()
+  price!: Money;
 }
