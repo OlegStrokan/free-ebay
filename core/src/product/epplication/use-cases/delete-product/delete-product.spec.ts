@@ -3,10 +3,9 @@ import { clearRepos } from 'src/shared/testing-module/clear-repos';
 import { createTestingModule } from 'src/shared/testing-module/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
-import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { DeleteProductUseCase } from './delete-product.use-case';
 import { IDeleteProductUseCase } from './delete-product.interface';
-import { ProductNotFoundError } from 'src/product/core/product/error';
+import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 
 describe('MarkAsAvailableUseCaseTest', () => {
   let deleteProductUseCase: IDeleteProductUseCase;
@@ -40,6 +39,6 @@ describe('MarkAsAvailableUseCaseTest', () => {
   it('should succesfully delete product', async () => {
     await expect(
       deleteProductUseCase.execute('not_existing_id'),
-    ).rejects.toThrow(ProductNotFoundError);
+    ).rejects.toThrow(ProductNotFoundException);
   });
 });

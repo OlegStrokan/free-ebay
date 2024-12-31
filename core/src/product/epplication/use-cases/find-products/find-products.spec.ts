@@ -34,4 +34,11 @@ describe('FindProductsUseCaseTest', () => {
     expect(retrievedProducts).toBeDefined();
     expect(retrievedProducts).toHaveLength(2);
   });
+
+  it('should succesfully retrieve empty array of products', async () => {
+    const retrievedProducts = await findProductsUseCase.execute();
+
+    expect(retrievedProducts).toBeDefined();
+    expect(retrievedProducts).toHaveLength(0);
+  });
 });

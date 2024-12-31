@@ -4,6 +4,7 @@ import { IProductRepository } from 'src/product/core/product/repository/product.
 import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
 import { IFindProductUseCase } from './find-product.interface';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
+import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 
 @Injectable()
 export class FindProductUseCase implements IFindProductUseCase {
@@ -13,6 +14,10 @@ export class FindProductUseCase implements IFindProductUseCase {
   ) {}
 
   async execute(productId: ProductData['id']): Promise<Product> {
-    return await this.productsRepo.findById(productId);
+    const product = await this.productsRepo.findById(productId);
+    if (!product) {
+      throw new ProductNotFoundException('id', productId);
+    }
+    return product;
   }
 }

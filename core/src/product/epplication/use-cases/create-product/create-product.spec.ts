@@ -39,6 +39,11 @@ describe('CreateProductUseCaseTest', () => {
     const retrievedProduct = await productRepository.findBySku(productDto.sku);
 
     expect(retrievedProduct).toBeDefined();
-    expect(retrievedProduct.data.name).toBe(productDto.name);
+    expect(retrievedProduct?.data.name).toBe(productDto.name);
+  });
+
+  it('should throw error if product already exists', async () => {
+    const productDto = productMockService.getOneToCreate();
+    await productMockService.createOne({ sku: productDto.sku });
   });
 });

@@ -5,27 +5,27 @@ import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
 @Entity('products')
 export class ProductDb extends BaseEntity {
   @PrimaryColumn()
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar', length: 100, unique: true })
-  sku: string;
+  sku!: string;
 
   @Column({
     type: 'enum',
     enum: ProductStatus,
     default: ProductStatus.Available,
   })
-  status: ProductStatus;
+  status!: ProductStatus;
 
   @Column({ type: 'jsonb' })
-  price: string;
+  price!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  name: string;
+  name!: string;
 
   @Column({ type: 'text' })
-  description: string;
+  description!: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  discontinuedAt: Date | null;
+  discontinuedAt?: Date;
 }

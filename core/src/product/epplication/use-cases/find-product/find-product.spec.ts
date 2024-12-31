@@ -6,6 +6,7 @@ import { ProductMockService } from 'src/product/core/product/entity/mocks/produc
 import { IFindProductUseCase } from './find-product.interface';
 import { FindProductUseCase } from './find-product.use-case';
 import { faker } from '@faker-js/faker';
+import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 
 describe('FindProductUseCaseTest', () => {
   let findProductUseCase: IFindProductUseCase;
@@ -34,5 +35,10 @@ describe('FindProductUseCaseTest', () => {
 
     expect(retrievedProduct).toBeDefined();
     expect(retrievedProduct.name).toBe(productName);
+  });
+  it("should throw error if product dosn't exist", async () => {
+    await expect(findProductUseCase.execute()).rejects.toThrow(
+      ProductNotFoundException,
+    );
   });
 });
