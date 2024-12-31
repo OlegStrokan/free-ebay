@@ -2,8 +2,8 @@ import { Clonable } from 'src/shared/types/clonable';
 import { ProductStatus } from './product-status';
 import { Money, ZERO_AMOUNT_MONEY } from 'src/shared/types/money';
 import { ProductData } from './product.interface';
-import { InvalidProductStatusError } from '../error';
 import { generateUlid } from 'src/shared/types/generate-ulid';
+import { InvalidProductStatusException } from '../exceptions/invalid-product-status.exception';
 
 export class Product implements Clonable<Product> {
   constructor(public product: ProductData) {}
@@ -73,7 +73,7 @@ export class Product implements Clonable<Product> {
 
   discontinue = () => {
     if (!this.isAvailable()) {
-      throw new InvalidProductStatusError(
+      throw new InvalidProductStatusException(
         'Cannot discontinue a product that is not available.',
       );
     }
