@@ -40,15 +40,15 @@ export class UserRepository implements IUserRepository, IClearableRepository {
     return usersDb.map((userDb) => this.userMapper.toDomain(userDb));
   }
 
-  async updateById(id: UserData['id'], user: User): Promise<User> {
-    // refactor it
-    const userDb = await this.userRepository.findOne({ where: { id } });
-    if (!userDb) {
-      throw new UserNotFoundException('id', id);
-    }
+  async updateById(user: User): Promise<User> {
     const updatedUserDb = this.userMapper.toDb(user);
-    await this.userRepository.update(id, updatedUserDb);
-    return this.userMapper.toDomain(updatedUserDb);
+    const result = await this.userRepository.update(user.id, updatedUserDb);
+
+    if (result.affected === 0) {
+      throw new UserNotFoundException('id', user.id);
+    }
+
+    return user;
   }
 
   async deleteById(id: UserData['id']): Promise<void> {
