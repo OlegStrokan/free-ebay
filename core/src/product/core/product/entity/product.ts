@@ -102,6 +102,36 @@ export class Product implements Clonable<Product> {
     }
   };
 
+  adjustPricingAndInventory = (salesData: {
+    soldUnits: number;
+    promotionActive: boolean;
+  }) => {
+    if (!this.isAvailable()) {
+      throw new InvalidProductStatusException(
+        'Cannot adjust pricing and inventory for a product that is not available.',
+      );
+    }
+
+    const clone = this.clone();
+    const { soldUnits, promotionActive } = salesData;
+
+    clone.product.stock = Math.max(0, clone.product.stock - soldUnits);
+
+    if (clone.product.stock < 10) {
+      clone.product.price.amount *= 1.1;
+    } else if (promotionActive) {
+      clone.product.price.amount *= 0.9;
+    }
+
+    if (clone.product.stock === 0) {
+      clone.product.status = ProductStatus.OutOfStock;
+    }
+
+    clone.product.updatedAt = new Date();
+
+    return clone;
+  };
+
   restock = (quantity: number) => {
     if (quantity <= 0) {
       throw new RestockQuantityException();
