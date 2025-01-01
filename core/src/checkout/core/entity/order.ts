@@ -1,7 +1,12 @@
 import { Clonable } from 'src/shared/types/clonable';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { Money } from 'src/shared/types/money';
-import { CartItemData } from 'src/checkout/domain/cart-item.entity';
+import { CartItemData } from './order-item';
+
+export enum OrderStatus {
+  SHIPPED = 'Shipped',
+  CANCELLED = 'Cancelled',
+}
 
 export interface OrderData {
   id: string;
@@ -48,13 +53,13 @@ export class Order implements Clonable<Order> {
 
   markAsShipped = () => {
     const clone = this.clone();
-    clone.order.status = 'Shipped';
+    clone.order.status = OrderStatus.SHIPPED;
     return clone;
   };
 
   markAsCancelled = () => {
     const clone = this.clone();
-    clone.order.status = 'Cancelled';
+    clone.order.status = OrderStatus.CANCELLED;
     return clone;
   };
 
