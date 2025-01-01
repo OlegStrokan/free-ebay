@@ -1,7 +1,15 @@
-import { Entity, Column, PrimaryColumn, JoinColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
 import { CategoryDb } from 'src/catalog/infrastructure/entity/category';
+import { OrderItemDb } from 'src/checkout/infrastructure/entity/order-item.entity';
 
 @Entity('products')
 export class ProductDb extends BaseEntity {
@@ -35,4 +43,7 @@ export class ProductDb extends BaseEntity {
   })
   @JoinColumn({ name: 'category_id' })
   category!: CategoryDb;
+
+  @OneToMany(() => OrderItemDb, (orderItem) => orderItem.product)
+  orderItems!: OrderItemDb[];
 }
