@@ -37,10 +37,9 @@ describe('CreateCategoryUseCaseTest', () => {
   it('should create a random category and verify its existence', async () => {
     const categoryName = faker.commerce.department();
 
-    const categoryDto = categoryMockService.getOneToCreateWithoutParentId({
+    const categoryDto = categoryMockService.getOneToCreate({
       name: categoryName,
     });
-
     await createCategoryUseCase.execute(categoryDto);
     const category = await categoryRepository.findByName(categoryName);
 
@@ -51,7 +50,7 @@ describe('CreateCategoryUseCaseTest', () => {
   it('should throw error if category already exists', async () => {
     const categoryName = faker.commerce.department();
 
-    const categoryDto = categoryMockService.getOneToCreateWithoutParentId({
+    const categoryDto = categoryMockService.getOne({
       name: categoryName,
     });
     await categoryMockService.createOne({ name: categoryDto.name });
