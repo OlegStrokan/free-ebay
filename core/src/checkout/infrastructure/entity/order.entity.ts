@@ -1,4 +1,3 @@
-import { User } from 'src/user/core/entity/user';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 import {
   Entity,
@@ -11,6 +10,7 @@ import {
 } from 'typeorm';
 import { OrderItemDb } from './order-item.entity';
 import { ShipmentDb } from './shipment.entity';
+import { PaymentDb } from './payment.entity';
 
 @Entity('orders')
 export class OrderDb extends BaseEntity {
@@ -29,4 +29,9 @@ export class OrderDb extends BaseEntity {
   })
   @JoinColumn({ name: 'shipment_id' })
   shipment!: ShipmentDb;
+
+  @OneToOne(() => PaymentDb, (payment) => payment.order, {
+    onDelete: 'CASCADE',
+  })
+  payment!: PaymentDb;
 }

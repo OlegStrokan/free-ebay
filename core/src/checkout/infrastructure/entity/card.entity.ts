@@ -1,11 +1,11 @@
 import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
+import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 import {
   Entity,
   OneToOne,
   ManyToMany,
   JoinTable,
-  BaseEntity,
   PrimaryColumn,
 } from 'typeorm';
 
