@@ -8,6 +8,7 @@ export interface ProductData {
   description: string;
   price: Money;
   status: ProductStatus;
+  stock: number;
   createdAt: Date;
   updatedAt: Date;
   discontinuedAt?: Date;

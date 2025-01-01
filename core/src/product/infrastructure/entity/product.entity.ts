@@ -38,6 +38,9 @@ export class ProductDb extends BaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   discontinuedAt?: Date;
 
+  @Column({ type: 'int', default: 0 })
+  stock?: number;
+
   @ManyToOne(() => CategoryDb, (category) => category.products, {
     onDelete: 'SET NULL',
   })

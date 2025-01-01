@@ -67,5 +67,13 @@ export class Order implements Clonable<Order> {
     return clone;
   };
 
+  calculateTaxes = (taxRate: number) => {
+    const clone = this.clone();
+    const taxAmount = (clone.order.totalPrice.amount * taxRate) / 100;
+    clone.order.totalPrice.amount += taxAmount;
+    clone.order.updatedAt = new Date();
+    return clone;
+  };
+
   clone = (): Order => new Order({ ...this.order });
 }
