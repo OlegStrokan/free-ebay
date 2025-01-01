@@ -7,6 +7,8 @@ import { ProductDb } from './product/infrastructure/entity/product.entity';
 import { UserDb } from './user/infrastructure/entity/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { CatalogModule } from './catalog/catalog.module';
+import { CategoryDb } from './catalog/infrastructure/entity/category';
 
 @Module({
   imports: [
@@ -23,10 +25,11 @@ import { UserModule } from './user/user.module';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([UserDb, ProductDb]),
+    TypeOrmModule.forFeature([UserDb, ProductDb, CategoryDb]),
     ProductModule,
     AuthModule,
     UserModule,
+    CatalogModule,
   ],
   exports: [],
   providers: [],
