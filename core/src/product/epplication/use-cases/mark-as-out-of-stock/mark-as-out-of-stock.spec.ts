@@ -7,7 +7,7 @@ import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { MarkAsOutOfStockUseCase } from './mark-as-out-of-stock.use-case';
 import { IMarkAsOutOfStockUseCase } from './mark-as-out-of-stock.interface';
 
-describe('MarkAsAvailableUseCaseTest', () => {
+describe('MarkAsOutOfStockUseCaseTest', () => {
   let markAsOutOfStockUseCase: IMarkAsOutOfStockUseCase;
   let productMockService: IProductMockService;
   let module: TestingModule;

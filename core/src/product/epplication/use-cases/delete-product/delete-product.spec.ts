@@ -7,7 +7,7 @@ import { DeleteProductUseCase } from './delete-product.use-case';
 import { IDeleteProductUseCase } from './delete-product.interface';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 
-describe('MarkAsAvailableUseCaseTest', () => {
+describe('DeleteProductUseCaseTest', () => {
   let deleteProductUseCase: IDeleteProductUseCase;
   let productMockService: IProductMockService;
   let module: TestingModule;
