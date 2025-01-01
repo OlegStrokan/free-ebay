@@ -1,6 +1,6 @@
 import { TestingModule } from '@nestjs/testing';
-import { clearRepos } from 'src/shared/testing-module/clear-repos';
-import { createTestingModule } from 'src/shared/testing-module/test.module';
+import { clearRepos } from 'src/shared/testing/clear-repos';
+import { createTestingModule } from 'src/shared/testing/test.module';
 import { faker } from '@faker-js/faker';
 import { IGetUserByEmailUseCase } from './get-user-by-email.interface';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';

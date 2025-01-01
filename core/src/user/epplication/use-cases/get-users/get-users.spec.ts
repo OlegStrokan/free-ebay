@@ -1,10 +1,10 @@
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { TestingModule } from '@nestjs/testing';
-import { clearRepos } from 'src/shared/testing-module/clear-repos';
-import { createTestingModule } from 'src/shared/testing-module/test.module';
 import { IGetUsersUseCase } from './get-users.interface';
 import { GetUsersUseCase } from './get-users.use-case';
+import { createTestingModule } from 'src/shared/testing/test.module';
+import { clearRepos } from 'src/shared/testing/clear-repos';
 
 describe('GetUsersUseCaseTest', () => {
   let getUsersUseCase: IGetUsersUseCase;

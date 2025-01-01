@@ -21,6 +21,7 @@ export class UserRepository implements IUserRepository, IClearableRepository {
   ) {}
 
   async save(user: User): Promise<void> {
+    //TODO - return user
     const userDb = this.userMapper.toDb(user);
     await this.userRepository.save(userDb);
   }
@@ -40,7 +41,7 @@ export class UserRepository implements IUserRepository, IClearableRepository {
     return usersDb.map((userDb) => this.userMapper.toDomain(userDb));
   }
 
-  async updateById(user: User): Promise<User> {
+  async update(user: User): Promise<User> {
     const updatedUserDb = this.userMapper.toDb(user);
     const result = await this.userRepository.update(user.id, updatedUserDb);
 
@@ -59,6 +60,6 @@ export class UserRepository implements IUserRepository, IClearableRepository {
   }
 
   async clear(): Promise<void> {
-    await this.userRepository.clear();
+    await this.userRepository.query(`DELETE FROM "users"`);
   }
 }

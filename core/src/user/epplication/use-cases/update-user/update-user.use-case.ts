@@ -26,6 +26,6 @@ export class UpdateUserUseCase implements IUpdateUserUseCase {
       throw new UserNotFoundException('id', user.id);
     }
 
-    return await this.userRepository.updateById(existingUser);
+    return await this.userRepository.update(existingUser);
   }
 }
