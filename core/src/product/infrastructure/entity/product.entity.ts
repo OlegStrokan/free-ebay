@@ -1,6 +1,7 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, JoinColumn, ManyToOne } from 'typeorm';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
+import { CategoryDb } from 'src/catalog/infrastructure/entity/category';
 
 @Entity('products')
 export class ProductDb extends BaseEntity {
@@ -28,4 +29,10 @@ export class ProductDb extends BaseEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   discontinuedAt?: Date;
+
+  @ManyToOne(() => CategoryDb, (category) => category.products, {
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'category_id' })
+  category!: CategoryDb;
 }
