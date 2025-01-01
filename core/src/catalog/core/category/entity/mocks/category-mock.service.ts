@@ -17,18 +17,6 @@ export class CategoryMockService implements ICategoryMockService {
     return {
       name: overrides.name ?? faker.commerce.department(),
       description: overrides.description ?? faker.commerce.productDescription(),
-      parentCategoryId: overrides.parentCategoryId
-        ? faker.string.uuid()
-        : undefined,
-    };
-  }
-
-  getOneToCreateWithoutParentId(
-    overrides: Partial<Omit<CategoryData, 'parentCategoryId'>> = {},
-  ): CreateCategoryDto {
-    return {
-      name: overrides.name ?? faker.commerce.department(),
-      description: overrides.description ?? faker.commerce.productDescription(),
     };
   }
 
@@ -36,10 +24,6 @@ export class CategoryMockService implements ICategoryMockService {
     return Category.create({
       name: overrides.name ?? faker.commerce.department(),
       description: overrides.description ?? faker.commerce.productDescription(),
-      parentCategoryId:
-        overrides.parentCategoryId ?? faker.datatype.boolean()
-          ? faker.string.uuid()
-          : undefined,
     });
   }
 
