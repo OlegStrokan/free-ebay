@@ -4,6 +4,7 @@ import { Money, ZERO_AMOUNT_MONEY } from 'src/shared/types/money';
 import { ProductData } from './product.interface';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { InvalidProductStatusException } from '../exceptions/invalid-product-status.exception';
+import { RestockQuantityException } from '../exceptions/restock-quantity.exception';
 
 export class Product implements Clonable<Product> {
   constructor(public product: ProductData) {}
@@ -87,6 +88,26 @@ export class Product implements Clonable<Product> {
     const clone = this.clone();
     const discountAmount = (clone.price.amount * discountPercentage) / 100;
     clone.product.price.amount -= discountAmount;
+    return clone;
+  };
+
+  validateStatusTransition = (newStatus: ProductStatus) => {
+    if (
+      this.product.status === ProductStatus.Discontinued &&
+      newStatus !== ProductStatus.Available
+    ) {
+      throw new InvalidProductStatusException(
+        'Cannot change status from Discontinued to anything other than Available.',
+      );
+    }
+  };
+
+  restock = (quantity: number) => {
+    if (quantity <= 0) {
+      throw new RestockQuantityException();
+    }
+    const clone = this.clone();
+    clone.product.stock += quantity;
     return clone;
   };
 
