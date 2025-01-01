@@ -58,5 +58,14 @@ export class Order implements Clonable<Order> {
     return clone;
   };
 
+  applyDiscount = (discountPercentage: number) => {
+    const clone = this.clone();
+    const discountAmount =
+      (clone.order.totalPrice.amount * discountPercentage) / 100;
+    clone.order.totalPrice.amount -= discountAmount;
+    clone.order.updatedAt = new Date();
+    return clone;
+  };
+
   clone = (): Order => new Order({ ...this.order });
 }
