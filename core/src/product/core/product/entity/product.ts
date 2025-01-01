@@ -83,5 +83,12 @@ export class Product implements Clonable<Product> {
     return clone;
   };
 
+  applyDiscount = (discountPercentage: number) => {
+    const clone = this.clone();
+    const discountAmount = (clone.price.amount * discountPercentage) / 100;
+    clone.product.price.amount -= discountAmount;
+    return clone;
+  };
+
   clone = (): Product => new Product({ ...this.product });
 }
