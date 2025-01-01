@@ -16,10 +16,10 @@ export class UserMockService implements IUserMockService {
     private readonly userRepository: IUserRepository,
   ) {}
 
-  getOneToCreate(): CreateUserDto {
+  getOneToCreate(overrides?: Partial<UserData>): CreateUserDto {
     return {
-      email: faker.internet.email(),
-      password: faker.internet.password({ length: 8 }),
+      email: overrides?.email ?? faker.internet.email(),
+      password: overrides?.password ?? faker.internet.password({ length: 8 }),
     };
   }
 

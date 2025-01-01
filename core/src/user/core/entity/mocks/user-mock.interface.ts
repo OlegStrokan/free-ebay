@@ -1,8 +1,8 @@
-import { CreateUserDto } from 'src/auth/interface/dtos/register.dto';
+import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
 import { User, UserData } from '../user';
 
 export interface IUserMockService {
-  getOneToCreate(): CreateUserDto;
+  getOneToCreate(overrides?: Partial<UserData>): CreateUserDto;
   getOne(overrides?: Partial<UserData>): User;
   createOne(overrides?: Partial<UserData>): Promise<void>;
 }
