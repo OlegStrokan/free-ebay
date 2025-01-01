@@ -47,5 +47,12 @@ export class User implements Clonable<User> {
     return { ...this.user };
   }
 
+  // temporary ( it's because we have only email to update)
+  update(userData: Pick<UserData, 'email'>) {
+    const cloned = this.clone();
+    cloned.data.email = userData.email;
+    return cloned;
+  }
+
   clone = (): User => new User({ ...this.user });
 }
