@@ -7,6 +7,8 @@ import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing-module/clear-repos';
 import { createTestingModule } from 'src/shared/testing-module/test.module';
 import { ICreateUserUseCase } from './create-user.interface';
+import { UserAlreadyExistsException } from 'src/user/core/exceptions/user-already-exists';
+import { faker } from '@faker-js/faker';
 
 describe('CreateUserUseCaseTest', () => {
   let createUserUseCase: ICreateUserUseCase;
@@ -42,5 +44,17 @@ describe('CreateUserUseCaseTest', () => {
 
     expect(user).toBeDefined();
     expect(user?.email).toBe(userDto.email);
+  });
+
+  it('should throw error if user already exists', async () => {
+    const email = faker.internet.email();
+
+    await userMockService.createOne({ email });
+
+    const userToCreate = userMockService.getOneToCreate({ email });
+
+    await expect(createUserUseCase.execute(userToCreate)).rejects.toThrow(
+      UserAlreadyExistsException,
+    );
   });
 });

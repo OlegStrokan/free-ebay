@@ -4,10 +4,10 @@ import {
   USER_REPOSITORY,
 } from 'src/user/core/repository/user.repository';
 import { ICreateUserUseCase } from './create-user.interface';
-import { CreateUserDto } from 'src/auth/interface/dtos/register.dto';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/user/core/entity/user';
 import { UserAlreadyExistsException } from 'src/user/core/exceptions/user-already-exists';
+import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
 
 export class CreateUserUseCase implements ICreateUserUseCase {
   constructor(
