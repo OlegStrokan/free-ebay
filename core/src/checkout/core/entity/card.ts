@@ -1,6 +1,7 @@
 import { Clonable } from 'src/shared/types/clonable';
 import { generateUlid } from 'src/shared/types/generate-ulid';
-import { Money } from 'src/shared/types/money';
+import { addMoney, createMoney, Money } from 'src/shared/types/money';
+import { CartItemData } from './order-item';
 
 export interface CartData {
   id: string;
@@ -58,7 +59,22 @@ export class Cart implements Clonable<Cart> {
   };
 
   private calculateTotalPrice(items: CartItemData[]): Money {
-    return items.reduce((total, item) => total.add(item.price), new Money(0));
+    if (items.length === 0) {
+      throw new Error(
+        'Cannot calculate total price for an empty list of items',
+      );
+    }
+
+    const initialMoney = createMoney(
+      0,
+      items[0].price.currency,
+      items[0].price.fraction,
+    );
+
+    return items.reduce(
+      (total, item) => addMoney(total, item.price),
+      initialMoney,
+    );
   }
 
   clone = (): Cart => new Cart({ ...this.cart });

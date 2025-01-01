@@ -20,9 +20,23 @@ export interface Money {
   fraction: number;
 }
 
-export interface CzkMoney extends Money {
-  currency: typeof CZK_CURRENCY;
-  fraction: 100;
+export function createMoney(
+  amount: number,
+  currency: Currency,
+  fraction: number,
+): Money {
+  return { amount, currency, fraction };
+}
+
+export function addMoney(m1: Money, m2: Money): Money {
+  if (m1.currency !== m2.currency || m1.fraction !== m2.fraction) {
+    throw new Error('Cannot add Money with different currencies or fractions');
+  }
+  return {
+    amount: m1.amount + m2.amount,
+    currency: m1.currency,
+    fraction: m1.fraction,
+  };
 }
 
 export type MoneyFormat = Pick<Money, 'currency' | 'fraction'>;
