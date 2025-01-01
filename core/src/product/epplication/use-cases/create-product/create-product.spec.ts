@@ -3,10 +3,11 @@ import { ICreateProductUseCase } from './create-product.interface';
 import { TestingModule } from '@nestjs/testing';
 import { CreateProductUseCase } from './create-product.use-case';
 import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
-import { clearRepos } from 'src/shared/testing-module/clear-repos';
-import { createTestingModule } from 'src/shared/testing-module/test.module';
+import { clearRepos } from 'src/shared/testing/clear-repos';
+import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
+import { ProductAlreadyExistsException } from 'src/product/core/product/exceptions/product-already-exists.exception';
 
 describe('CreateProductUseCaseTest', () => {
   let createProductUseCase: ICreateProductUseCase;
@@ -45,5 +46,9 @@ describe('CreateProductUseCaseTest', () => {
   it('should throw error if product already exists', async () => {
     const productDto = productMockService.getOneToCreate();
     await productMockService.createOne({ sku: productDto.sku });
+
+    await expect(createProductUseCase.execute(productDto)).rejects.toThrow(
+      ProductAlreadyExistsException,
+    );
   });
 });

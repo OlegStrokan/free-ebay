@@ -1,6 +1,6 @@
 import { TestingModule } from '@nestjs/testing';
-import { clearRepos } from 'src/shared/testing-module/clear-repos';
-import { createTestingModule } from 'src/shared/testing-module/test.module';
+import { clearRepos } from 'src/shared/testing/clear-repos';
+import { createTestingModule } from 'src/shared/testing/test.module';
 import { IFindProductsUseCase } from './find-product.interface';
 import { FindProductsUseCase } from './find-products.use-case';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';

@@ -14,8 +14,8 @@ export class CreateProductUseCase implements ICreateProductUseCase {
   ) {}
 
   async execute(dto: CreateProductDto): Promise<void> {
-    const existedProduct = this.productsRepo.findBySku(dto.sku);
-    if (!existedProduct) {
+    const existedProduct = await this.productsRepo.findBySku(dto.sku);
+    if (existedProduct) {
       throw new ProductAlreadyExistsException(dto.sku);
     }
     const product = Product.create({ ...dto });
