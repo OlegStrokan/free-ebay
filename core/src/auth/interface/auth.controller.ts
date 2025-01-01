@@ -4,7 +4,7 @@ import { LoginUseCase } from '../epplication/use-cases/login/login.use-case';
 import { IRegisterUseCase } from '../epplication/use-cases/register/register.interface';
 import { RegisterUseCase } from '../epplication/use-cases/register/register.use-case';
 import { LoginDto } from './dtos/login.dto';
-import { CreateUserDto } from './dtos/register.dto';
+import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
 
 @Controller('auth')
 export class AuthController {
