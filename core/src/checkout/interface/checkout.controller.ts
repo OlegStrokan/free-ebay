@@ -8,7 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { IAddToCartUseCase } from '../epplication/use-cases/add-to-card/add-to-card.interface';
+import { IAddToCartUseCase } from '../epplication/use-cases/add-to-cart/add-to-cart.interface';
 import { ICancelOrderUseCase } from '../epplication/use-cases/cancel-order/cancel-order.interface';
 import { ICheckPaymentStatusUseCase } from '../epplication/use-cases/check-payment-status/check-payment-status.interface';
 import { IClearCartUseCase } from '../epplication/use-cases/clear-cart/clear-cart.interface';
@@ -39,11 +39,18 @@ export class CheckoutController {
     private proceedPaymentUseCase: IProceedPaymentUseCase,
     @Inject(ICheckPaymentStatusUseCase)
     private checkPaymentStatusUseCase: ICheckPaymentStatusUseCase,
+    @Inject(ICreateCartUseCase)
+    private createCartUseCase: ICreateCartUseCase,
   ) {}
 
   @Post('cart')
   addToCart(@Body() dto: any) {
     return this.addToCartUseCase.execute(dto);
+  }
+
+  @Post('cart/create')
+  createCart(@Body() dto: any) {
+    return this.createCartUseCase.execute(dto);
   }
 
   @Get('cart')
