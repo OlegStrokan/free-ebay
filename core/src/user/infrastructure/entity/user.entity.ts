@@ -1,5 +1,6 @@
 import { CartDb } from 'src/checkout/infrastructure/entity/card.entity';
 import { OrderDb } from 'src/checkout/infrastructure/entity/order.entity';
+import { PaymentDb } from 'src/checkout/infrastructure/entity/payment.entity';
 import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
 import {
   Entity,
@@ -27,4 +28,7 @@ export class UserDb extends BaseEntity {
 
   @OneToMany(() => OrderDb, (order) => order.user)
   orders!: OrderDb[];
+
+  @OneToMany(() => PaymentDb, (payment) => payment.user)
+  payments!: PaymentDb[];
 }
