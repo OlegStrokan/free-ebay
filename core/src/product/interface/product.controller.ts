@@ -27,7 +27,7 @@ import { FindProductUseCase } from '../epplication/use-cases/find-product/find-p
 import { IFindProductUseCase } from '../epplication/use-cases/find-product/find-product.interface';
 import { IDeleteProductUseCase } from '../epplication/use-cases/delete-product/delete-product.interface';
 import { DeleteProductUseCase } from '../epplication/use-cases/delete-product/delete-product.use-case';
-import { AuthGuard } from 'src/auth/interface/auth.guard';
+import { AuthGuard } from 'src/auth/interface/guards/auth.guard';
 
 @Controller('products')
 export class ProductsController {

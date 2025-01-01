@@ -113,6 +113,6 @@ export class ProductRepository implements IProductRepository {
   }
 
   async clear(): Promise<void> {
-    await this.productRepository.clear();
+    await this.productRepository.query(`DELETE FROM "products"`);
   }
 }

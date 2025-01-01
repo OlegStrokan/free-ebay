@@ -1,5 +1,5 @@
 import { TestingModule } from '@nestjs/testing';
-import { createTestingModule } from 'src/shared/testing-module/test.module';
+import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMapper } from './product.mapper.interface';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { Product } from 'src/product/core/product/entity/product';
