@@ -4,14 +4,15 @@ import {
   CATEGORY_REPOSITORY,
   ICategoryRepository,
 } from 'src/catalog/core/category/repository/category.repository';
+import { IGetAllCategoriesUseCase } from './get-all-categories.interface';
 
-export class GetAllCategoriesUseCase implements GetAllCategoriesUseCase {
+export class GetAllCategoriesUseCase implements IGetAllCategoriesUseCase {
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,
   ) {}
 
   public async execute(): Promise<Category[]> {
-    return this.categoryRepository.findAll(0, 100);
+    return this.categoryRepository.findAll(1, 100);
   }
 }
