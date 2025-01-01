@@ -6,7 +6,8 @@ import {
 } from '../../repository/user.repository';
 import { User, UserData } from '../user';
 import { faker } from '@faker-js/faker';
-import { CreateUserDto } from 'src/auth/interface/dtos/register.dto';
+import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
+import { generateUlid } from 'src/shared/types/generate-ulid';
 
 @Injectable()
 export class UserMockService implements IUserMockService {
@@ -23,9 +24,12 @@ export class UserMockService implements IUserMockService {
   }
 
   getOne(overrides?: Partial<UserData>): User {
-    const user = User.create({
+    const user = new User({
       email: overrides?.email ?? faker.internet.email(),
       password: overrides?.password ?? faker.internet.password({ length: 8 }),
+      id: overrides?.id ?? generateUlid(),
+      createdAt: overrides?.createdAt ?? new Date(),
+      updatedAt: overrides?.updatedAt ?? new Date(),
     });
 
     return user;
