@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Patch,
@@ -23,6 +24,8 @@ import { IUpdateUserUseCase } from '../epplication/use-cases/update-user/update-
 import { ICreateUserUseCase } from '../epplication/use-cases/create-user/create-user.interface';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { DeleteUserUseCase } from '../epplication/use-cases/delete-user/delete-user.use-case';
+import { IDeleteUserUseCase } from '../epplication/use-cases/delete-user/delete-user.interface';
 
 @Controller('user')
 export class UserController {
@@ -35,6 +38,8 @@ export class UserController {
     private readonly createUserUseCase: ICreateUserUseCase,
     @Inject(UpdateUserUseCase)
     private readonly updateUserUseCase: IUpdateUserUseCase,
+    @Inject(DeleteUserUseCase)
+    private readonly deleteUserUseCase: IDeleteUserUseCase,
     @Inject(USER_MAPPER)
     private readonly userMapper: IUserMapper<UserData, User, UserDb>,
   ) {}
@@ -62,5 +67,10 @@ export class UserController {
   async updateUser(@Query('id') id: string, @Body() dto: UpdateUserDto) {
     const user = await this.updateUserUseCase.execute({ id, dto });
     return this.userMapper.toClient(user);
+  }
+
+  @Delete(':id')
+  async deleteUser(@Query('id') id: string) {
+    await this.deleteUserUseCase.execute(id);
   }
 }
