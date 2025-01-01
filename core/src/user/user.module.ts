@@ -16,6 +16,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { MetricsInterceptor } from 'src/shared/interceptors/metrics.interceptor';
 import { GetUsersUseCase } from './epplication/use-cases/get-users/get-users.use-case';
 import { UpdateUserUseCase } from './epplication/use-cases/update-user/update-user.use-case';
+import { DeleteUserUseCase } from './epplication/use-cases/delete-user/delete-user.use-case';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserDb])],
@@ -39,6 +40,7 @@ import { UpdateUserUseCase } from './epplication/use-cases/update-user/update-us
     CreateUserUseCase,
     GetUsersUseCase,
     UpdateUserUseCase,
+    DeleteUserUseCase,
   ],
   controllers: [UserController],
   exports: [
