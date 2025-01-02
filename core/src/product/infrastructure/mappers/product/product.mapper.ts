@@ -55,11 +55,4 @@ export class ProductMapper
   toClient(product: Product): ProductData {
     return product.data;
   }
-  private getDefaultMoney(): Money {
-    return {
-      amount: 0,
-      currency: 'USD',
-      fraction: 100,
-    };
-  }
 }

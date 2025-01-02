@@ -6,45 +6,59 @@ export type ISO4217 = string;
 export const CZK_CURRENCY = 'CZK';
 export const EUR_CURRENCY = 'EUR';
 
-export interface Money {
-  /**
-   * Has to be divided by the fraction to get the base currency units
-   */
-  amount: number;
-  currency: Currency;
-  /**
-   * A number by which we should divide the amount to get it in the Currency base units
-   *
-   * e.g. for CZK ... fraction of 100 and amount of 1000 would mean that we are representing the amount in "haléře" and the result would be: 1000 / 100 = 10 Kč
-   */
-  fraction: number;
-}
-
-export function createMoney(
-  amount: number,
-  currency: Currency,
-  fraction: number,
-): Money {
-  return { amount, currency, fraction };
-}
-
-export function addMoney(m1: Money, m2: Money): Money {
-  if (m1.currency !== m2.currency || m1.fraction !== m2.fraction) {
-    throw new Error('Cannot add Money with different currencies or fractions');
-  }
-  return {
-    amount: m1.amount + m2.amount,
-    currency: m1.currency,
-    fraction: m1.fraction,
-  };
-}
-
-export type MoneyFormat = Pick<Money, 'currency' | 'fraction'>;
-
 export type Currency = ISO4217;
 
-export const ZERO_AMOUNT_MONEY: Money = Object.freeze({
-  amount: 0,
-  currency: CZK_CURRENCY,
-  fraction: 100,
-});
+export class Money {
+  private amount: number;
+  private currency: Currency;
+  private fraction: number;
+
+  constructor(amount: number, currency: Currency, fraction: number) {
+    this.amount = amount;
+    this.currency = currency;
+    this.fraction = fraction;
+  }
+
+  static getDefaultMoney(): Money {
+    return new Money(0, 'USD', 100);
+  }
+
+  static zero(currency: Currency = CZK_CURRENCY, fraction = 100): Money {
+    return new Money(0, currency, fraction);
+  }
+
+  add(other: Money): Money {
+    this.ensureSameCurrencyAndFraction(other);
+    return new Money(this.amount + other.amount, this.currency, this.fraction);
+  }
+
+  subtract(other: Money): Money {
+    this.ensureSameCurrencyAndFraction(other);
+    return new Money(this.amount - other.amount, this.currency, this.fraction);
+  }
+
+  format(): string {
+    const baseUnits = this.amount / this.fraction;
+    return `${baseUnits.toFixed(2)} ${this.currency}`;
+  }
+
+  private ensureSameCurrencyAndFraction(other: Money): void {
+    if (this.currency !== other.currency || this.fraction !== other.fraction) {
+      throw new Error('Currencies and fractions must match for operations');
+    }
+  }
+
+  getAmount(): number {
+    return this.amount;
+  }
+
+  getCurrency(): Currency {
+    return this.currency;
+  }
+
+  getFraction(): number {
+    return this.fraction;
+  }
+}
+
+export const ZERO_AMOUNT_MONEY: Money = Money.zero();
