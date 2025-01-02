@@ -9,6 +9,9 @@ import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 import { CatalogModule } from 'src/catalog/catalog.module';
 import { CategoryDb } from 'src/catalog/infrastructure/entity/category';
 import { TestDbConfig } from './database/database.config';
+import { CheckoutModule } from 'src/checkout/checkout.module';
+import { CartDb } from 'src/checkout/infrastructure/entity/cart.entity';
+import { CartItemDb } from 'src/checkout/infrastructure/entity/cart-item.entity';
 
 export const createTestingModule = async () => {
   return await Test.createTestingModule({
@@ -26,11 +29,18 @@ export const createTestingModule = async () => {
         }),
         inject: [ConfigService],
       }),
-      TypeOrmModule.forFeature([ProductDb, UserDb, CategoryDb]),
+      TypeOrmModule.forFeature([
+        ProductDb,
+        UserDb,
+        CategoryDb,
+        CartDb,
+        CartItemDb,
+      ]),
       ProductModule,
       AuthModule,
       UserModule,
       CatalogModule,
+      CheckoutModule,
     ],
     exports: [],
     providers: [],
