@@ -10,7 +10,10 @@ export class Product implements Clonable<Product> {
   constructor(public product: ProductData) {}
 
   static create = (
-    productData: Omit<ProductData, 'id' | 'status' | 'updatedAt' | 'createdAt'>,
+    productData: Omit<
+      ProductData,
+      'id' | 'status' | 'updatedAt' | 'createdAt' | 'stock'
+    >,
   ) =>
     new Product({
       ...productData,
@@ -18,6 +21,7 @@ export class Product implements Clonable<Product> {
       status: Product.getInitialStatus(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      stock: 0,
     });
 
   static getInitialStatus = () => ProductStatus.Available;
@@ -86,8 +90,13 @@ export class Product implements Clonable<Product> {
 
   applyDiscount = (discountPercentage: number) => {
     const clone = this.clone();
-    const discountAmount = (clone.price.amount * discountPercentage) / 100;
-    clone.product.price.amount -= discountAmount;
+    const discountAmount = (clone.price.getAmount() * discountPercentage) / 100;
+    const newAmount = clone.price.getAmount() - discountAmount;
+    clone.product.price = new Money(
+      newAmount,
+      clone.price.getCurrency(),
+      clone.price.getFraction(),
+    );
     return clone;
   };
 
@@ -117,11 +126,17 @@ export class Product implements Clonable<Product> {
 
     clone.product.stock = Math.max(0, clone.product.stock - soldUnits);
 
+    let newAmount = clone.price.getAmount();
     if (clone.product.stock < 10) {
-      clone.product.price.amount *= 1.1;
+      newAmount *= 1.1;
     } else if (promotionActive) {
-      clone.product.price.amount *= 0.9;
+      newAmount *= 0.9;
     }
+    clone.product.price = new Money(
+      newAmount,
+      clone.price.getCurrency(),
+      clone.price.getFraction(),
+    );
 
     if (clone.product.stock === 0) {
       clone.product.status = ProductStatus.OutOfStock;
@@ -131,7 +146,6 @@ export class Product implements Clonable<Product> {
 
     return clone;
   };
-
   restock = (quantity: number) => {
     if (quantity <= 0) {
       throw new RestockQuantityException();
