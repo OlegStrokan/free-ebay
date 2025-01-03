@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Clonable } from 'src/shared/types/clonable';
 import { generateUlid } from 'src/shared/types/generate-ulid';
-import { addMoney, createMoney, Money } from 'src/shared/types/money';
-import { CartItemData } from './order-item';
+import { CartItemData } from '../cart-item/cart-item';
+import { Money } from 'src/shared/types/money';
 
 export interface CartData {
   id: string;
@@ -15,18 +16,27 @@ export interface CartData {
 export class Cart implements Clonable<Cart> {
   constructor(public cart: CartData) {}
 
-  static create = (
-    cartData: Omit<CartData, 'id' | 'createdAt' | 'updatedAt'>,
-  ) =>
-    new Cart({
-      ...cartData,
+  /**
+   * Creation of cart require only userId, because we create cart when user open application and didn't add it to cart
+   */
+
+  static create = (userId: string): Cart => {
+    return new Cart({
+      userId,
       id: generateUlid(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      totalPrice: Money.getDefaultMoney(),
+      items: [],
     });
+  };
 
   get id(): string {
     return this.cart.id;
+  }
+
+  get data(): CartData {
+    return this.cart;
   }
 
   get userId(): string {
@@ -41,10 +51,9 @@ export class Cart implements Clonable<Cart> {
     return this.cart.totalPrice;
   }
 
-  addItem = (productId: string, quantity: number, price: Money) => {
+  addItem = (item: CartItemData) => {
     const clone = this.clone();
-    const newItem = { productId, quantity, price };
-    clone.cart.items.push(newItem);
+    clone.cart.items.push(item);
     clone.cart.totalPrice = this.calculateTotalPrice(clone.cart.items);
     return clone;
   };
@@ -60,21 +69,12 @@ export class Cart implements Clonable<Cart> {
 
   private calculateTotalPrice(items: CartItemData[]): Money {
     if (items.length === 0) {
-      throw new Error(
-        'Cannot calculate total price for an empty list of items',
-      );
+      return Money.getDefaultMoney();
     }
 
-    const initialMoney = createMoney(
-      0,
-      items[0].price.currency,
-      items[0].price.fraction,
-    );
+    const initialMoney = Money.getDefaultMoney();
 
-    return items.reduce(
-      (total, item) => addMoney(total, item.price),
-      initialMoney,
-    );
+    return items.reduce((total, item) => total.add(item.price), initialMoney);
   }
 
   clone = (): Cart => new Cart({ ...this.cart });
