@@ -26,6 +26,7 @@ const validateProductDataStructure = (productData: ProductData | undefined) => {
     discontinuedAt: productData.discontinuedAt ? expect.any(Date) : undefined,
     createdAt: expect.any(Date),
     updatedAt: expect.any(Date),
+    stock: expect.any(Number),
     name: expect.any(String),
     description: expect.any(String),
   });

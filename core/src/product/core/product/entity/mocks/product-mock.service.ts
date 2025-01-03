@@ -7,6 +7,9 @@ import { IProductMockService } from './product-mock.interface';
 import { IProductRepository } from '../../repository/product.repository';
 import { ProductData } from '../product.interface';
 import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
+import { generateUlid } from 'src/shared/types/generate-ulid';
+
+// ... existing code ...
 
 @Injectable()
 export class ProductMockService implements IProductMockService {
@@ -15,13 +18,16 @@ export class ProductMockService implements IProductMockService {
     private readonly productRepository: IProductRepository,
   ) {}
 
+  private getRandomMoney(): Money {
+    const amount = faker.number.int({ min: 1, max: 1000 });
+    const currency = 'USD';
+    const fraction = 100;
+    return new Money(amount, currency, fraction);
+  }
+
   getOneToCreate(): CreateProductDto {
-    const randomPrice: Money = {
-      amount: faker.number.int({ min: 1, max: 1000 }),
-      currency: 'USD',
-      fraction: 100,
-    };
-    const sku = faker.string.uuid();
+    const randomPrice = this.getRandomMoney();
+    const sku = generateUlid();
 
     return {
       name: faker.commerce.productName(),
@@ -30,15 +36,10 @@ export class ProductMockService implements IProductMockService {
       sku: sku,
     };
   }
-  getOne(overrides: Partial<ProductData>): Product {
-    const randomPrice: Money = {
-      amount:
-        overrides?.price?.amount ?? faker.number.int({ min: 1, max: 1000 }),
-      currency: overrides?.price?.currency ?? 'USD',
-      fraction: overrides?.price?.fraction ?? 100,
-    };
 
-    const sku = overrides?.sku ?? faker.string.uuid();
+  getOne(overrides: Partial<ProductData>): Product {
+    const randomPrice = overrides?.price ?? this.getRandomMoney();
+    const sku = overrides?.sku ?? generateUlid();
 
     const discontinuedAt =
       overrides?.discontinuedAt ?? faker.datatype.boolean()

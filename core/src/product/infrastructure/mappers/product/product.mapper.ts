@@ -31,6 +31,7 @@ export class ProductMapper
     productDb.updatedAt = productData.updatedAt;
     productDb.name = product.name;
     productDb.description = product.description;
+    productDb.stock = productData.stock;
 
     return productDb;
   }
@@ -41,12 +42,13 @@ export class ProductMapper
       sku: productDb.sku,
       status: productDb.status,
       price:
-        this.moneyMapper.toDomain(productDb.price) || this.getDefaultMoney(),
+        this.moneyMapper.toDomain(productDb.price) || Money.getDefaultMoney(),
       discontinuedAt: productDb.discontinuedAt,
       createdAt: productDb.createdAt,
       updatedAt: productDb.updatedAt,
       name: productDb.name,
       description: productDb.description,
+      stock: productDb.stock ?? 0,
     };
 
     return new Product(productData);

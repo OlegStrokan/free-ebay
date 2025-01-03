@@ -22,9 +22,7 @@ describe('CreateProductUseCaseTest', () => {
       module.get<ICreateProductUseCase>(CreateProductUseCase);
     productRepository = module.get<IProductRepository>(ProductRepository);
     productMockService = module.get<IProductMockService>(ProductMockService);
-  });
 
-  beforeAll(async () => {
     await clearRepos(module);
   });
 

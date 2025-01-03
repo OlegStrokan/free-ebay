@@ -28,7 +28,7 @@ import { AuthModule } from 'src/auth/auth.module';
     ProductRepository,
     ProductMockService,
   ],
-  exports: [],
+  exports: [ProductMockService, ProductRepository],
   controllers: [ProductsController],
 })
 export class ProductModule {}
