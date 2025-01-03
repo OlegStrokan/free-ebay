@@ -20,7 +20,9 @@ export class AddToCartUseCase implements IAddToCartUseCase {
   ) {}
 
   async execute(dto: AddToCartDto): Promise<Cart> {
-    const cart = await this.cartRepository.getCartById(dto.cartId);
+    const cart = await this.cartRepository.getOneByIdIdWithRelations(
+      dto.cartId,
+    );
     if (!cart) {
       throw new CartNotFoundException('id', dto.cartId);
     }

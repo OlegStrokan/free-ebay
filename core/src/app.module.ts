@@ -9,6 +9,8 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { CategoryDb } from './catalog/infrastructure/entity/category';
+import { CartDb } from './checkout/infrastructure/entity/cart.entity';
+import { CartItemDb } from './checkout/infrastructure/entity/cart-item.entity';
 
 @Module({
   imports: [
@@ -25,7 +27,13 @@ import { CategoryDb } from './catalog/infrastructure/entity/category';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([UserDb, ProductDb, CategoryDb]),
+    TypeOrmModule.forFeature([
+      UserDb,
+      ProductDb,
+      CategoryDb,
+      CartDb,
+      CartItemDb,
+    ]),
     ProductModule,
     AuthModule,
     UserModule,
