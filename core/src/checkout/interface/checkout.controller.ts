@@ -18,28 +18,45 @@ import { IGetOrderDetailsUseCase } from '../epplication/use-cases/get-order-deta
 import { IProceedPaymentUseCase } from '../epplication/use-cases/process-payment/process-payment.interface';
 import { IRetrieveCartUseCase } from '../epplication/use-cases/retrieve-cart/retrieve-cart.interface';
 import { IShipOrderUseCase } from '../epplication/use-cases/ship-order/ship-order.interface';
+import { ICreateCartUseCase } from '../epplication/use-cases/create-cart/create-cart.interface';
+import {
+  ADD_TO_CART_USE_CASE_TOKEN,
+  CANCEL_ORDER_USE_CASE_TOKEN,
+  CHECK_PAYMENT_STATUS_USE_CASE_TOKEN,
+  CLEAR_CART_USE_CASE_TOKEN,
+  CREATE_ORDER_USE_CASE_TOKEN,
+  GET_ALL_ORDERS_USE_CASE_TOKEN,
+  RETRIEVE_CART_USE_CASE_TOKEN,
+  SHIP_ORDER_USE_CASE_TOKEN,
+  CREATE_CART_USE_CASE_TOKEN,
+  GET_ORDER_DETAILS_USE_CASE_TOKEN,
+  PROCEED_PAYMENT_USE_CASE_TOKEN,
+} from '../epplication/injection-tokens/use-case.token';
 
 @Controller('checkout')
 export class CheckoutController {
   constructor(
-    @Inject(IAddToCartUseCase) private addToCartUseCase: IAddToCartUseCase,
-    @Inject(IRetrieveCartUseCase)
+    @Inject(ADD_TO_CART_USE_CASE_TOKEN)
+    private addToCartUseCase: IAddToCartUseCase,
+    @Inject(RETRIEVE_CART_USE_CASE_TOKEN)
     private retrieveCartUseCase: IRetrieveCartUseCase,
-    @Inject(IClearCartUseCase) private clearCartUseCase: IClearCartUseCase,
-    @Inject(ICreateOrderUseCase)
+    @Inject(CLEAR_CART_USE_CASE_TOKEN)
+    private clearCartUseCase: IClearCartUseCase,
+    @Inject(CREATE_ORDER_USE_CASE_TOKEN)
     private createOrderUseCase: ICreateOrderUseCase,
-    @Inject(IGetOrderDetailsUseCase)
+    @Inject(GET_ORDER_DETAILS_USE_CASE_TOKEN)
     private getOrderDetailsUseCase: IGetOrderDetailsUseCase,
-    @Inject(IGetAllOrdersUseCase)
+    @Inject(GET_ALL_ORDERS_USE_CASE_TOKEN)
     private getAllOrdersUseCase: IGetAllOrdersUseCase,
-    @Inject(ICancelOrderUseCase)
+    @Inject(CANCEL_ORDER_USE_CASE_TOKEN)
     private cancelOrderUseCase: ICancelOrderUseCase,
-    @Inject(IShipOrderUseCase) private shipOrderUseCase: IShipOrderUseCase,
-    @Inject(IProceedPaymentUseCase)
+    @Inject(SHIP_ORDER_USE_CASE_TOKEN)
+    private shipOrderUseCase: IShipOrderUseCase,
+    @Inject(PROCEED_PAYMENT_USE_CASE_TOKEN)
     private proceedPaymentUseCase: IProceedPaymentUseCase,
-    @Inject(ICheckPaymentStatusUseCase)
+    @Inject(CHECK_PAYMENT_STATUS_USE_CASE_TOKEN)
     private checkPaymentStatusUseCase: ICheckPaymentStatusUseCase,
-    @Inject(ICreateCartUseCase)
+    @Inject(CREATE_CART_USE_CASE_TOKEN)
     private createCartUseCase: ICreateCartUseCase,
   ) {}
 
