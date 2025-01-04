@@ -12,6 +12,10 @@ import { TestDbConfig } from './database/database.config';
 import { CheckoutModule } from 'src/checkout/checkout.module';
 import { CartDb } from 'src/checkout/infrastructure/entity/cart.entity';
 import { CartItemDb } from 'src/checkout/infrastructure/entity/cart-item.entity';
+import { ShipmentDb } from 'src/checkout/infrastructure/entity/shipment.entity';
+import { OrderItemDb } from 'src/checkout/infrastructure/entity/order-item.entity';
+import { PaymentDb } from 'src/checkout/infrastructure/entity/payment.entity';
+import { OrderDb } from 'src/checkout/infrastructure/entity/order.entity';
 
 export const createTestingModule = async () => {
   return await Test.createTestingModule({
@@ -34,6 +38,10 @@ export const createTestingModule = async () => {
         UserDb,
         CategoryDb,
         CartDb,
+        PaymentDb,
+        ShipmentDb,
+        OrderDb,
+        OrderItemDb,
         CartItemDb,
       ]),
       ProductModule,
