@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { faker } from '@faker-js/faker';
 import { CartData } from '../cart';
 import { Cart } from '../cart';
 import { Money } from 'src/shared/types/money';
@@ -25,7 +24,7 @@ export class CartMockService implements ICartMockService {
     const cartData: CartData = {
       id: overrides.id ?? generateUlid(),
       userId: overrides.userId ?? generateUlid(),
-      items: [],
+      items: overrides.items ?? [],
       totalPrice: new Money(100, 'USD', 100),
       createdAt: overrides.createdAt ?? new Date(),
       updatedAt: overrides.updatedAt ?? new Date(),

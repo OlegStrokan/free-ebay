@@ -38,6 +38,10 @@ export class CartItem implements Clonable<CartItem> {
     return this.item.productId;
   }
 
+  get cartId(): string {
+    return this.item.cartId;
+  }
+
   get quantity(): number {
     return this.item.quantity;
   }

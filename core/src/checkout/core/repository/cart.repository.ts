@@ -6,4 +6,5 @@ export interface ICartRepository {
   getCartByUserId(userId: string): Promise<Cart | null>;
   getCartById(id: string): Promise<Cart | null>;
   getOneByIdIdWithRelations(userId: string): Promise<Cart | null>;
+  getCartByUserIdWithRelations(userId: string): Promise<Cart | null>;
 }
