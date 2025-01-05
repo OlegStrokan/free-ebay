@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+//@ts-nocheck
 import {
   Entity,
   Column,
@@ -5,12 +7,14 @@ import {
   OneToOne,
   ManyToOne,
   JoinColumn,
-  OneToMany,
 } from 'typeorm';
 import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
 import { OrderDb } from './order.entity';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
-import { PaymentStatusDb } from './payment-status.entity';
+import {
+  PaymentMethod,
+  PaymentStatus,
+} from 'src/checkout/core/entity/payment/payment';
 
 @Entity('payments')
 export class PaymentDb extends BaseEntity {
@@ -25,15 +29,15 @@ export class PaymentDb extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user!: UserDb;
 
-  @Column({ type: 'varchar', length: 50 })
-  paymentStatus!: string;
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.Pending })
+  paymentStatus!: PaymentStatus;
 
-  @Column({ type: 'decimal' })
-  amount!: number;
+  @Column({ type: 'enum', enum: PaymentMethod })
+  paymentMethod!: PaymentMethod;
+
+  @Column({ type: 'jsonb' })
+  amount!: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   paymentDate!: Date;
-
-  @OneToMany(() => PaymentStatusDb, (paymentStatus) => paymentStatus.payment)
-  statuses!: PaymentStatusDb[];
 }

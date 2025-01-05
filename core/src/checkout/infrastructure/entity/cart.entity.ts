@@ -13,6 +13,9 @@ export class CartDb extends BaseEntity {
   @Column({ type: 'jsonb' })
   totalPrice!: string;
 
-  @OneToMany(() => CartItemDb, (cartItem) => cartItem.cart, { cascade: true })
+  @OneToMany(() => CartItemDb, (cartItem) => cartItem.cart, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   items!: CartItemDb[];
 }

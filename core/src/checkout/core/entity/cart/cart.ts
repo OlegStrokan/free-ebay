@@ -58,11 +58,18 @@ export class Cart implements Clonable<Cart> {
     return clone;
   };
 
-  removeItem = (productId: string) => {
+  removeItem = (cartItemId: string) => {
     const clone = this.clone();
     clone.cart.items = clone.cart.items.filter(
-      (item) => item.productId !== productId,
+      (item) => item.id !== cartItemId,
     );
+    clone.cart.totalPrice = this.calculateTotalPrice(clone.cart.items);
+    return clone;
+  };
+
+  clearCart = () => {
+    const clone = this.clone();
+    clone.cart.items = [];
     clone.cart.totalPrice = this.calculateTotalPrice(clone.cart.items);
     return clone;
   };

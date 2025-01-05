@@ -1,9 +1,9 @@
-import { Order } from '../entity/order';
+import { Order } from '../entity/order/order';
 
 export interface IOrderRepository {
-  createOrder(orderData: Partial<Order>): Promise<Order>;
-  findById(orderId: string): Promise<Order>;
-  cancelOrder(orderId: string): Promise<Order>;
-  cancelOrder(orderId: string): Promise<Order>;
+  save(orderData: Order): Promise<Order>;
+  update(cart: Order): Promise<Order>;
+  findById(orderId: string): Promise<Order | null>;
+  findByIdWithRelations(orderId: string): Promise<Order | null>;
   findAll(): Promise<Order[]>;
 }

@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
 import { OrderDb } from './order.entity';
+import { ShipmentStatus } from 'src/checkout/core/entity/shipment/shipment';
 
 @Entity('shipments')
 export class ShipmentDb extends BaseEntity {
@@ -11,8 +12,12 @@ export class ShipmentDb extends BaseEntity {
   @JoinColumn({ name: 'order_id' })
   order!: OrderDb;
 
-  @Column({ type: 'varchar', length: 50 })
-  shipmentStatus!: string;
+  @Column({
+    type: 'enum',
+    enum: ShipmentStatus,
+    default: ShipmentStatus.Pending,
+  })
+  shipmentStatus!: ShipmentStatus;
 
   @Column({ type: 'varchar', length: 255 })
   trackingNumber!: string;
