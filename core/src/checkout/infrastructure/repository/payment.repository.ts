@@ -1,37 +1,55 @@
-// src/infrastructure/repositories/payment.repository.ts
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PaymentDb } from '../entity/payment.entity';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
-import { Payment } from 'src/checkout/core/entity/payment';
+import { IPaymentMapper } from '../mappers/payment/payment.mapper.inteface';
+import { Payment, PaymentData } from 'src/checkout/core/entity/payment/payment';
+import { IClearableRepository } from 'src/shared/types/clearable';
+import { PAYMENT_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 
 @Injectable()
-export class PaymentRepository implements IPaymentRepository {
+export class PaymentRepository
+  implements IPaymentRepository, IClearableRepository
+{
   constructor(
     @InjectRepository(PaymentDb)
     private readonly paymentRepository: Repository<PaymentDb>,
+    @Inject(PAYMENT_MAPPER)
+    private readonly mapper: IPaymentMapper<PaymentData, Payment, PaymentDb>,
   ) {}
 
-  async createPayment(paymentData: Partial<Payment>): Promise<Payment> {
-    const payment = this.paymentRepository.create(paymentData);
-    return this.paymentRepository.save(payment);
+  async save(payment: Payment): Promise<Payment> {
+    const dbPayment = this.mapper.toDb(payment);
+    const createdPayment = await this.paymentRepository.save(dbPayment);
+    return this.mapper.toDomain(createdPayment);
   }
 
-  async findById(paymentId: string): Promise<Payment> {
-    return this.paymentRepository.findOne(paymentId);
+  async findById(paymentId: string): Promise<Payment | null> {
+    const payment = await this.paymentRepository.findOneBy({
+      id: paymentId,
+    });
+    return payment ? this.mapper.toDomain(payment) : null;
   }
 
-  async updatePaymentStatus(
-    paymentId: string,
-    status: string,
-  ): Promise<Payment> {
-    const payment = await this.findById(paymentId);
-    payment.status = status;
-    return this.paymentRepository.save(payment);
+  async update(payment: Payment): Promise<Payment> {
+    const dbPayment = this.mapper.toDb(payment);
+
+    const updatedPayment = await this.paymentRepository.save(dbPayment);
+
+    return this.mapper.toDomain(updatedPayment);
   }
 
   async findPaymentsByOrderId(orderId: string): Promise<Payment[]> {
-    return this.paymentRepository.find({ where: { orderId } });
+    const payment = await this.paymentRepository.find({
+      where: { order: { id: orderId } },
+      relations: ['order'],
+    });
+
+    return payment.map((payment) => this.mapper.toDomain(payment));
+  }
+
+  async clear(): Promise<void> {
+    await this.paymentRepository.query(`DELETE FROM "payments"`);
   }
 }
