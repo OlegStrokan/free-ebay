@@ -6,10 +6,10 @@ import { CLEAR_CART_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token
 import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { generateUlid } from 'src/shared/types/generate-ulid';
-import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/cart-item-mock.interface';
-import { CartItemMockService } from 'src/checkout/core/entity/cart-item/cart-item-mock.service';
 import { Money } from 'src/shared/types/money';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
+import { CartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.service';
+import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
 
 describe('ClearCartUseCaseTest', () => {
   let clearCartUseCase: IClearCartUseCase;

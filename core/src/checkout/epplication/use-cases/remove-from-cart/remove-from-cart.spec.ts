@@ -4,13 +4,13 @@ import { clearRepos } from 'src/shared/testing/clear-repos';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
 import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
-import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/cart-item-mock.interface';
-import { CartItemMockService } from 'src/checkout/core/entity/cart-item/cart-item-mock.service';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { IRemoveFromCartUseCase } from './remove-from-cart.interface';
 import { REMOVE_FROM_CART_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
 import { Money } from 'src/shared/types/money';
 import { CartItemNotFoundException } from 'src/checkout/core/exceptions/cart/cart-item-not-found';
+import { CartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.service';
+import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
 
 describe('CreateCartUseCase', () => {
   let removeFromCartUseCase: IRemoveFromCartUseCase;

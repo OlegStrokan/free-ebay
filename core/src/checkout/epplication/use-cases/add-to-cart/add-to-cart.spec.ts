@@ -6,10 +6,12 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
 import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
 import { IAddToCartUseCase } from './add-to-cart.interface';
-import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/cart-item-mock.interface';
-import { CartItemMockService } from 'src/checkout/core/entity/cart-item/cart-item-mock.service';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
+import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
+import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
+import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
+import { CartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.service';
 
 describe('CreateCartUseCase', () => {
   let addToCartUseCase: IAddToCartUseCase;
@@ -33,7 +35,7 @@ describe('CreateCartUseCase', () => {
     await module.close();
   });
 
-  it('should successfully add item to cart and verify it existence', async () => {
+  it('should successfully add item to cart and recalculate total price', async () => {
     const userId = generateUlid();
     const cartId = generateUlid();
     const product = await productMockService.createOne();
@@ -51,23 +53,26 @@ describe('CreateCartUseCase', () => {
     expect(cartWithItem.items[0].quantity).toBe(1);
     expect(cartWithItem.items[0].price).toStrictEqual(product.price);
     expect(cartWithItem.totalPrice).toStrictEqual(product.price);
-  }, 10000000);
+  });
 
-  // it('should throw exception because cart already exist', async () => {
-  //   const userId = generateUlid();
-  //   await userMockService.createOne({ id: userId });
-  //   await cartMockService.createOne({ userId });
+  it('should throw exception because cart not found', async () => {
+    const cartItem = cartItemMockService.getOneToCreate();
+    await expect(addToCartUseCase.execute(cartItem)).rejects.toThrow(
+      CartNotFoundException,
+    );
+  });
 
-  //   await expect(addToCartUseCase.execute({ userId })).rejects.toThrow(
-  //     CartAlreadyExists,
-  //   );
-  // });
+  it("should throw exception because product doesn't exist", async () => {
+    const userId = generateUlid();
+    const cartId = generateUlid();
 
-  // it("should throw exception because user doesn't exist", async () => {
-  //   const userId = generateUlid();
+    await cartMockService.createOne({ id: cartId, userId, items: [] });
+    const cartItem = cartItemMockService.getOneToCreate({
+      cartId: cartId,
+    });
 
-  //   await expect(addToCartUseCase.execute({ userId })).rejects.toThrow(
-  //     UserNotFoundException,
-  //   );
-  // });
+    await expect(addToCartUseCase.execute(cartItem)).rejects.toThrow(
+      ProductNotFoundException,
+    );
+  });
 });
