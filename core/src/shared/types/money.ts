@@ -19,8 +19,8 @@ export class Money {
     this.fraction = fraction;
   }
 
-  static getDefaultMoney(): Money {
-    return new Money(0, 'USD', 100);
+  static getDefaultMoney(amount = 0): Money {
+    return new Money(amount, 'USD', 100);
   }
 
   static zero(currency: Currency = CZK_CURRENCY, fraction = 100): Money {

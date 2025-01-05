@@ -31,13 +31,20 @@ import {
   CREATE_CART_USE_CASE_TOKEN,
   GET_ORDER_DETAILS_USE_CASE_TOKEN,
   PROCEED_PAYMENT_USE_CASE_TOKEN,
+  REMOVE_FROM_CART_USE_CASE_TOKEN,
 } from '../epplication/injection-tokens/use-case.token';
+import { AddToCartDto } from './dtos/add-to-cart.dto';
+import { RemoveFromCartDto } from './dtos/remove-from-cart.dto';
+import { CreateCartDto } from './dtos/create-cart.dto';
+import { IRemoveFromCartUseCase } from '../epplication/use-cases/remove-from-cart/remove-from-cart.interface';
 
 @Controller('checkout')
 export class CheckoutController {
   constructor(
     @Inject(ADD_TO_CART_USE_CASE_TOKEN)
     private addToCartUseCase: IAddToCartUseCase,
+    @Inject(REMOVE_FROM_CART_USE_CASE_TOKEN)
+    private removeFromCartUseCase: IRemoveFromCartUseCase,
     @Inject(RETRIEVE_CART_USE_CASE_TOKEN)
     private retrieveCartUseCase: IRetrieveCartUseCase,
     @Inject(CLEAR_CART_USE_CASE_TOKEN)
@@ -61,23 +68,28 @@ export class CheckoutController {
   ) {}
 
   @Post('cart')
-  addToCart(@Body() dto: any) {
+  addToCart(@Body() dto: AddToCartDto) {
     return this.addToCartUseCase.execute(dto);
   }
 
+  @Patch('cart')
+  removeFromCart(@Body() dto: RemoveFromCartDto) {
+    return this.removeFromCartUseCase.execute(dto);
+  }
+
   @Post('cart/create')
-  createCart(@Body() dto: any) {
+  createCart(@Body() dto: CreateCartDto) {
     return this.createCartUseCase.execute(dto);
   }
 
   @Get('cart')
-  getCart() {
-    return this.retrieveCartUseCase.execute(null);
+  getCart(@Param('userId') userId: string) {
+    return this.retrieveCartUseCase.execute(userId);
   }
 
   @Delete('cart')
-  clearCart() {
-    return this.clearCartUseCase.execute(null);
+  clearCart(@Param('userId') userId: string) {
+    return this.clearCartUseCase.execute(userId);
   }
 
   @Post('order')
