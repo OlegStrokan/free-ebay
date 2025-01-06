@@ -1,0 +1,114 @@
+import { TestingModule } from '@nestjs/testing';
+import { createTestingModule } from 'src/shared/testing/test.module';
+import { CREATE_ORDER_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
+import { clearRepos } from 'src/shared/testing/clear-repos';
+import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
+import { OrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.service';
+import { ICreateOrderUseCase } from './create-order.interface';
+import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
+import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
+import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
+import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/cart-items-not-found.exception';
+import { PaymentMethod } from 'src/checkout/core/entity/payment/payment';
+import { generateUlid } from 'src/shared/types/generate-ulid';
+import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
+import { CART_REPOSITORY } from '../../injection-tokens/repository.token';
+import { Money } from 'src/shared/types/money';
+import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
+import { CartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.service';
+
+describe('CreateOrderUseCase', () => {
+  let createOrderUseCase: ICreateOrderUseCase;
+  let orderMockService: IOrderMockService;
+  let cartMockService: ICartMockService;
+  let cartItemMockService: ICartItemMockService;
+  let cartRepository: ICartRepository;
+  let module: TestingModule;
+
+  beforeAll(async () => {
+    module = await createTestingModule();
+
+    createOrderUseCase = module.get(CREATE_ORDER_USE_CASE_TOKEN);
+    orderMockService = module.get(OrderMockService);
+    cartItemMockService = module.get(CartItemMockService);
+    cartMockService = module.get(CartMockService);
+    cartRepository = module.get(CART_REPOSITORY);
+
+    await clearRepos(module);
+  });
+
+  afterAll(async () => {
+    await module.close();
+  });
+
+  it('should successfully create an order from a cart', async () => {
+    const cartId = generateUlid();
+    const cartItemId = generateUlid();
+    const userId = generateUlid();
+
+    const price = Money.getDefaultMoney(100);
+    const cartItem = cartItemMockService.getOne({
+      cartId,
+      id: cartItemId,
+      quantity: 1,
+      price,
+    });
+    const cart = await cartMockService.createOne({
+      id: cartId,
+      userId,
+      items: [cartItem.data],
+    });
+    const dto = orderMockService.getOneToCreate({
+      cartId: cart.id,
+      shippingAddress: '123 Test St',
+      paymentMethod: PaymentMethod.CashOnDelivery,
+    });
+
+    const order = await createOrderUseCase.execute(dto);
+
+    const clearedCart = await cartRepository.getOneByIdIdWithRelations(cart.id);
+
+    expect(clearedCart?.items.length).toBe(0);
+    expect(clearedCart?.totalPrice).toEqual(Money.getDefaultMoney(0));
+    expect(order).toBeDefined();
+    expect(order.items.length).toBeGreaterThan(0);
+    // expect(order.data.shipment).toBeDefined();
+    // expect(order.data.payment).toBeDefined();
+  });
+
+  it('should throw CartNotFoundException if cart does not exist', async () => {
+    const cartId = generateUlid();
+
+    const dto = orderMockService.getOneToCreate({
+      cartId: cartId,
+    });
+
+    await expect(createOrderUseCase.execute(dto)).rejects.toThrow(
+      CartNotFoundException,
+    );
+  });
+
+  it('should throw CartItemsNotFoundException if cart is empty', async () => {
+    const cart = await cartMockService.createOne({ items: [] });
+    const dto = orderMockService.getOneToCreate({
+      cartId: cart.id,
+    });
+
+    await expect(createOrderUseCase.execute(dto)).rejects.toThrow(
+      CartItemsNotFoundException,
+    );
+  });
+
+  //   it('should throw PaymentFailedException if payment fails', async () => {
+  //     const cart = await cartMockService.createOne();
+  //     const dto: CreateOrderDto = {
+  //       cartId: cart.id,
+  //       shippingAddress: '123 Test St',
+  //       paymentMethod: PaymentMethod.CreditCard,
+  //     };
+
+  //     await expect(createOrderUseCase.execute(dto)).rejects.toThrow(
+  //       PaymentFailedException,
+  //     );
+  //   });
+});

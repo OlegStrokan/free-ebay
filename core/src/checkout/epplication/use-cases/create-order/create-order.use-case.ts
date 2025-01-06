@@ -22,6 +22,8 @@ import {
 import { Money } from 'src/shared/types/money';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
+import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
+import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/cart-items-not-found.exception';
 
 @Injectable()
 export class CreateOrderUseCase implements ICreateOrderUseCase {
@@ -43,6 +45,11 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     if (!cart) {
       throw new CartNotFoundException('id', dto.cartId);
     }
+
+    if (cart.items.length === 0) {
+      throw new CartItemsNotFoundException(cart.id);
+    }
+
     const order = this.createOrderFromCart(cart);
 
     const shipment = await this.createShipment(dto.shippingAddress);
@@ -52,11 +59,18 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
       order.totalPrice,
     );
 
-    order.data.shipment = shipment;
-    order.data.payment = payment;
+    if (dto.paymentMethod !== PaymentMethod.CashOnDelivery) {
+      const paymentResult = await this.initiatePayment(order, dto, true);
+      if (!paymentResult.success) {
+        throw new PaymentFailedException(order.id);
+      }
+    }
+
+    order.data.shipment = shipment.data;
+    order.data.payment = payment.data;
 
     const emptyCart = cart.clearCart();
-    const savedOrder = await this.orderRepository.createOrder(order);
+    const savedOrder = await this.orderRepository.save(order);
     await this.cartRepository.updateCart(emptyCart);
 
     return savedOrder;
@@ -85,7 +99,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
 
   private async createShipment(orderId: string): Promise<Shipment> {
     const shipment = Shipment.create(orderId);
-    await this.shipmentRepository.create(shipment);
+    await this.shipmentRepository.save(shipment);
     return shipment;
   }
 
@@ -95,7 +109,23 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     amount: Money,
   ): Promise<Payment> {
     const payment = Payment.create({ amount, paymentMethod, orderId });
-    await this.paymentRepository.create(payment);
+    await this.paymentRepository.save(payment);
     return payment;
+  }
+
+  private initiatePayment(
+    order: Order,
+    dto: CreateOrderDto,
+    simulateSuccess: boolean,
+  ): Promise<{ success: boolean }> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (simulateSuccess) {
+          resolve({ success: true });
+        } else {
+          reject(new Error('Payment simulation failed.'));
+        }
+      }, 1000);
+    });
   }
 }
