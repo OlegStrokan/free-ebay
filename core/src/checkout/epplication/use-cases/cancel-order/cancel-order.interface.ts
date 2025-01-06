@@ -1,3 +1,4 @@
+import { Order } from 'src/checkout/core/entity/order/order';
 import { IUseCase } from 'src/shared/types/use-case.interface';
 
-export type ICancelOrderUseCase = IUseCase<string, void>;
+export type ICancelOrderUseCase = IUseCase<string, Order>;
