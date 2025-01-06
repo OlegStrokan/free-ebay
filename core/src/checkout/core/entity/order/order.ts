@@ -52,7 +52,7 @@ export class Order implements Clonable<Order> {
     return this.order.userId;
   }
 
-  get status(): string {
+  get status(): OrderStatus {
     return this.order.status;
   }
 
