@@ -9,7 +9,7 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
 import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
-import { CartAlreadyExists } from 'src/checkout/core/exceptions/cart/cart-already-exist';
+import { CartAlreadyExists } from 'src/checkout/core/exceptions/cart/cart-already-exist.exception';
 
 describe('CreateCartUseCase', () => {
   let createCartUseCase: ICreateCartUseCase;

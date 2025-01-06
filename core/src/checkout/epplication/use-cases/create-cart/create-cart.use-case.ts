@@ -4,12 +4,12 @@ import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 import { CART_REPOSITORY } from '../../injection-tokens/repository.token';
 import { Cart } from 'src/checkout/core/entity/cart/cart';
 import { CreateCartDto } from 'src/checkout/interface/dtos/create-cart.dto';
-import { CartAlreadyExists } from 'src/checkout/core/exceptions/cart/cart-already-exist';
 import {
   IUserRepository,
   USER_REPOSITORY,
 } from 'src/user/core/repository/user.repository';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
+import { CartAlreadyExists } from 'src/checkout/core/exceptions/cart/cart-already-exist.exception';
 
 @Injectable()
 export class CreateCartUseCase implements ICreateCartUseCase {

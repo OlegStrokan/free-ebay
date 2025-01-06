@@ -43,6 +43,7 @@ describe('CreateCartUseCase', () => {
     const cartItem = cartItemMockService.getOneToCreate({
       cartId: cartId,
       productId: product.id,
+      quantity: 1,
     });
 
     const cartWithItem = await addToCartUseCase.execute(cartItem);
