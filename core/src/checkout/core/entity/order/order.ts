@@ -2,10 +2,11 @@ import { Clonable } from 'src/shared/types/clonable';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { Money } from 'src/shared/types/money';
 import { OrderItemData } from '../order-item/order-item';
-import { Shipment, ShipmentData } from '../shipment/shipment';
-import { Payment, PaymentData } from '../payment/payment';
+import { ShipmentData } from '../shipment/shipment';
+import { PaymentData } from '../payment/payment';
 
 export enum OrderStatus {
+  Pending = 'Pending',
   Shipped = 'Shipped',
   Cancelled = 'Cancelled',
 }
@@ -33,7 +34,7 @@ export class Order implements Clonable<Order> {
   ) =>
     new Order({
       ...orderData,
-      status: OrderStatus.Shipped,
+      status: OrderStatus.Cancelled,
       id: generateUlid(),
       items: [],
       createdAt: new Date(),
@@ -70,7 +71,6 @@ export class Order implements Clonable<Order> {
   get payment(): PaymentData | undefined {
     return this.order.payment;
   }
-
   markAsShipped = () => {
     const clone = this.clone();
     clone.order.status = OrderStatus.Shipped;

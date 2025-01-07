@@ -6,4 +6,5 @@ export interface IOrderRepository {
   findById(orderId: string): Promise<Order | null>;
   findByIdWithRelations(orderId: string): Promise<Order | null>;
   findAll(): Promise<Order[]>;
+  findAllByUserId(userId: string): Promise<Order[]>;
 }

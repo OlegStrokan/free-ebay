@@ -8,10 +8,12 @@ import { Money } from 'src/shared/types/money';
 import { OrderItemDb } from '../../entity/order-item.entity';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ORDER_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
+import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 
-const validateOrderDataStructure = (orderData: OrderData | undefined) => {
+export const validateOrderDataStructure = (
+  orderData: OrderData | undefined,
+) => {
   if (!orderData) throw new Error('Order not found test error');
-
   expect(orderData).toEqual({
     id: expect.any(String),
     userId: expect.any(String),
@@ -58,14 +60,14 @@ describe('OrderMapperTest', () => {
 
   it('should successfully transform domain order to client (dto) order', async () => {
     const domainOrder = new Order({
-      id: 'order123',
-      userId: 'user123',
+      id: generateUlid(),
+      userId: generateUlid(),
       status: OrderStatus.Shipped,
       items: [
         {
           id: generateUlid(),
           productId: generateUlid(),
-          orderId: 'order123',
+          orderId: generateUlid(),
           quantity: 2,
           priceAtPurchase: new Money(200, 'USD', 100),
           createdAt: new Date(),
@@ -83,13 +85,14 @@ describe('OrderMapperTest', () => {
 
   it('should successfully map database order to domain order', async () => {
     const orderDb = new OrderDb();
-    orderDb.id = 'order123';
+    orderDb.id = generateUlid();
     orderDb.status = OrderStatus.Shipped;
+    orderDb.user = { id: generateUlid() } as UserDb;
     orderDb.items = [
       {
         id: generateUlid(),
         productId: generateUlid(),
-        orderId: 'order123',
+        orderId: generateUlid(),
         createdAt: new Date(),
         updatedAt: new Date(),
         quantity: 2,

@@ -6,6 +6,7 @@ import { Order, OrderData } from 'src/checkout/core/entity/order/order';
 import { OrderDb } from '../../entity/order.entity';
 import { OrderItemDb } from '../../entity/order-item.entity';
 import { IOrderMapper } from './order.mapper.interface';
+import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 
 export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
   constructor(
@@ -17,19 +18,20 @@ export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
     const orderData: OrderData = {
       id: orderDB.id,
       status: orderDB.status,
-      // TODO use: orderDB.user.id, but add users relation to findOne()
-      userId: 'just_temporary_user-id',
-      items: orderDB.items?.map((orderItem) => ({
-        id: orderItem.id,
-        productId: orderItem.productId,
-        orderId: orderItem.orderId,
-        quantity: orderItem.quantity,
-        createdAt: orderItem.createdAt,
-        updatedAt: orderItem.updatedAt,
-        priceAtPurchase:
-          this.moneyMapper.toDomain(orderItem.priceAtPurchase) ??
-          Money.getDefaultMoney(),
-      })),
+      userId: orderDB.user?.id ?? null,
+      items: orderDB?.items
+        ? orderDB.items.map((orderItem) => ({
+            id: orderItem.id,
+            productId: orderItem.productId,
+            orderId: orderItem.orderId,
+            quantity: orderItem.quantity,
+            createdAt: orderItem.createdAt,
+            updatedAt: orderItem.updatedAt,
+            priceAtPurchase:
+              this.moneyMapper.toDomain(orderItem.priceAtPurchase) ??
+              Money.getDefaultMoney(),
+          }))
+        : [],
       totalPrice:
         this.moneyMapper.toDomain(orderDB.totalPrice) ??
         Money.getDefaultMoney(),
@@ -43,7 +45,8 @@ export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
   toDb(order: Order): OrderDb {
     const orderDb = new OrderDb();
     orderDb.id = order.id;
-    // orderDb.user = new UserDb()
+    orderDb.status = order.status;
+    orderDb.user = { id: order.userId } as UserDb;
     orderDb.items = order.items.map((item) => {
       const orderItem = new OrderItemDb();
       orderItem.id = item.id;
