@@ -5,6 +5,7 @@ import { MoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapp
 import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
 import { IPaymentMapper } from './payment.mapper.inteface';
 import { Money } from 'src/shared/types/money';
+import { generateUlid } from 'src/shared/types/generate-ulid';
 
 export class PaymentMapper
   implements IPaymentMapper<PaymentData, Payment, PaymentDb>
@@ -17,7 +18,8 @@ export class PaymentMapper
   toDomain(paymentDb: PaymentDb): Payment {
     const paymentData: PaymentData = {
       id: paymentDb.id,
-      orderId: paymentDb.order.id, // Assuming order is loaded
+      // TODO fix it
+      orderId: paymentDb?.order?.id ?? generateUlid(),
       amount:
         this.moneyMapper.toDomain(paymentDb.amount) ?? Money.getDefaultMoney(),
       paymentMethod: paymentDb.paymentMethod,
