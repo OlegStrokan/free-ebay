@@ -1,34 +1,69 @@
-// src/infrastructure/repositories/order.repository.ts
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderDb } from '../entity/order.entity';
-import { Order } from 'src/checkout/core/entity/order';
 import { IOrderRepository } from 'src/checkout/core/repository/order.repository';
+import { Order, OrderData } from 'src/checkout/core/entity/order/order';
+import { IOrderMapper } from '../mappers/order/order.mapper.interface';
+import { ORDER_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
+import { OrderItemDb } from '../entity/order-item.entity';
+import { IClearableRepository } from 'src/shared/types/clearable';
 
 @Injectable()
-export class OrderRepository implements IOrderRepository {
+export class OrderRepository implements IOrderRepository, IClearableRepository {
   constructor(
     @InjectRepository(OrderDb)
     private readonly orderRepository: Repository<OrderDb>,
+    @InjectRepository(OrderDb)
+    private readonly orderItemRepository: Repository<OrderItemDb>,
+    @Inject(ORDER_MAPPER)
+    private readonly mapper: IOrderMapper<OrderData, Order, OrderDb>,
   ) {}
 
-  async createOrder(orderData: Partial<Order>): Promise<Order> {
-    const order = this.orderRepository.create(orderData);
-    return this.orderRepository.save(order);
+  async save(orderData: Order): Promise<Order> {
+    const order = this.mapper.toDb(orderData);
+    const savedOrder = await this.orderRepository.save(order);
+    return this.mapper.toDomain(savedOrder);
   }
 
-  async findById(orderId: string): Promise<Order> {
-    return this.orderRepository.findOne(orderId);
+  async update(cart: Order): Promise<Order> {
+    const dbOrder = this.mapper.toDb(cart);
+
+    if (dbOrder.items.length === 0) {
+      await this.orderItemRepository.delete({ order: dbOrder });
+    }
+
+    const savedCart = await this.orderRepository.save(dbOrder);
+    return this.mapper.toDomain(savedCart);
   }
 
-  async cancelOrder(orderId: string): Promise<Order> {
-    const order = await this.findById(orderId);
-    order.status = 'Cancelled'; // Business logic: changing status to 'Cancelled'
-    return this.orderRepository.save(order);
+  async findById(orderId: string): Promise<Order | null> {
+    const order = await this.orderRepository.findOneBy({ id: orderId });
+    return order ? this.mapper.toDomain(order) : null;
+  }
+
+  async findAllByUserId(userId: string): Promise<Order[]> {
+    const orders = await this.orderRepository.find({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+    return orders.map((order) => this.mapper.toDomain(order));
+  }
+
+  async findByIdWithRelations(orderId: string): Promise<Order | null> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['items', 'user'],
+    });
+    return order ? this.mapper.toDomain(order) : null;
   }
 
   async findAll(): Promise<Order[]> {
-    return this.orderRepository.find();
+    const orders = await this.orderRepository.find();
+    return orders.map((order) => this.mapper.toDomain(order));
+  }
+
+  async clear(): Promise<void> {
+    await this.orderItemRepository.query(`DELETE FROM "orders"`);
   }
 }

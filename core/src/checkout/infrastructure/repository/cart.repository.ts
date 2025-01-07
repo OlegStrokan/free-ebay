@@ -7,12 +7,15 @@ import { ICartMapper } from '../mappers/cart/cart.mapper.interface';
 import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 import { CART_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { IClearableRepository } from 'src/shared/types/clearable';
+import { CartItemDb } from '../entity/cart-item.entity';
 
 @Injectable()
 export class CartRepository implements ICartRepository, IClearableRepository {
   constructor(
     @InjectRepository(CartDb)
     private readonly cartRepository: Repository<CartDb>,
+    @InjectRepository(CartItemDb)
+    private readonly cartItemRepository: Repository<CartItemDb>,
     @Inject(CART_MAPPER)
     private readonly mapper: ICartMapper<CartData, Cart, CartDb>,
   ) {}
@@ -28,11 +31,24 @@ export class CartRepository implements ICartRepository, IClearableRepository {
   }
   async updateCart(cart: Cart): Promise<Cart> {
     const dbCart = this.mapper.toDb(cart);
+
+    if (dbCart.items.length === 0) {
+      await this.cartItemRepository.delete({ cart: dbCart });
+    }
+
     const savedCart = await this.cartRepository.save(dbCart);
     return this.mapper.toDomain(savedCart);
   }
   async getCartByUserId(userId: string): Promise<Cart | null> {
     const cart = await this.cartRepository.findOneBy({ userId });
+    return cart ? this.mapper.toDomain(cart) : null;
+  }
+
+  async getCartByUserIdWithRelations(userId: string): Promise<Cart | null> {
+    const cart = await this.cartRepository.findOne({
+      where: { userId },
+      relations: ['items'],
+    });
     return cart ? this.mapper.toDomain(cart) : null;
   }
 
