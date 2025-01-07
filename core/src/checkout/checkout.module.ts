@@ -24,8 +24,8 @@ import {
   RETRIEVE_CART_USE_CASE_TOKEN,
   CLEAR_CART_USE_CASE_TOKEN,
   CREATE_ORDER_USE_CASE_TOKEN,
-  GET_ORDER_DETAILS_USE_CASE_TOKEN,
-  GET_ALL_ORDERS_USE_CASE_TOKEN,
+  GET_ORDER_DETAIL_USE_CASE_TOKEN,
+  GET_ALL_USER_ORDERS_USE_CASE_TOKEN,
   CANCEL_ORDER_USE_CASE_TOKEN,
   SHIP_ORDER_USE_CASE_TOKEN,
   PROCEED_PAYMENT_USE_CASE_TOKEN,
@@ -37,7 +37,7 @@ import { CancelOrderUseCase } from './epplication/use-cases/cancel-order/cancel-
 import { CheckPaymentStatusUseCase } from './epplication/use-cases/check-payment-status/check-payment-status.use-case';
 import { ClearCartUseCase } from './epplication/use-cases/clear-cart/clear-cart.use-case';
 import { CreateOrderUseCase } from './epplication/use-cases/create-order/create-order.use-case';
-import { GetAllOrdersUseCase } from './epplication/use-cases/get-all-orders/get-all-orders.use-case';
+import { GetAllUserOrdersUseCase } from './epplication/use-cases/get-all-user-orders/get-all-user-orders.use-case';
 import { GetOrderDetailsUseCase } from './epplication/use-cases/get-order-detail/get-order-detail.use-case';
 import { ProceedPaymentUseCase } from './epplication/use-cases/process-payment/process-payment.use-case';
 import { RetrieveCartUseCase } from './epplication/use-cases/retrieve-cart/retrieve-cart.use-case';
@@ -113,12 +113,12 @@ import { OrderItemMockService } from './core/entity/order-item/mocks/order-item-
       useClass: CreateOrderUseCase,
     },
     {
-      provide: GET_ORDER_DETAILS_USE_CASE_TOKEN,
+      provide: GET_ORDER_DETAIL_USE_CASE_TOKEN,
       useClass: GetOrderDetailsUseCase,
     },
     {
-      provide: GET_ALL_ORDERS_USE_CASE_TOKEN,
-      useClass: GetAllOrdersUseCase,
+      provide: GET_ALL_USER_ORDERS_USE_CASE_TOKEN,
+      useClass: GetAllUserOrdersUseCase,
     },
     {
       provide: CANCEL_ORDER_USE_CASE_TOKEN,
