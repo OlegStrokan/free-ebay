@@ -1,4 +1,4 @@
-import { Order } from 'src/checkout/core/entity/order';
+import { Order } from 'src/checkout/core/entity/order/order';
 import { IUseCase } from 'src/shared/types/use-case.interface';
 
 export type IGetOrderDetailsUseCase = IUseCase<string, Order>;
