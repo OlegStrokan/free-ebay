@@ -23,4 +23,9 @@ export class OrderItemMockService implements IOrderItemMockService {
 
     return new OrderItem(orderItemData);
   }
+  getMany(count = 2, overrides: Partial<OrderItemData>[] = []): OrderItem[] {
+    return Array.from({ length: count }).map((_, index) =>
+      this.getOne(overrides[index] as Partial<OrderItemData>),
+    );
+  }
 }

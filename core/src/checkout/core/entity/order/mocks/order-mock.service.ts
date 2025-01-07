@@ -10,12 +10,21 @@ import { ORDER_REPOSITORY } from 'src/checkout/epplication/injection-tokens/repo
 import { OrderData } from '../order';
 import { CreateOrderDto } from 'src/checkout/interface/dtos/create-order.dto';
 import { PaymentMethod } from '../../payment/payment';
+import { UserData } from 'src/user/core/entity/user';
+import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
+import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
+import { OrderItemMockService } from '../../order-item/mocks/order-item-mock.service';
+import { IOrderItemMockService } from '../../order-item/mocks/order-item-mock.interface';
 
 @Injectable()
 export class OrderMockService implements IOrderMockService {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: IOrderRepository,
+    @Inject(UserMockService)
+    private readonly userMockService: IUserMockService,
+    @Inject(OrderItemMockService)
+    private readonly orderItemMockService: IOrderItemMockService,
   ) {}
 
   getOneToCreate(overrides: Partial<CreateOrderDto> = {}): CreateOrderDto {
@@ -46,6 +55,20 @@ export class OrderMockService implements IOrderMockService {
 
   async createOne(overrides: Partial<OrderData> = {}): Promise<Order> {
     const order = this.getOne(overrides);
+    return await this.orderRepository.save(order);
+  }
+
+  async createOneWithDependencies(
+    orderOverrides: Partial<OrderData> = {},
+    userOverrides: Partial<UserData> = {},
+    orderItemsCount = 1,
+  ): Promise<Order> {
+    await this.userMockService.createOne(userOverrides);
+    const items = this.orderItemMockService.getMany(orderItemsCount);
+    const order = this.getOne({
+      ...orderOverrides,
+      items: items.map((item) => item.data),
+    });
     return await this.orderRepository.save(order);
   }
 }
