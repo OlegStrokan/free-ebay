@@ -15,6 +15,7 @@ import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { OrderItemMockService } from '../../order-item/mocks/order-item-mock.service';
 import { IOrderItemMockService } from '../../order-item/mocks/order-item-mock.interface';
+import { OrderItemData } from '../../order-item/order-item';
 
 @Injectable()
 export class OrderMockService implements IOrderMockService {
@@ -61,14 +62,23 @@ export class OrderMockService implements IOrderMockService {
   async createOneWithDependencies(
     orderOverrides: Partial<OrderData> = {},
     userOverrides: Partial<UserData> = {},
+    orderItemOverrides: Partial<OrderItemData>[] = [],
     orderItemsCount = 1,
   ): Promise<Order> {
     await this.userMockService.createOne(userOverrides);
-    const items = this.orderItemMockService.getMany(orderItemsCount);
     const order = this.getOne({
       ...orderOverrides,
-      items: items.map((item) => item.data),
     });
+
+    const items = this.orderItemMockService
+      .getMany(orderItemsCount, orderItemOverrides)
+      .map((item) => {
+        item.data.id = order.id;
+        return item.data;
+      });
+
+    order.data.items = items;
+
     return await this.orderRepository.save(order);
   }
 }

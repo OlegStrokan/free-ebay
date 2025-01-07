@@ -13,7 +13,7 @@ import { ICancelOrderUseCase } from '../epplication/use-cases/cancel-order/cance
 import { ICheckPaymentStatusUseCase } from '../epplication/use-cases/check-payment-status/check-payment-status.interface';
 import { IClearCartUseCase } from '../epplication/use-cases/clear-cart/clear-cart.interface';
 import { ICreateOrderUseCase } from '../epplication/use-cases/create-order/create-order.interface';
-import { IGetAllOrdersUseCase } from '../epplication/use-cases/get-all-orders/get-all-orders.interface';
+import { IGetAllUserOrdersUseCase } from '../epplication/use-cases/get-all-user-orders/get-all-user-orders.interface';
 import { IGetOrderDetailsUseCase } from '../epplication/use-cases/get-order-detail/get-order-detail.interface';
 import { IProceedPaymentUseCase } from '../epplication/use-cases/process-payment/process-payment.interface';
 import { IRetrieveCartUseCase } from '../epplication/use-cases/retrieve-cart/retrieve-cart.interface';
@@ -25,11 +25,11 @@ import {
   CHECK_PAYMENT_STATUS_USE_CASE_TOKEN,
   CLEAR_CART_USE_CASE_TOKEN,
   CREATE_ORDER_USE_CASE_TOKEN,
-  GET_ALL_ORDERS_USE_CASE_TOKEN,
+  GET_ALL_USER_ORDERS_USE_CASE_TOKEN,
   RETRIEVE_CART_USE_CASE_TOKEN,
   SHIP_ORDER_USE_CASE_TOKEN,
   CREATE_CART_USE_CASE_TOKEN,
-  GET_ORDER_DETAILS_USE_CASE_TOKEN,
+  GET_ORDER_DETAIL_USE_CASE_TOKEN,
   PROCEED_PAYMENT_USE_CASE_TOKEN,
   REMOVE_FROM_CART_USE_CASE_TOKEN,
 } from '../epplication/injection-tokens/use-case.token';
@@ -51,10 +51,10 @@ export class CheckoutController {
     private clearCartUseCase: IClearCartUseCase,
     @Inject(CREATE_ORDER_USE_CASE_TOKEN)
     private createOrderUseCase: ICreateOrderUseCase,
-    @Inject(GET_ORDER_DETAILS_USE_CASE_TOKEN)
+    @Inject(GET_ORDER_DETAIL_USE_CASE_TOKEN)
     private getOrderDetailsUseCase: IGetOrderDetailsUseCase,
-    @Inject(GET_ALL_ORDERS_USE_CASE_TOKEN)
-    private getAllOrdersUseCase: IGetAllOrdersUseCase,
+    @Inject(GET_ALL_USER_ORDERS_USE_CASE_TOKEN)
+    private getAllOrdersUseCase: IGetAllUserOrdersUseCase,
     @Inject(CANCEL_ORDER_USE_CASE_TOKEN)
     private cancelOrderUseCase: ICancelOrderUseCase,
     @Inject(SHIP_ORDER_USE_CASE_TOKEN)
@@ -103,8 +103,8 @@ export class CheckoutController {
   }
 
   @Get('orders')
-  getAllOrders() {
-    return this.getAllOrdersUseCase.execute(null);
+  getAllOrders(@Param('id') id: string) {
+    return this.getAllOrdersUseCase.execute(id);
   }
 
   @Patch('order/:id/cancel')

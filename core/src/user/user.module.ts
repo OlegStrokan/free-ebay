@@ -49,6 +49,7 @@ import { DeleteUserUseCase } from './epplication/use-cases/delete-user/delete-us
     CreateUserUseCase,
     UpdateUserUseCase,
     UserMapper,
+    UserMockService,
     USER_REPOSITORY,
     USER_MAPPER,
   ],
