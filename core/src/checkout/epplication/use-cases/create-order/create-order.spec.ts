@@ -16,11 +16,14 @@ import { CART_REPOSITORY } from '../../injection-tokens/repository.token';
 import { Money } from 'src/shared/types/money';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
 import { CartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.service';
+import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
+import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 
 describe('CreateOrderUseCase', () => {
   let createOrderUseCase: ICreateOrderUseCase;
   let orderMockService: IOrderMockService;
   let cartMockService: ICartMockService;
+  let userMockService: IUserMockService;
   let cartItemMockService: ICartItemMockService;
   let cartRepository: ICartRepository;
   let module: TestingModule;
@@ -30,6 +33,7 @@ describe('CreateOrderUseCase', () => {
 
     createOrderUseCase = module.get(CREATE_ORDER_USE_CASE_TOKEN);
     orderMockService = module.get(OrderMockService);
+    userMockService = module.get(UserMockService);
     cartItemMockService = module.get(CartItemMockService);
     cartMockService = module.get(CartMockService);
     cartRepository = module.get(CART_REPOSITORY);
@@ -64,6 +68,8 @@ describe('CreateOrderUseCase', () => {
       paymentMethod: PaymentMethod.CashOnDelivery,
     });
 
+    await userMockService.createOne({ id: userId });
+
     const order = await createOrderUseCase.execute(dto);
 
     const clearedCart = await cartRepository.getOneByIdIdWithRelations(cart.id);
@@ -83,12 +89,18 @@ describe('CreateOrderUseCase', () => {
       cartId: cartId,
     });
 
+    const userId = generateUlid();
+    await userMockService.createOne({ id: userId });
+
     await expect(createOrderUseCase.execute(dto)).rejects.toThrow(
       CartNotFoundException,
     );
   });
 
   it('should throw CartItemsNotFoundException if cart is empty', async () => {
+    const userId = generateUlid();
+    await userMockService.createOne({ id: userId });
+
     const cart = await cartMockService.createOne({ items: [] });
     const dto = orderMockService.getOneToCreate({
       cartId: cart.id,

@@ -28,9 +28,18 @@ describe('CancelOrderUseCase', () => {
   });
 
   it('should successfully cancel an order', async () => {
-    const order = await orderMockService.createOne({
-      status: OrderStatus.Shipped,
-    });
+    const userId = generateUlid();
+    const orderId = generateUlid();
+    const order = await orderMockService.createOneWithDependencies(
+      {
+        id: orderId,
+        status: OrderStatus.Shipped,
+        userId,
+      },
+      { id: userId },
+      [{ orderId }],
+      1,
+    );
 
     const canceledOrder = await cancelOrderUseCase.execute(order.id);
 

@@ -36,7 +36,6 @@ describe('GetOrderDetailUseCase', () => {
         userId,
       },
       { id: userId },
-      1,
     );
 
     const retrievedOrder = await getOrderDetailUseCase.execute(order.id);

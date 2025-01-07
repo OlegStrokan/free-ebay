@@ -38,10 +38,13 @@ describe('GetAllUserOrdersUseCase', () => {
         status: OrderStatus.Pending,
         userId,
       }),
-      orderMockService.createOne({
-        status: OrderStatus.Pending,
-        userId,
-      })),
+      orderMockService.createOneWithDependencies(
+        {
+          status: OrderStatus.Pending,
+          userId,
+        },
+        { id: userId },
+      )),
     ]);
 
     const userOrders = await getAllUserOrdersUseCase.execute(userId);

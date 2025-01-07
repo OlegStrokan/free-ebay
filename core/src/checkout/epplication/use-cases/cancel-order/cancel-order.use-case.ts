@@ -13,7 +13,7 @@ export class CancelOrderUseCase implements ICancelOrderUseCase {
   ) {}
 
   async execute(orderId: string): Promise<Order> {
-    const order = await this.orderRepository.findById(orderId);
+    const order = await this.orderRepository.findByIdWithRelations(orderId);
     if (!order) {
       throw new OrderNotFoundException(orderId);
     }
