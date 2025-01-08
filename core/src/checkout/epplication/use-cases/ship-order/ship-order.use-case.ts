@@ -13,7 +13,7 @@ export class ShipOrderUseCase implements IShipOrderUseCase {
   ) {}
 
   async execute(orderId: string): Promise<Order> {
-    const order = await this.repository.findById(orderId);
+    const order = await this.repository.findByIdWithRelations(orderId);
     if (!order) {
       throw new OrderNotFoundException(orderId);
     }

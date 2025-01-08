@@ -11,7 +11,9 @@ import { Money } from 'src/shared/types/money';
 import { PAYMENT_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { IPaymentMapper } from './payment.mapper.inteface';
 
-const validatePaymentDataStructure = (paymentData: PaymentData | undefined) => {
+export const validatePaymentDataStructure = (
+  paymentData: PaymentData | undefined,
+) => {
   if (!paymentData) throw new Error('Payment not found test error');
 
   expect(paymentData).toEqual({

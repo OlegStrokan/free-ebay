@@ -10,6 +10,7 @@ import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.e
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
 import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
 import { CartAlreadyExists } from 'src/checkout/core/exceptions/cart/cart-already-exist.exception';
+import { CART_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('CreateCartUseCase', () => {
   let createCartUseCase: ICreateCartUseCase;
@@ -21,7 +22,7 @@ describe('CreateCartUseCase', () => {
     module = await createTestingModule();
 
     createCartUseCase = module.get(CREATE_CART_USE_CASE_TOKEN);
-    cartMockService = module.get(CartMockService);
+    cartMockService = module.get(CART_MOCK_SERVICE);
     userMockService = module.get(UserMockService);
 
     await clearRepos(module);

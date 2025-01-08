@@ -5,7 +5,7 @@ import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-no
 import { IRemoveFromCartUseCase } from './remove-from-cart.interface';
 import { Cart } from 'src/checkout/core/entity/cart/cart';
 import { RemoveFromCartDto } from 'src/checkout/interface/dtos/remove-from-cart.dto';
-import { CartItemNotFoundException } from 'src/checkout/core/exceptions/cart/cart-item-not-found';
+import { CartItemNotFoundException } from 'src/checkout/core/exceptions/cart/cart-item-not-found.exception';
 
 @Injectable()
 export class RemoveFromCartUseCase implements IRemoveFromCartUseCase {

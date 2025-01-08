@@ -3,11 +3,11 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { SHIP_ORDER_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
-import { OrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.service';
 import { OrderNotFoundException } from 'src/checkout/core/exceptions/order/order-not-found.exception';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { OrderStatus } from 'src/checkout/core/entity/order/order';
 import { IShipOrderUseCase } from './ship-order.interface';
+import { ORDER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('ShipOrderUseCaseTest', () => {
   let shipOrderUseCase: IShipOrderUseCase;
@@ -18,7 +18,7 @@ describe('ShipOrderUseCaseTest', () => {
     module = await createTestingModule();
 
     shipOrderUseCase = module.get(SHIP_ORDER_USE_CASE_TOKEN);
-    orderMockService = module.get(OrderMockService);
+    orderMockService = module.get(ORDER_MOCK_SERVICE);
 
     await clearRepos(module);
   });

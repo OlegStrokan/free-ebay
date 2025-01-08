@@ -3,10 +3,8 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { CREATE_ORDER_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
-import { OrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.service';
 import { ICreateOrderUseCase } from './create-order.interface';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
-import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/cart-items-not-found.exception';
 import { PaymentMethod } from 'src/checkout/core/entity/payment/payment';
@@ -15,9 +13,13 @@ import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 import { CART_REPOSITORY } from '../../injection-tokens/repository.token';
 import { Money } from 'src/shared/types/money';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
-import { CartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.service';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
+import {
+  CART_ITEM_MOCK_SERVICE,
+  CART_MOCK_SERVICE,
+  ORDER_MOCK_SERVICE,
+} from '../../injection-tokens/mock-services.token';
 
 describe('CreateOrderUseCase', () => {
   let createOrderUseCase: ICreateOrderUseCase;
@@ -32,10 +34,10 @@ describe('CreateOrderUseCase', () => {
     module = await createTestingModule();
 
     createOrderUseCase = module.get(CREATE_ORDER_USE_CASE_TOKEN);
-    orderMockService = module.get(OrderMockService);
+    orderMockService = module.get(ORDER_MOCK_SERVICE);
     userMockService = module.get(UserMockService);
-    cartItemMockService = module.get(CartItemMockService);
-    cartMockService = module.get(CartMockService);
+    cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
+    cartMockService = module.get(CART_MOCK_SERVICE);
     cartRepository = module.get(CART_REPOSITORY);
 
     await clearRepos(module);

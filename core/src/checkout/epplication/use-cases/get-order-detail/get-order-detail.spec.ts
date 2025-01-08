@@ -3,12 +3,12 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { GET_ORDER_DETAIL_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
-import { OrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.service';
 import { OrderNotFoundException } from 'src/checkout/core/exceptions/order/order-not-found.exception';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { OrderStatus } from 'src/checkout/core/entity/order/order';
 import { IGetOrderDetailsUseCase } from './get-order-detail.interface';
 import { validateOrderDataStructure } from 'src/checkout/infrastructure/mappers/order/order.mapper.spec';
+import { ORDER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('GetOrderDetailUseCase', () => {
   let getOrderDetailUseCase: IGetOrderDetailsUseCase;
@@ -19,7 +19,7 @@ describe('GetOrderDetailUseCase', () => {
     module = await createTestingModule();
 
     getOrderDetailUseCase = module.get(GET_ORDER_DETAIL_USE_CASE_TOKEN);
-    orderMockService = module.get(OrderMockService);
+    orderMockService = module.get(ORDER_MOCK_SERVICE);
 
     await clearRepos(module);
   });

@@ -9,6 +9,7 @@ import { IRetrieveCartUseCase } from './retrieve-cart.interface';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
+import { CART_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('RetrieveUserCartUseCase', () => {
   let retrieveCartUseCase: IRetrieveCartUseCase;
@@ -20,7 +21,7 @@ describe('RetrieveUserCartUseCase', () => {
     module = await createTestingModule();
 
     retrieveCartUseCase = module.get(RETRIEVE_CART_USE_CASE_TOKEN);
-    cartMockService = module.get(CartMockService);
+    cartMockService = module.get(CART_MOCK_SERVICE);
     userMockService = module.get(UserMockService);
 
     await clearRepos(module);
