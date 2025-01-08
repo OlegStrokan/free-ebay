@@ -1,4 +1,4 @@
-import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
+import { Product } from 'src/product/core/product/entity/product';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 
 export interface CategoryData {
@@ -7,20 +7,20 @@ export interface CategoryData {
   description: string;
   parentCategoryId?: string;
   children: Category[];
-  products: ProductDb[];
+  products: Product[];
 }
 
 export class Category {
   constructor(private category: CategoryData) {}
 
   static create = (
-    categoryData: Omit<CategoryData, 'id' | 'children' | 'products'>,
+    categoryData: Omit<CategoryData, 'id' | 'children'>,
   ): Category => {
     return new Category({
       ...categoryData,
       id: generateUlid(),
+      products: categoryData.products ?? [],
       children: [],
-      products: [],
     });
   };
 
@@ -48,7 +48,7 @@ export class Category {
     return this.category.children;
   }
 
-  get products(): ProductDb[] {
+  get products(): Product[] {
     return this.category.products;
   }
 
@@ -56,7 +56,7 @@ export class Category {
     this.category.children.push(child);
   }
 
-  addProduct(product: ProductDb): void {
+  addProduct(product: Product): void {
     this.category.products.push(product);
   }
 

@@ -5,12 +5,17 @@ import { ICategoryRepository } from '../../repository/category.repository';
 import { CATEGORY_REPOSITORY } from '../../repository/category.repository';
 import { CreateCategoryDto } from 'src/catalog/interface/dtos/create-category.dto';
 import { ICategoryMockService } from './category-mock.interface';
+import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
+import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
+import { ProductData } from 'src/product/core/product/entity/product.interface';
 
 @Injectable()
 export class CategoryMockService implements ICategoryMockService {
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,
+    @Inject(ProductMockService)
+    private readonly productMockService: IProductMockService,
   ) {}
 
   getOneToCreate(overrides: Partial<CategoryData> = {}): CreateCategoryDto {
@@ -24,11 +29,21 @@ export class CategoryMockService implements ICategoryMockService {
     return Category.create({
       name: overrides.name ?? faker.commerce.department(),
       description: overrides.description ?? faker.commerce.productDescription(),
+      products: overrides.products ?? [],
     });
   }
 
   async createOne(overrides: Partial<CategoryData> = {}): Promise<Category> {
     const category = this.getOne(overrides);
+    return await this.categoryRepository.save(category);
+  }
+
+  async createOneWithDepencencies(
+    categoryOverrides: Partial<CategoryData> = {},
+    productOverrides: Partial<ProductData> = {},
+  ): Promise<Category> {
+    const category = this.getOne(categoryOverrides);
+    await this.productMockService.createOne({ ...productOverrides, category });
     return await this.categoryRepository.save(category);
   }
 }
