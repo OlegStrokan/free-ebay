@@ -34,6 +34,12 @@ export class CartItemMockService implements ICartItemMockService {
     return new CartItem(cartData);
   }
 
+  getMany(count = 2, overrides: Partial<CartItemData>[] = []): CartItem[] {
+    return Array.from({ length: count }).map((_, index) =>
+      this.getOne(overrides[index] as Partial<CartItemData>),
+    );
+  }
+
   async createOne(overrides: Partial<CartItemData> = {}): Promise<CartItem> {
     throw new NotImplementedException();
   }
