@@ -83,22 +83,34 @@ export class Order implements Clonable<Order> {
     return clone;
   };
 
-  // applyDiscount = (discountPercentage: number) => {
-  //   const clone = this.clone();
-  //   const discountAmount =
-  //     (clone.order.totalPrice.amount * discountPercentage) / 100;
-  //   clone.order.totalPrice.amount -= discountAmount;
-  //   clone.order.updatedAt = new Date();
-  //   return clone;
-  // };
+  applyDiscount = (discountPercentage: number) => {
+    const clone = this.clone();
+    const discountAmount =
+      (clone.order.totalPrice.getAmount() * discountPercentage) / 100;
+    const currentAmount = clone.order.totalPrice.getAmount();
+    const newAmount = currentAmount - discountAmount;
+    clone.order.totalPrice = new Money(
+      newAmount,
+      clone.order.totalPrice.getCurrency(),
+      clone.order.totalPrice.getFraction(),
+    );
+    clone.order.updatedAt = new Date();
+    return clone;
+  };
 
-  // calculateTaxes = (taxRate: number) => {
-  //   const clone = this.clone();
-  //   const taxAmount = (clone.order.totalPrice.amount * taxRate) / 100;
-  //   clone.order.totalPrice.amount += taxAmount;
-  //   clone.order.updatedAt = new Date();
-  //   return clone;
-  // };
+  calculateTaxes = (taxRate: number) => {
+    const clone = this.clone();
+    const taxAmount = (clone.order.totalPrice.getAmount() * taxRate) / 100;
+    const currentAmount = clone.order.totalPrice.getAmount();
+    const newAmount = currentAmount + taxAmount;
+    clone.order.totalPrice = new Money(
+      newAmount,
+      clone.order.totalPrice.getCurrency(),
+      clone.order.totalPrice.getFraction(),
+    );
+    clone.order.updatedAt = new Date();
+    return clone;
+  };
 
   addItem = (item: OrderItemData) => {
     const clone = this.clone();
