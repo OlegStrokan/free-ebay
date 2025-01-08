@@ -14,9 +14,10 @@ import {
   CATEGORY_MAPPER,
   CATEGORY_REPOSITORY,
 } from './core/category/repository/category.repository';
+import { ProductModule } from 'src/product/product.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CategoryDb])],
+  imports: [TypeOrmModule.forFeature([CategoryDb]), ProductModule],
   controllers: [CatalogController],
   providers: [
     CategoryRepository,
