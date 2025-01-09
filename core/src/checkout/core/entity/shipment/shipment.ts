@@ -26,7 +26,8 @@ export class Shipment implements Clonable<Shipment> {
 
   static create = (orderId: string): Shipment => {
     const createdAt = new Date();
-    const generateTrackingNumber = `shipment-${orderId}-${createdAt}`;
+    const formattedDate = createdAt.toISOString();
+    const generateTrackingNumber = `shipment-${orderId}-${formattedDate}`;
     return new Shipment({
       id: generateUlid(),
       orderId,
