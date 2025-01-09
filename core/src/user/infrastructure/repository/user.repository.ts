@@ -3,13 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDb } from '../entity/user.entity';
 import { User, UserData } from 'src/user/core/entity/user';
-import {
-  IUserRepository,
-  USER_MAPPER,
-} from 'src/user/core/repository/user.repository';
+import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { IUserMapper } from '../mappers/user.mapper.interface';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
 import { IClearableRepository } from 'src/shared/types/clearable';
+import { USER_MAPPER } from 'src/user/epplication/injection-tokens/mapper.token';
 
 @Injectable()
 export class UserRepository implements IUserRepository, IClearableRepository {

@@ -11,18 +11,18 @@ import { OrderData } from '../order';
 import { CreateOrderDto } from 'src/checkout/interface/dtos/create-order.dto';
 import { PaymentMethod } from '../../payment/payment';
 import { UserData } from 'src/user/core/entity/user';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { IOrderItemMockService } from '../../order-item/mocks/order-item-mock.interface';
 import { OrderItemData } from '../../order-item/order-item';
 import { ORDER_ITEM_MOCK_SERVICE } from 'src/checkout/epplication/injection-tokens/mock-services.token';
+import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
 
 @Injectable()
 export class OrderMockService implements IOrderMockService {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: IOrderRepository,
-    @Inject(UserMockService)
+    @Inject(USER_MOCK_SERVICE)
     private readonly userMockService: IUserMockService,
     @Inject(ORDER_ITEM_MOCK_SERVICE)
     private readonly orderItemMockService: IOrderItemMockService,

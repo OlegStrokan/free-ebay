@@ -14,12 +14,12 @@ import { CART_REPOSITORY } from '../../injection-tokens/repository.token';
 import { Money } from 'src/shared/types/money';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import {
   CART_ITEM_MOCK_SERVICE,
   CART_MOCK_SERVICE,
   ORDER_MOCK_SERVICE,
 } from '../../injection-tokens/mock-services.token';
+import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
 
 describe('CreateOrderUseCase', () => {
   let createOrderUseCase: ICreateOrderUseCase;
@@ -35,7 +35,7 @@ describe('CreateOrderUseCase', () => {
 
     createOrderUseCase = module.get(CREATE_ORDER_USE_CASE_TOKEN);
     orderMockService = module.get(ORDER_MOCK_SERVICE);
-    userMockService = module.get(UserMockService);
+    userMockService = module.get(USER_MOCK_SERVICE);
     cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
     cartMockService = module.get(CART_MOCK_SERVICE);
     cartRepository = module.get(CART_REPOSITORY);

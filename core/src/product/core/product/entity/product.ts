@@ -40,7 +40,7 @@ export class Product implements Clonable<Product> {
   }
 
   get price(): Money {
-    return this.product.price ?? ZERO_AMOUNT_MONEY;
+    return this.product.price;
   }
 
   get name(): string {

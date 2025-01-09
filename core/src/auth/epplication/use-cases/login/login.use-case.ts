@@ -3,13 +3,13 @@ import * as bcrypt from 'bcrypt';
 import { LoginDto } from 'src/auth/interface/dtos/login.dto';
 import { TokenService } from '../../service/token.service';
 import { IUserRepository } from 'src/user/core/repository/user.repository';
-import { UserRepository } from 'src/user/infrastructure/repository/user.repository';
 import { User } from 'src/user/core/entity/user';
+import { USER_REPOSITORY } from 'src/user/epplication/injection-tokens/repository.token';
 
 @Injectable()
 export class LoginUseCase {
   constructor(
-    @Inject(UserRepository)
+    @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly tokenService: TokenService,
   ) {}

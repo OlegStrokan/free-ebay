@@ -1,14 +1,14 @@
 import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
-import { UserRepository } from 'src/user/infrastructure/repository/user.repository';
-import { CreateUserUseCase } from './create-user.use-case';
 import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { ICreateUserUseCase } from './create-user.interface';
 import { UserAlreadyExistsException } from 'src/user/core/exceptions/user-already-exists';
 import { faker } from '@faker-js/faker';
+import { CREATE_USER_USE_CASE } from '../../injection-tokens/use-case.token';
+import { USER_REPOSITORY } from '../../injection-tokens/repository.token';
+import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('CreateUserUseCaseTest', () => {
   let createUserUseCase: ICreateUserUseCase;
@@ -19,9 +19,9 @@ describe('CreateUserUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    createUserUseCase = module.get<ICreateUserUseCase>(CreateUserUseCase);
-    userRepository = module.get<IUserRepository>(UserRepository);
-    userMockService = module.get<IUserMockService>(UserMockService);
+    createUserUseCase = module.get<ICreateUserUseCase>(CREATE_USER_USE_CASE);
+    userRepository = module.get<IUserRepository>(USER_REPOSITORY);
+    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
   });
 
   beforeAll(async () => {

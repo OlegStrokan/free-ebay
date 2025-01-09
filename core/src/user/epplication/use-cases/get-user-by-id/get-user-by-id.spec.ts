@@ -3,10 +3,10 @@ import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
-import { GetUserByEmailUseCase } from '../get-user-by-email/get-user-by-email.use-case';
 import { IGetUserByIdUseCase } from './get-user-by-id.interface';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
+import { GET_USER_BY_ID_USE_CASE } from '../../injection-tokens/use-case.token';
+import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('GetUserByEmailTest', () => {
   let getUserByIdUseCase: IGetUserByIdUseCase;
@@ -16,8 +16,10 @@ describe('GetUserByEmailTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    getUserByIdUseCase = module.get<IGetUserByIdUseCase>(GetUserByEmailUseCase);
-    userMockService = module.get<IUserMockService>(UserMockService);
+    getUserByIdUseCase = module.get<IGetUserByIdUseCase>(
+      GET_USER_BY_ID_USE_CASE,
+    );
+    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
   });
 
   afterAll(async () => {

@@ -4,8 +4,10 @@ import { ProductRepository } from 'src/product/infrastructure/repository/product
 import { IClearableRepository } from '../types/clearable';
 import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { UserRepository } from 'src/user/infrastructure/repository/user.repository';
-import { ICategoryRepository } from 'src/catalog/core/category/repository/category.repository';
-import { CategoryRepository } from 'src/catalog/infrastructure/repository/category.repository';
+import {
+  CATEGORY_REPOSITORY,
+  ICategoryRepository,
+} from 'src/catalog/core/category/repository/category.repository';
 import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 import {
   CART_REPOSITORY,
@@ -16,12 +18,13 @@ import {
 import { IOrderRepository } from 'src/checkout/core/repository/order.repository';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
+import { USER_REPOSITORY } from 'src/user/epplication/injection-tokens/repository.token';
 
 export const clearRepos = async (module: TestingModule) => {
   const repositories = [
     module.get<IProductRepository>(ProductRepository),
-    module.get<IUserRepository>(UserRepository),
-    module.get<ICategoryRepository>(CategoryRepository),
+    module.get<IUserRepository>(USER_REPOSITORY),
+    module.get<ICategoryRepository>(CATEGORY_REPOSITORY),
     module.get<ICartRepository>(CART_REPOSITORY),
     module.get<IShipmentRepository>(SHIPMENT_REPOSITORY),
     module.get<IPaymentRepository>(PAYMENT_REPOSITORY),

@@ -10,35 +10,37 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { IGetUserByIdUseCase } from '../epplication/use-cases/get-user-by-id/get-user-by-id.interface';
-import { GetUserByIdUseCase } from '../epplication/use-cases/get-user-by-id/get-user-by-id.use-case';
 import { MetricsInterceptor } from 'src/shared/interceptors/metrics.interceptor';
-import { GetUsersUseCase } from '../epplication/use-cases/get-users/get-users.use-case';
 import { IGetUsersUseCase } from '../epplication/use-cases/get-users/get-users.interface';
 import { User, UserData } from '../core/entity/user';
-import { USER_MAPPER } from '../core/repository/user.repository';
 import { IUserMapper } from '../infrastructure/mappers/user.mapper.interface';
 import { UserDb } from '../infrastructure/entity/user.entity';
-import { CreateUserUseCase } from '../epplication/use-cases/create-user/create-user.use-case';
-import { UpdateUserUseCase } from '../epplication/use-cases/update-user/update-user.use-case';
 import { IUpdateUserUseCase } from '../epplication/use-cases/update-user/update-user.interface';
 import { ICreateUserUseCase } from '../epplication/use-cases/create-user/create-user.interface';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { DeleteUserUseCase } from '../epplication/use-cases/delete-user/delete-user.use-case';
 import { IDeleteUserUseCase } from '../epplication/use-cases/delete-user/delete-user.interface';
+import {
+  CREATE_USER_USE_CASE,
+  DELETE_USER_USE_CASE,
+  GET_USER_BY_ID_USE_CASE,
+  GET_USERS_USE_CASE,
+  UPDATE_USER_USE_CASE,
+} from '../epplication/injection-tokens/use-case.token';
+import { USER_MAPPER } from '../epplication/injection-tokens/mapper.token';
 
 @Controller('user')
 export class UserController {
   constructor(
-    @Inject(GetUserByIdUseCase)
+    @Inject(GET_USER_BY_ID_USE_CASE)
     private readonly getUserByIdUseCase: IGetUserByIdUseCase,
-    @Inject(GetUsersUseCase)
+    @Inject(GET_USERS_USE_CASE)
     private readonly getUsersUseCase: IGetUsersUseCase,
-    @Inject(CreateUserUseCase)
+    @Inject(CREATE_USER_USE_CASE)
     private readonly createUserUseCase: ICreateUserUseCase,
-    @Inject(UpdateUserUseCase)
+    @Inject(UPDATE_USER_USE_CASE)
     private readonly updateUserUseCase: IUpdateUserUseCase,
-    @Inject(DeleteUserUseCase)
+    @Inject(DELETE_USER_USE_CASE)
     private readonly deleteUserUseCase: IDeleteUserUseCase,
     @Inject(USER_MAPPER)
     private readonly userMapper: IUserMapper<UserData, User, UserDb>,

@@ -1,5 +1,4 @@
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
@@ -8,7 +7,8 @@ import { faker } from '@faker-js/faker';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { UpdateUserDto } from 'src/user/interface/dtos/update-user.dto';
 import { UpdateUserRequest } from './update-user.use-case';
-import { UpdateUserUseCase } from './update-user.use-case';
+import { UPDATE_USER_USE_CASE } from '../../injection-tokens/use-case.token';
+import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('UpdateUserUseCaseTest', () => {
   let updateUserUseCase: IUpdateUserUseCase;
@@ -18,8 +18,8 @@ describe('UpdateUserUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    updateUserUseCase = module.get<IUpdateUserUseCase>(UpdateUserUseCase);
-    userMockService = module.get<IUserMockService>(UserMockService);
+    updateUserUseCase = module.get<IUpdateUserUseCase>(UPDATE_USER_USE_CASE);
+    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
   });
 
   beforeAll(async () => {

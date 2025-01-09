@@ -1,13 +1,11 @@
 import { Inject } from '@nestjs/common';
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from 'src/user/core/repository/user.repository';
+import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { ICreateUserUseCase } from './create-user.interface';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/user/core/entity/user';
 import { UserAlreadyExistsException } from 'src/user/core/exceptions/user-already-exists';
 import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
+import { USER_REPOSITORY } from '../../injection-tokens/repository.token';
 
 export class CreateUserUseCase implements ICreateUserUseCase {
   constructor(

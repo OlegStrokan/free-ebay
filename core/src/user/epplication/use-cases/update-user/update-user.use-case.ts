@@ -1,14 +1,12 @@
 import { Inject } from '@nestjs/common';
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from 'src/user/core/repository/user.repository';
+import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
 import { IUpdateUserUseCase } from './update-user.interface';
 import { User } from 'src/user/core/entity/user';
 import { UpdateUserDto } from 'src/user/interface/dtos/update-user.dto';
+import { USER_REPOSITORY } from '../../injection-tokens/repository.token';
 
-// @Todo....maybe i should refactor this shit in the future
+// @Todo....maybe i need to refactor this shit in the future
 export type UpdateUserRequest = {
   id: string;
   dto: UpdateUserDto;

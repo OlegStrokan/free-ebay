@@ -1,13 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IUserMockService } from './user-mock.interface';
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from '../../repository/user.repository';
+import { IUserRepository } from '../../repository/user.repository';
 import { User, UserData } from '../user';
 import { faker } from '@faker-js/faker';
 import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
 import { generateUlid } from 'src/shared/types/generate-ulid';
+import { USER_REPOSITORY } from 'src/user/epplication/injection-tokens/repository.token';
 
 @Injectable()
 export class UserMockService implements IUserMockService {

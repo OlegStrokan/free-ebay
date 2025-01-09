@@ -7,8 +7,8 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { OrderStatus } from 'src/checkout/core/entity/order/order';
 import { IGetAllUserOrdersUseCase } from './get-all-user-orders.interface';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { ORDER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
 
 describe('GetAllUserOrdersUseCase', () => {
   let getAllUserOrdersUseCase: IGetAllUserOrdersUseCase;
@@ -21,7 +21,7 @@ describe('GetAllUserOrdersUseCase', () => {
 
     getAllUserOrdersUseCase = module.get(GET_ALL_USER_ORDERS_USE_CASE_TOKEN);
     orderMockService = module.get(ORDER_MOCK_SERVICE);
-    userMockService = module.get(UserMockService);
+    userMockService = module.get(USER_MOCK_SERVICE);
 
     await clearRepos(module);
   });

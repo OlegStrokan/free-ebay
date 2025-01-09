@@ -1,10 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { User } from 'src/user/core/entity/user';
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from 'src/user/core/repository/user.repository';
+import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { IGetUsersUseCase } from './get-users.interface';
+import { USER_REPOSITORY } from '../../injection-tokens/repository.token';
 
 @Injectable()
 export class GetUsersUseCase implements IGetUsersUseCase {

@@ -1,14 +1,14 @@
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { IDeleteUserUseCase } from './delete-user.interface';
-import { DeleteUserUseCase } from './delete-user.use-case';
 import { IUserRepository } from 'src/user/core/repository/user.repository';
-import { UserRepository } from 'src/user/infrastructure/repository/user.repository';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
+import { DELETE_USER_USE_CASE } from '../../injection-tokens/use-case.token';
+import { USER_REPOSITORY } from '../../injection-tokens/repository.token';
+import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('DeleteUserUseCaseTest', () => {
   let deleteUserUseCase: IDeleteUserUseCase;
@@ -20,9 +20,9 @@ describe('DeleteUserUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    deleteUserUseCase = module.get<IDeleteUserUseCase>(DeleteUserUseCase);
-    userRepository = module.get<IUserRepository>(UserRepository);
-    userMockService = module.get<IUserMockService>(UserMockService);
+    deleteUserUseCase = module.get<IDeleteUserUseCase>(DELETE_USER_USE_CASE);
+    userRepository = module.get<IUserRepository>(USER_REPOSITORY);
+    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
   });
 
   beforeAll(async () => {

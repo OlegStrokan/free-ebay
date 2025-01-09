@@ -1,10 +1,10 @@
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { TestingModule } from '@nestjs/testing';
 import { IGetUsersUseCase } from './get-users.interface';
-import { GetUsersUseCase } from './get-users.use-case';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { clearRepos } from 'src/shared/testing/clear-repos';
+import { GET_USERS_USE_CASE } from '../../injection-tokens/use-case.token';
+import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('GetUsersUseCaseTest', () => {
   let getUsersUseCase: IGetUsersUseCase;
@@ -14,8 +14,8 @@ describe('GetUsersUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    getUsersUseCase = module.get<IGetUsersUseCase>(GetUsersUseCase);
-    userMockService = module.get<IUserMockService>(UserMockService);
+    getUsersUseCase = module.get<IGetUsersUseCase>(GET_USERS_USE_CASE);
+    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
   });
 
   beforeAll(async () => {

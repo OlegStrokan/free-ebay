@@ -4,9 +4,9 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { faker } from '@faker-js/faker';
 import { IGetUserByEmailUseCase } from './get-user-by-email.interface';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
-import { GetUserByEmailUseCase } from './get-user-by-email.use-case';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
+import { GET_USER_BY_EMAIL_USE_CASE } from '../../injection-tokens/use-case.token';
+import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('GetUserByEmailTest', () => {
   let getUserByEmailUseCase: IGetUserByEmailUseCase;
@@ -17,9 +17,9 @@ describe('GetUserByEmailTest', () => {
     module = await createTestingModule();
 
     getUserByEmailUseCase = module.get<IGetUserByEmailUseCase>(
-      GetUserByEmailUseCase,
+      GET_USER_BY_EMAIL_USE_CASE,
     );
-    userMockService = module.get<IUserMockService>(UserMockService);
+    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
   });
 
   afterAll(async () => {
