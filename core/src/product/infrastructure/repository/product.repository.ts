@@ -70,6 +70,7 @@ export class ProductRepository implements IProductRepository {
   }
 
   async update(product: Product): Promise<Product> {
+    // TODO update this error handling and return type
     const foundedProduct = await this.findById(product.id);
     if (!foundedProduct) {
       throw new ProductNotFoundException('id', product.id);
