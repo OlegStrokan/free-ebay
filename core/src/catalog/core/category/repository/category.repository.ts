@@ -6,6 +6,7 @@ export const CATEGORY_MAPPER = Symbol('CATEGORY_MAPPER');
 export interface ICategoryRepository {
   save(category: Category): Promise<Category>;
   findById(id: string): Promise<Category | null>;
+  findByIdWithRelations(id: string): Promise<Category | null>;
   findByName(name: string): Promise<Category | null>;
   findAll(page: number, limit: number): Promise<Category[]>;
   update(category: Category): Promise<Category>;

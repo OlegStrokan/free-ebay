@@ -32,7 +32,7 @@ export class CategoryRepository
 
     await this.categoryRepository.save(categoryDb);
 
-    const savedCategory = await this.findById(categoryDb.id);
+    const savedCategory = await this.findByIdWithRelations(categoryDb.id);
     if (!savedCategory) {
       throw new CategoryNotFoundException('id', categoryDb.id);
     }
@@ -41,6 +41,13 @@ export class CategoryRepository
 
   async findById(id: string): Promise<Category | null> {
     const categoryDb = await this.categoryRepository.findOneBy({ id });
+    return categoryDb ? this.mapper.toDomain(categoryDb) : null;
+  }
+  async findByIdWithRelations(id: string): Promise<Category | null> {
+    const categoryDb = await this.categoryRepository.findOne({
+      where: { id },
+      relations: ['products'],
+    });
     return categoryDb ? this.mapper.toDomain(categoryDb) : null;
   }
 
@@ -59,14 +66,9 @@ export class CategoryRepository
 
   async update(category: Category): Promise<Category> {
     const dbCategory = this.mapper.toDb(category);
-    const result = await this.categoryRepository.update(
-      category.id,
-      dbCategory,
-    );
-    if (result.affected === 0) {
-      throw new CategoryNotFoundException('id', category.id);
-    }
-    return category;
+    const updatedCategory = await this.categoryRepository.save(dbCategory);
+
+    return this.mapper.toDomain(updatedCategory);
   }
 
   async deleteById(id: string): Promise<void> {

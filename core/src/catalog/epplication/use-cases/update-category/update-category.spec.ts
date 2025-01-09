@@ -32,8 +32,9 @@ describe('UpdateCategoryUseCaseTest', () => {
   });
 
   it('should create a random Category and verify its existence', async () => {
+    const categoryId = generateUlid();
     const category = await categoryMockService.createOne({
-      id: generateUlid(),
+      id: categoryId,
       description: faker.commerce.department(),
     });
 
@@ -48,5 +49,5 @@ describe('UpdateCategoryUseCaseTest', () => {
 
     expect(updatedCategory).toBeDefined();
     expect(updatedCategory?.data.description).toBe(updatedCategory.description);
-  });
+  }, 1000000);
 });

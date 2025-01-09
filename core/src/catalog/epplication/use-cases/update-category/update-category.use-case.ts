@@ -20,9 +20,8 @@ export class UpdateCategoryUseCase implements IUpdateCategoryUseCase {
   ) {}
 
   public async execute(categoryData: UpdateCategoryRequest): Promise<Category> {
-    const existingCategory = await this.categoryRepository.findById(
-      categoryData.id,
-    );
+    const existingCategory =
+      await this.categoryRepository.findByIdWithRelations(categoryData.id);
     if (!existingCategory) {
       throw new CategoryNotFoundException('id', categoryData.id);
     }

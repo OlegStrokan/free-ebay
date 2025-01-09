@@ -1,13 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Category } from 'src/catalog/core/category/entity/category';
 import { CategoryDb } from '../entity/category';
 import { CategoryData } from 'src/catalog/core/category/entity/category';
 import { ICategoryMapper } from './category.mapper.interface';
+import { ProductMapper } from 'src/product/infrastructure/mappers/product/product.mapper';
+import { IProductMapper } from 'src/product/infrastructure/mappers/product/product.mapper.interface';
+import { ProductData } from 'src/product/core/product/entity/product.interface';
+import { Product } from 'src/product/core/product/entity/product';
+import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
 
 @Injectable()
 export class CategoryMapper
   implements ICategoryMapper<CategoryData, Category, CategoryDb>
 {
+  constructor(
+    @Inject(ProductMapper)
+    private readonly productMapper: IProductMapper<
+      ProductData,
+      Product,
+      ProductDb
+    >,
+  ) {}
   toDb({
     id,
     name,
@@ -29,21 +42,32 @@ export class CategoryMapper
 
     categoryDb.children = children?.map((child) => this.toDb(child));
 
-    categoryDb.products = products;
+    categoryDb.products =
+      products.length > 0
+        ? products.map((product) => this.productMapper.toDb(product))
+        : [];
 
     return categoryDb;
   }
 
-  toDomain(categoryDb: CategoryDb): Category {
+  toDomain({
+    id,
+    children,
+    description,
+    name,
+    products,
+    parentCategory,
+  }: CategoryDb): Category {
     const categoryData: CategoryData = {
-      id: categoryDb.id,
-      name: categoryDb.name,
-      description: categoryDb.description,
-      parentCategoryId: categoryDb.parentCategory
-        ? categoryDb.parentCategory.id
-        : undefined,
-      children: categoryDb.children?.map((child) => this.toDomain(child)),
-      products: categoryDb.products,
+      id,
+      name,
+      description,
+      parentCategoryId: parentCategory ? parentCategory.id : undefined,
+      children: children?.map((child) => this.toDomain(child)),
+      products:
+        products?.length > 0
+          ? products.map((product) => this.productMapper.toDomain(product))
+          : [],
     };
     return new Category(categoryData);
   }

@@ -19,7 +19,7 @@ export class CreateCategoryUseCase implements ICreateCategoryUseCase {
     if (existingCategory) {
       throw new CategoryAlreadyExistsException('name', existingCategory.name);
     }
-    const category = Category.create(dto);
+    const category = Category.create({ ...dto, products: [] });
     await this.categoryRepository.save(category);
     return category;
   }
