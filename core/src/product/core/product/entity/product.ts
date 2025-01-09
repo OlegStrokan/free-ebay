@@ -5,6 +5,7 @@ import { ProductData } from './product.interface';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { InvalidProductStatusException } from '../exceptions/invalid-product-status.exception';
 import { RestockQuantityException } from '../exceptions/restock-quantity.exception';
+import { CategoryData } from 'src/catalog/core/category/entity/category';
 
 export class Product implements Clonable<Product> {
   constructor(public product: ProductData) {}
@@ -48,6 +49,14 @@ export class Product implements Clonable<Product> {
 
   get description(): string {
     return this.product.description;
+  }
+
+  get stock(): number {
+    return this.product.stock;
+  }
+
+  get category(): CategoryData | undefined {
+    return this.product.category;
   }
 
   isAvailable = () => {
