@@ -4,12 +4,11 @@ import { RETRIEVE_CART_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
-import { CartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.service';
 import { IRetrieveCartUseCase } from './retrieve-cart.interface';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
-import { UserMockService } from 'src/user/core/entity/mocks/user-mock.service';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { CART_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
 
 describe('RetrieveUserCartUseCase', () => {
   let retrieveCartUseCase: IRetrieveCartUseCase;
@@ -22,7 +21,7 @@ describe('RetrieveUserCartUseCase', () => {
 
     retrieveCartUseCase = module.get(RETRIEVE_CART_USE_CASE);
     cartMockService = module.get(CART_MOCK_SERVICE);
-    userMockService = module.get(UserMockService);
+    userMockService = module.get(USER_MOCK_SERVICE);
 
     await clearRepos(module);
   });

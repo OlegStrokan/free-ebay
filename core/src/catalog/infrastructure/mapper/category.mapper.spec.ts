@@ -9,6 +9,8 @@ import { CategoryDb } from '../entity/category';
 import { CategoryMapper } from './category.mapper';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
 import { CategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.service';
+import { CATEGORY_MAPPER } from 'src/catalog/epplication/injection-tokens/mapper.token';
+import { CATEGORY_MOCK_SERVICE } from 'src/catalog/epplication/injection-tokens/mock-services.token';
 
 const validateCategoryDataStructure = (
   categoryData: CategoryData | undefined,
@@ -37,10 +39,12 @@ describe('CategoryMapperTest', () => {
 
     categoryMapper =
       module.get<ICategoryMapper<CategoryData, Category, CategoryDb>>(
-        CategoryMapper,
+        CATEGORY_MAPPER,
       );
 
-    categoryMockService = module.get<ICategoryMockService>(CategoryMockService);
+    categoryMockService = module.get<ICategoryMockService>(
+      CATEGORY_MOCK_SERVICE,
+    );
   });
 
   afterAll(async () => {

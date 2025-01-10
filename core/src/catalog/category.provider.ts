@@ -10,6 +10,13 @@ import {
   GET_CATEGORY_BY_ID_USE_CASE,
   UPDATE_CATEGORY_USE_CASE,
 } from './epplication/injection-tokens/use-case.token';
+import { CategoryMockService } from './core/category/entity/mocks/category-mock.service';
+import { CategoryRepository } from './infrastructure/repository/category.repository';
+import { CreateCategoryUseCase } from './epplication/use-cases/create-category/create-category.use-case';
+import { UpdateCategoryUseCase } from './epplication/use-cases/update-category/update-category.use-case';
+import { GetAllCategoriesUseCase } from './epplication/use-cases/get-all-categories/get-all-categories.use-case';
+import { GetCategoryByIdUseCase } from './epplication/use-cases/get-category-by-id/get-category-by-id.use-case';
+import { DeleteCategoryUseCase } from './epplication/use-cases/delete-category/delete-category.use-case';
 
 export const categoryProviders: Provider[] = [
   {
@@ -18,34 +25,30 @@ export const categoryProviders: Provider[] = [
   },
   {
     provide: CATEGORY_MOCK_SERVICE,
-    useClass: CategoryMapper,
+    useClass: CategoryMockService,
   },
   {
     provide: CATEGORY_REPOSITORY,
-    useClass: CategoryMapper,
+    useClass: CategoryRepository,
   },
   {
     provide: CREATE_CATEGORY_USE_CASE,
-    useClass: CategoryMapper,
+    useClass: CreateCategoryUseCase,
   },
   {
     provide: UPDATE_CATEGORY_USE_CASE,
-    useClass: CategoryMapper,
+    useClass: UpdateCategoryUseCase,
   },
   {
     provide: GET_ALL_CATEGORIES_USE_CASE,
-    useClass: CategoryMapper,
+    useClass: GetAllCategoriesUseCase,
   },
   {
     provide: GET_CATEGORY_BY_ID_USE_CASE,
-    useClass: CategoryMapper,
+    useClass: GetCategoryByIdUseCase,
   },
   {
     provide: DELETE_CATEGORY_USE_CASE,
-    useClass: CategoryMapper,
-  },
-  {
-    provide: CATEGORY_MAPPER,
-    useClass: CategoryMapper,
+    useClass: DeleteCategoryUseCase,
   },
 ];
