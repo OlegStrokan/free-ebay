@@ -1,13 +1,13 @@
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
 import { ICreateProductUseCase } from './create-product.interface';
 import { TestingModule } from '@nestjs/testing';
-import { CreateProductUseCase } from './create-product.use-case';
-import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
-import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
 import { ProductAlreadyExistsException } from 'src/product/core/product/exceptions/product-already-exists.exception';
+import { CREATE_PRODUCT_USE_CASE } from '../../injection-tokens/use-case.token';
+import { PRODUCT_REPOSITORY } from '../../injection-tokens/repository.token';
+import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('CreateProductUseCaseTest', () => {
   let createProductUseCase: ICreateProductUseCase;
@@ -18,10 +18,11 @@ describe('CreateProductUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    createProductUseCase =
-      module.get<ICreateProductUseCase>(CreateProductUseCase);
-    productRepository = module.get<IProductRepository>(ProductRepository);
-    productMockService = module.get<IProductMockService>(ProductMockService);
+    createProductUseCase = module.get<ICreateProductUseCase>(
+      CREATE_PRODUCT_USE_CASE,
+    );
+    productRepository = module.get<IProductRepository>(PRODUCT_REPOSITORY);
+    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
 
     await clearRepos(module);
   });

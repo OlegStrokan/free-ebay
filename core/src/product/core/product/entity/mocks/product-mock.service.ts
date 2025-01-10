@@ -6,15 +6,15 @@ import { CreateProductDto } from 'src/product/interface/dtos/create-product.dto'
 import { IProductMockService } from './product-mock.interface';
 import { IProductRepository } from '../../repository/product.repository';
 import { ProductData } from '../product.interface';
-import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
 import { generateUlid } from 'src/shared/types/generate-ulid';
+import { PRODUCT_REPOSITORY } from 'src/product/epplication/injection-tokens/repository.token';
 
 // ... existing code ...
 
 @Injectable()
 export class ProductMockService implements IProductMockService {
   constructor(
-    @Inject(ProductRepository)
+    @Inject(PRODUCT_REPOSITORY)
     private readonly productRepository: IProductRepository,
   ) {}
 

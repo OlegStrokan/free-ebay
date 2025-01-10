@@ -2,11 +2,11 @@ import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
-import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
 import { IFindProductUseCase } from './find-product.interface';
-import { FindProductUseCase } from './find-product.use-case';
 import { faker } from '@faker-js/faker';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
+import { FIND_PRODUCT_USE_CASE } from '../../injection-tokens/use-case.token';
+import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('FindProductUseCaseTest', () => {
   let findProductUseCase: IFindProductUseCase;
@@ -16,8 +16,8 @@ describe('FindProductUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    findProductUseCase = module.get<IFindProductUseCase>(FindProductUseCase);
-    productMockService = module.get<IProductMockService>(ProductMockService);
+    findProductUseCase = module.get<IFindProductUseCase>(FIND_PRODUCT_USE_CASE);
+    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
   });
 
   afterAll(async () => {

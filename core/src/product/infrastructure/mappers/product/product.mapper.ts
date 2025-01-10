@@ -4,15 +4,15 @@ import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { ProductDb } from '../../entity/product.entity';
 import { IMoneyMapper } from '../money/money.mapper.interface';
 import { IProductMapper } from './product.mapper.interface';
-import { MoneyMapper } from '../money/money.mapper';
 import { Money } from 'src/shared/types/money';
+import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 
 @Injectable()
 export class ProductMapper
   implements IProductMapper<ProductData, Product, ProductDb>
 {
   constructor(
-    @Inject(MoneyMapper)
+    @Inject(MONEY_MAPPER)
     private readonly moneyMapper: IMoneyMapper,
   ) {}
 

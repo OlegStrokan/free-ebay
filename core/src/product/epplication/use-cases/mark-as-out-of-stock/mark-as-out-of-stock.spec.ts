@@ -2,10 +2,10 @@ import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
-import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
-import { MarkAsOutOfStockUseCase } from './mark-as-out-of-stock.use-case';
 import { IMarkAsOutOfStockUseCase } from './mark-as-out-of-stock.interface';
+import { MARK_AS_OUT_OF_STOCK_USE_CASE } from '../../injection-tokens/use-case.token';
+import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('MarkAsOutOfStockUseCaseTest', () => {
   let markAsOutOfStockUseCase: IMarkAsOutOfStockUseCase;
@@ -16,9 +16,9 @@ describe('MarkAsOutOfStockUseCaseTest', () => {
     module = await createTestingModule();
 
     markAsOutOfStockUseCase = module.get<IMarkAsOutOfStockUseCase>(
-      MarkAsOutOfStockUseCase,
+      MARK_AS_OUT_OF_STOCK_USE_CASE,
     );
-    productMockService = module.get<IProductMockService>(ProductMockService);
+    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
   });
 
   afterAll(async () => {

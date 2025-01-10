@@ -7,16 +7,16 @@ import { IProductRepository } from 'src/product/core/product/repository/product.
 import { ProductDb } from '../entity/product.entity';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { IProductMapper } from '../mappers/product/product.mapper.interface';
-import { ProductMapper } from '../mappers/product/product.mapper';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 import { FailedToRetrieveProductException } from 'src/product/core/product/exceptions/failed-to-retrieve-product';
+import { PRODUCT_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
   constructor(
     @InjectRepository(ProductDb)
     private readonly productRepository: Repository<ProductDb>,
-    @Inject(ProductMapper)
+    @Inject(PRODUCT_MAPPER)
     private readonly mapper: IProductMapper<ProductData, Product, ProductDb>,
   ) {}
 

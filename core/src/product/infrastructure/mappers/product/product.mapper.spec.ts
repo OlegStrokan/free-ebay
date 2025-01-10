@@ -8,6 +8,8 @@ import { ProductMapper } from './product.mapper';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
+import { PRODUCT_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
+import { PRODUCT_MOCK_SERVICE } from 'src/product/epplication/injection-tokens/mock-services.token';
 
 const validateProductDataStructure = (productData: ProductData | undefined) => {
   if (!productData) throw new Error('Product not found test error');
@@ -42,10 +44,10 @@ describe('ProductMapperTest', () => {
 
     productMapper =
       module.get<IProductMapper<ProductData, Product, ProductDb>>(
-        ProductMapper,
+        PRODUCT_MAPPER,
       );
 
-    productMockService = module.get<IProductMockService>(ProductMockService);
+    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
   });
 
   afterAll(async () => {

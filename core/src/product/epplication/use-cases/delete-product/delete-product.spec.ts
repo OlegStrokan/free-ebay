@@ -2,10 +2,10 @@ import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
-import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
-import { DeleteProductUseCase } from './delete-product.use-case';
 import { IDeleteProductUseCase } from './delete-product.interface';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
+import { DELETE_PRODUCT_USE_CASE } from '../../injection-tokens/use-case.token';
+import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('DeleteProductUseCaseTest', () => {
   let deleteProductUseCase: IDeleteProductUseCase;
@@ -15,9 +15,10 @@ describe('DeleteProductUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    deleteProductUseCase =
-      module.get<IDeleteProductUseCase>(DeleteProductUseCase);
-    productMockService = module.get<IProductMockService>(ProductMockService);
+    deleteProductUseCase = module.get<IDeleteProductUseCase>(
+      DELETE_PRODUCT_USE_CASE,
+    );
+    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
   });
 
   afterAll(async () => {

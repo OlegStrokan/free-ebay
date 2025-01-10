@@ -2,13 +2,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
-import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
 import { IUseCase } from 'src/shared/types/use-case.interface';
+import { PRODUCT_REPOSITORY } from '../../injection-tokens/repository.token';
 
 @Injectable()
 export class MarkAsOutOfStockUseCase implements IUseCase<string, Product> {
   constructor(
-    @Inject(ProductRepository)
+    @Inject(PRODUCT_REPOSITORY)
     private readonly productsRepo: IProductRepository,
   ) {}
 
