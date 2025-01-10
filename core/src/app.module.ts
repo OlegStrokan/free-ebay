@@ -15,6 +15,9 @@ import { PaymentDb } from './checkout/infrastructure/entity/payment.entity';
 import { OrderItemDb } from './checkout/infrastructure/entity/order-item.entity';
 import { OrderDb } from './checkout/infrastructure/entity/order.entity';
 import { ShipmentDb } from './checkout/infrastructure/entity/shipment.entity';
+import { CheckoutModule } from './checkout/checkout.module';
+import { MetricsInterceptor } from './shared/interceptors/metrics.interceptor';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -46,8 +49,14 @@ import { ShipmentDb } from './checkout/infrastructure/entity/shipment.entity';
     AuthModule,
     UserModule,
     CatalogModule,
+    CheckoutModule,
   ],
   exports: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
+    },
+  ],
 })
 export class AppModule {}
