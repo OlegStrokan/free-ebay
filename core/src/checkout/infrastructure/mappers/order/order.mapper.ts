@@ -1,5 +1,4 @@
 import { Money } from 'src/shared/types/money';
-import { MoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper';
 import { Inject } from '@nestjs/common';
 import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
 import { Order, OrderData } from 'src/checkout/core/entity/order/order';
@@ -7,10 +6,11 @@ import { OrderDb } from '../../entity/order.entity';
 import { OrderItemDb } from '../../entity/order-item.entity';
 import { IOrderMapper } from './order.mapper.interface';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
+import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 
 export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
   constructor(
-    @Inject(MoneyMapper)
+    @Inject(MONEY_MAPPER)
     private readonly moneyMapper: IMoneyMapper,
   ) {}
 

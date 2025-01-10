@@ -1,6 +1,6 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { CANCEL_ORDER_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
+import { CANCEL_ORDER_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
 import { ICancelOrderUseCase } from './cancel-order.interface';
@@ -17,7 +17,7 @@ describe('CancelOrderUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    cancelOrderUseCase = module.get(CANCEL_ORDER_USE_CASE_TOKEN);
+    cancelOrderUseCase = module.get(CANCEL_ORDER_USE_CASE);
     orderMockService = module.get(ORDER_MOCK_SERVICE);
 
     await clearRepos(module);

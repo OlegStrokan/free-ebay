@@ -1,6 +1,6 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { SHIP_ORDER_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
+import { SHIP_ORDER_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
 import { OrderNotFoundException } from 'src/checkout/core/exceptions/order/order-not-found.exception';
@@ -17,7 +17,7 @@ describe('ShipOrderUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    shipOrderUseCase = module.get(SHIP_ORDER_USE_CASE_TOKEN);
+    shipOrderUseCase = module.get(SHIP_ORDER_USE_CASE);
     orderMockService = module.get(ORDER_MOCK_SERVICE);
 
     await clearRepos(module);

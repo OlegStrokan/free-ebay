@@ -1,7 +1,7 @@
 import { ICreateCartUseCase } from './create-cart.interface';
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { CREATE_CART_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
+import { CREATE_CART_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { generateUlid } from 'src/shared/types/generate-ulid';
@@ -20,7 +20,7 @@ describe('CreateCartUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    createCartUseCase = module.get(CREATE_CART_USE_CASE_TOKEN);
+    createCartUseCase = module.get(CREATE_CART_USE_CASE);
     cartMockService = module.get(CART_MOCK_SERVICE);
     userMockService = module.get(USER_MOCK_SERVICE);
 

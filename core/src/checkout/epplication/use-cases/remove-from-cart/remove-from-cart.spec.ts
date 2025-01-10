@@ -5,7 +5,7 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { IRemoveFromCartUseCase } from './remove-from-cart.interface';
-import { REMOVE_FROM_CART_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
+import { REMOVE_FROM_CART_USE_CASE } from '../../injection-tokens/use-case.token';
 import { Money } from 'src/shared/types/money';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
 import { CartItemNotFoundException } from 'src/checkout/core/exceptions/cart/cart-item-not-found.exception';
@@ -23,7 +23,7 @@ describe('CreateCartUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    removeFromCartUseCase = module.get(REMOVE_FROM_CART_USE_CASE_TOKEN);
+    removeFromCartUseCase = module.get(REMOVE_FROM_CART_USE_CASE);
     cartMockService = module.get(CART_MOCK_SERVICE);
     cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
 

@@ -1,6 +1,6 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { GET_ALL_USER_ORDERS_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
+import { GET_ALL_USER_ORDERS_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
 import { generateUlid } from 'src/shared/types/generate-ulid';
@@ -19,7 +19,7 @@ describe('GetAllUserOrdersUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    getAllUserOrdersUseCase = module.get(GET_ALL_USER_ORDERS_USE_CASE_TOKEN);
+    getAllUserOrdersUseCase = module.get(GET_ALL_USER_ORDERS_USE_CASE);
     orderMockService = module.get(ORDER_MOCK_SERVICE);
     userMockService = module.get(USER_MOCK_SERVICE);
 

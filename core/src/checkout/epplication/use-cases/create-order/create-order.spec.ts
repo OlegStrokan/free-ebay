@@ -1,6 +1,6 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { CREATE_ORDER_USE_CASE_TOKEN } from '../../injection-tokens/use-case.token';
+import { CREATE_ORDER_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
 import { ICreateOrderUseCase } from './create-order.interface';
@@ -33,7 +33,7 @@ describe('CreateOrderUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    createOrderUseCase = module.get(CREATE_ORDER_USE_CASE_TOKEN);
+    createOrderUseCase = module.get(CREATE_ORDER_USE_CASE);
     orderMockService = module.get(ORDER_MOCK_SERVICE);
     userMockService = module.get(USER_MOCK_SERVICE);
     cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);

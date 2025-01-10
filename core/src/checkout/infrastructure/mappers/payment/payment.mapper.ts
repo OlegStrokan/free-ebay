@@ -1,17 +1,17 @@
 import { Inject } from '@nestjs/common';
 import { Payment, PaymentData } from 'src/checkout/core/entity/payment/payment';
 import { PaymentDb } from '../../entity/payment.entity';
-import { MoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper';
 import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
 import { IPaymentMapper } from './payment.mapper.inteface';
 import { Money } from 'src/shared/types/money';
 import { generateUlid } from 'src/shared/types/generate-ulid';
+import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 
 export class PaymentMapper
   implements IPaymentMapper<PaymentData, Payment, PaymentDb>
 {
   constructor(
-    @Inject(MoneyMapper)
+    @Inject(MONEY_MAPPER)
     private readonly moneyMapper: IMoneyMapper,
   ) {}
 

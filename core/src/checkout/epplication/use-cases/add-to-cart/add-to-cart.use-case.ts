@@ -4,18 +4,18 @@ import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 import { CART_REPOSITORY } from '../../injection-tokens/repository.token';
 import { AddToCartDto } from 'src/checkout/interface/dtos/add-to-cart.dto';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
-import { ProductRepository } from 'src/product/infrastructure/repository/product.repository';
 import { IProductRepository } from 'src/product/core/product/repository/product.repository';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 import { CartItem } from 'src/checkout/core/entity/cart-item/cart-item';
 import { Cart } from 'src/checkout/core/entity/cart/cart';
+import { PRODUCT_REPOSITORY } from 'src/product/epplication/injection-tokens/repository.token';
 
 @Injectable()
 export class AddToCartUseCase implements IAddToCartUseCase {
   constructor(
     @Inject(CART_REPOSITORY)
     private readonly cartRepository: ICartRepository,
-    @Inject(ProductRepository)
+    @Inject(PRODUCT_REPOSITORY)
     private readonly productRepository: IProductRepository,
   ) {}
 

@@ -1,16 +1,16 @@
 import { Money } from 'src/shared/types/money';
 import { CartDb } from '../../entity/cart.entity';
-import { MoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper';
 import { Inject } from '@nestjs/common';
 import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
 import { CartItemDb } from '../../entity/cart-item.entity';
 import { ICartMapper } from './cart.mapper.interface';
 import { Cart } from 'src/checkout/core/entity/cart/cart';
 import { CartData } from 'src/checkout/core/entity/cart/cart';
+import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 
 export class CartMapper implements ICartMapper<CartData, Cart, CartDb> {
   constructor(
-    @Inject(MoneyMapper)
+    @Inject(MONEY_MAPPER)
     private readonly moneyMapper: IMoneyMapper,
   ) {}
 

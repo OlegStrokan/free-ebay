@@ -20,18 +20,18 @@ import { IRetrieveCartUseCase } from '../epplication/use-cases/retrieve-cart/ret
 import { IShipOrderUseCase } from '../epplication/use-cases/ship-order/ship-order.interface';
 import { ICreateCartUseCase } from '../epplication/use-cases/create-cart/create-cart.interface';
 import {
-  ADD_TO_CART_USE_CASE_TOKEN,
-  CANCEL_ORDER_USE_CASE_TOKEN,
-  CHECK_PAYMENT_STATUS_USE_CASE_TOKEN,
-  CLEAR_CART_USE_CASE_TOKEN,
-  CREATE_ORDER_USE_CASE_TOKEN,
-  GET_ALL_USER_ORDERS_USE_CASE_TOKEN,
-  RETRIEVE_CART_USE_CASE_TOKEN,
-  SHIP_ORDER_USE_CASE_TOKEN,
-  CREATE_CART_USE_CASE_TOKEN,
-  GET_ORDER_DETAIL_USE_CASE_TOKEN,
-  PROCEED_PAYMENT_USE_CASE_TOKEN,
-  REMOVE_FROM_CART_USE_CASE_TOKEN,
+  ADD_TO_CART_USE_CASE,
+  CANCEL_ORDER_USE_CASE,
+  CHECK_PAYMENT_STATUS_USE_CASE,
+  CLEAR_CART_USE_CASE,
+  CREATE_ORDER_USE_CASE,
+  GET_ALL_USER_ORDERS_USE_CASE,
+  RETRIEVE_CART_USE_CASE,
+  SHIP_ORDER_USE_CASE,
+  CREATE_CART_USE_CASE,
+  GET_ORDER_DETAIL_USE_CASE,
+  PROCEED_PAYMENT_USE_CASE,
+  REMOVE_FROM_CART_USE_CASE,
 } from '../epplication/injection-tokens/use-case.token';
 import { AddToCartDto } from './dtos/add-to-cart.dto';
 import { RemoveFromCartDto } from './dtos/remove-from-cart.dto';
@@ -41,29 +41,29 @@ import { IRemoveFromCartUseCase } from '../epplication/use-cases/remove-from-car
 @Controller('checkout')
 export class CheckoutController {
   constructor(
-    @Inject(ADD_TO_CART_USE_CASE_TOKEN)
+    @Inject(ADD_TO_CART_USE_CASE)
     private addToCartUseCase: IAddToCartUseCase,
-    @Inject(REMOVE_FROM_CART_USE_CASE_TOKEN)
+    @Inject(REMOVE_FROM_CART_USE_CASE)
     private removeFromCartUseCase: IRemoveFromCartUseCase,
-    @Inject(RETRIEVE_CART_USE_CASE_TOKEN)
+    @Inject(RETRIEVE_CART_USE_CASE)
     private retrieveCartUseCase: IRetrieveCartUseCase,
-    @Inject(CLEAR_CART_USE_CASE_TOKEN)
+    @Inject(CLEAR_CART_USE_CASE)
     private clearCartUseCase: IClearCartUseCase,
-    @Inject(CREATE_ORDER_USE_CASE_TOKEN)
+    @Inject(CREATE_ORDER_USE_CASE)
     private createOrderUseCase: ICreateOrderUseCase,
-    @Inject(GET_ORDER_DETAIL_USE_CASE_TOKEN)
+    @Inject(GET_ORDER_DETAIL_USE_CASE)
     private getOrderDetailsUseCase: IGetOrderDetailsUseCase,
-    @Inject(GET_ALL_USER_ORDERS_USE_CASE_TOKEN)
+    @Inject(GET_ALL_USER_ORDERS_USE_CASE)
     private getAllOrdersUseCase: IGetAllUserOrdersUseCase,
-    @Inject(CANCEL_ORDER_USE_CASE_TOKEN)
+    @Inject(CANCEL_ORDER_USE_CASE)
     private cancelOrderUseCase: ICancelOrderUseCase,
-    @Inject(SHIP_ORDER_USE_CASE_TOKEN)
+    @Inject(SHIP_ORDER_USE_CASE)
     private shipOrderUseCase: IShipOrderUseCase,
-    @Inject(PROCEED_PAYMENT_USE_CASE_TOKEN)
+    @Inject(PROCEED_PAYMENT_USE_CASE)
     private proceedPaymentUseCase: IProceedPaymentUseCase,
-    @Inject(CHECK_PAYMENT_STATUS_USE_CASE_TOKEN)
+    @Inject(CHECK_PAYMENT_STATUS_USE_CASE)
     private checkPaymentStatusUseCase: ICheckPaymentStatusUseCase,
-    @Inject(CREATE_CART_USE_CASE_TOKEN)
+    @Inject(CREATE_CART_USE_CASE)
     private createCartUseCase: ICreateCartUseCase,
   ) {}
 
