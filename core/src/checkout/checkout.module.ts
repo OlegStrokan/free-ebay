@@ -1,5 +1,4 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper';
 import { ProductModule } from 'src/product/product.module';
 import { UserModule } from 'src/user/user.module';
 import { CartItemDb } from './infrastructure/entity/cart-item.entity';
@@ -26,7 +25,7 @@ import { checkoutProviders } from './checkout.providers';
     ProductModule,
   ],
   exports: [],
-  providers: [...checkoutProviders, MoneyMapper],
+  providers: [...checkoutProviders],
   controllers: [CheckoutController],
 })
 export class CheckoutModule {}

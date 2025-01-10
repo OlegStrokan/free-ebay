@@ -18,11 +18,17 @@ import { USER_MOCK_SERVICE } from './epplication/injection-tokens/mock-services.
 import { UserMapper } from './infrastructure/mappers/user.mapper';
 import { USER_MAPPER } from './epplication/injection-tokens/mapper.token';
 import { UserRepository } from './infrastructure/repository/user.repository';
-import { MetricsInterceptor } from 'src/shared/interceptors/metrics.interceptor';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 import { USER_REPOSITORY } from './epplication/injection-tokens/repository.token';
 
 export const userProvider: Provider[] = [
+  {
+    useClass: UserMapper,
+    provide: USER_MAPPER,
+  },
+  {
+    useClass: UserRepository,
+    provide: USER_REPOSITORY,
+  },
   {
     useClass: CreateUserUseCase,
     provide: CREATE_USER_USE_CASE,
@@ -50,17 +56,5 @@ export const userProvider: Provider[] = [
   {
     useClass: UserMockService,
     provide: USER_MOCK_SERVICE,
-  },
-  {
-    useClass: UserMapper,
-    provide: USER_MAPPER,
-  },
-  {
-    useClass: UserRepository,
-    provide: USER_REPOSITORY,
-  },
-  {
-    provide: APP_INTERCEPTOR,
-    useClass: MetricsInterceptor,
   },
 ];

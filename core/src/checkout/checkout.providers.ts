@@ -26,18 +26,18 @@ import {
   PAYMENT_REPOSITORY,
 } from './epplication/injection-tokens/repository.token';
 import {
-  CREATE_CART_USE_CASE_TOKEN,
-  ADD_TO_CART_USE_CASE_TOKEN,
-  REMOVE_FROM_CART_USE_CASE_TOKEN,
-  RETRIEVE_CART_USE_CASE_TOKEN,
-  CLEAR_CART_USE_CASE_TOKEN,
-  CREATE_ORDER_USE_CASE_TOKEN,
-  GET_ORDER_DETAIL_USE_CASE_TOKEN,
-  GET_ALL_USER_ORDERS_USE_CASE_TOKEN,
-  CANCEL_ORDER_USE_CASE_TOKEN,
-  SHIP_ORDER_USE_CASE_TOKEN,
-  PROCEED_PAYMENT_USE_CASE_TOKEN,
-  CHECK_PAYMENT_STATUS_USE_CASE_TOKEN,
+  CREATE_CART_USE_CASE,
+  ADD_TO_CART_USE_CASE,
+  REMOVE_FROM_CART_USE_CASE,
+  RETRIEVE_CART_USE_CASE,
+  CLEAR_CART_USE_CASE,
+  CREATE_ORDER_USE_CASE,
+  GET_ORDER_DETAIL_USE_CASE,
+  GET_ALL_USER_ORDERS_USE_CASE,
+  CANCEL_ORDER_USE_CASE,
+  SHIP_ORDER_USE_CASE,
+  PROCEED_PAYMENT_USE_CASE,
+  CHECK_PAYMENT_STATUS_USE_CASE,
 } from './epplication/injection-tokens/use-case.token';
 import { AddToCartUseCase } from './epplication/use-cases/add-to-cart/add-to-cart.use-case';
 import { CancelOrderUseCase } from './epplication/use-cases/cancel-order/cancel-order.use-case';
@@ -86,51 +86,51 @@ export const checkoutProviders: Provider[] = [
     useClass: PaymentMockService,
   },
   {
-    provide: CREATE_CART_USE_CASE_TOKEN,
+    provide: CREATE_CART_USE_CASE,
     useClass: CreateCartUseCase,
   },
   {
-    provide: ADD_TO_CART_USE_CASE_TOKEN,
+    provide: ADD_TO_CART_USE_CASE,
     useClass: AddToCartUseCase,
   },
   {
-    provide: REMOVE_FROM_CART_USE_CASE_TOKEN,
+    provide: REMOVE_FROM_CART_USE_CASE,
     useClass: RemoveFromCartUseCase,
   },
   {
-    provide: RETRIEVE_CART_USE_CASE_TOKEN,
+    provide: RETRIEVE_CART_USE_CASE,
     useClass: RetrieveCartUseCase,
   },
   {
-    provide: CLEAR_CART_USE_CASE_TOKEN,
+    provide: CLEAR_CART_USE_CASE,
     useClass: ClearCartUseCase,
   },
   {
-    provide: CREATE_ORDER_USE_CASE_TOKEN,
+    provide: CREATE_ORDER_USE_CASE,
     useClass: CreateOrderUseCase,
   },
   {
-    provide: GET_ORDER_DETAIL_USE_CASE_TOKEN,
+    provide: GET_ORDER_DETAIL_USE_CASE,
     useClass: GetOrderDetailsUseCase,
   },
   {
-    provide: GET_ALL_USER_ORDERS_USE_CASE_TOKEN,
+    provide: GET_ALL_USER_ORDERS_USE_CASE,
     useClass: GetAllUserOrdersUseCase,
   },
   {
-    provide: CANCEL_ORDER_USE_CASE_TOKEN,
+    provide: CANCEL_ORDER_USE_CASE,
     useClass: CancelOrderUseCase,
   },
   {
-    provide: SHIP_ORDER_USE_CASE_TOKEN,
+    provide: SHIP_ORDER_USE_CASE,
     useClass: ShipOrderUseCase,
   },
   {
-    provide: PROCEED_PAYMENT_USE_CASE_TOKEN,
+    provide: PROCEED_PAYMENT_USE_CASE,
     useClass: ProceedPaymentUseCase,
   },
   {
-    provide: CHECK_PAYMENT_STATUS_USE_CASE_TOKEN,
+    provide: CHECK_PAYMENT_STATUS_USE_CASE,
     useClass: CheckPaymentStatusUseCase,
   },
   {
