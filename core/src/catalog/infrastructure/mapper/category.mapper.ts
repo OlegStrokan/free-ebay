@@ -3,18 +3,18 @@ import { Category } from 'src/catalog/core/category/entity/category';
 import { CategoryDb } from '../entity/category';
 import { CategoryData } from 'src/catalog/core/category/entity/category';
 import { ICategoryMapper } from './category.mapper.interface';
-import { ProductMapper } from 'src/product/infrastructure/mappers/product/product.mapper';
 import { IProductMapper } from 'src/product/infrastructure/mappers/product/product.mapper.interface';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
+import { PRODUCT_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 
 @Injectable()
 export class CategoryMapper
   implements ICategoryMapper<CategoryData, Category, CategoryDb>
 {
   constructor(
-    @Inject(ProductMapper)
+    @Inject(PRODUCT_MAPPER)
     private readonly productMapper: IProductMapper<
       ProductData,
       Product,

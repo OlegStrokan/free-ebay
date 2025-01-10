@@ -1,9 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { IDeleteCategoryUseCase } from './delete-category.interface';
-import {
-  CATEGORY_REPOSITORY,
-  ICategoryRepository,
-} from 'src/catalog/core/category/repository/category.repository';
+import { ICategoryRepository } from 'src/catalog/core/category/repository/category.repository';
+import { CATEGORY_REPOSITORY } from '../../injection-tokens/repository.token';
 
 export class DeleteCategoryUseCase implements IDeleteCategoryUseCase {
   constructor(

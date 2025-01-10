@@ -4,11 +4,11 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { ICreateCategoryUseCase } from './create-category.interface';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
 import { ICategoryRepository } from 'src/catalog/core/category/repository/category.repository';
-import { CreateCategoryUseCase } from './create-category.use-case';
-import { CategoryRepository } from 'src/catalog/infrastructure/repository/category.repository';
-import { CategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.service';
 import { faker } from '@faker-js/faker';
 import { CategoryAlreadyExistsException } from 'src/catalog/core/category/entity/exceptions/category-already-exists.exception';
+import { CATEGORY_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { CREATE_CATEGORY_USE_CASE } from '../../injection-tokens/use-case.token';
+import { CATEGORY_REPOSITORY } from '../../injection-tokens/repository.token';
 
 describe('CreateCategoryUseCaseTest', () => {
   let createCategoryUseCase: ICreateCategoryUseCase;
@@ -20,10 +20,12 @@ describe('CreateCategoryUseCaseTest', () => {
     module = await createTestingModule();
 
     createCategoryUseCase = module.get<ICreateCategoryUseCase>(
-      CreateCategoryUseCase,
+      CREATE_CATEGORY_USE_CASE,
     );
-    categoryRepository = module.get<ICategoryRepository>(CategoryRepository);
-    categoryMockService = module.get<ICategoryMockService>(CategoryMockService);
+    categoryRepository = module.get<ICategoryRepository>(CATEGORY_REPOSITORY);
+    categoryMockService = module.get<ICategoryMockService>(
+      CATEGORY_MOCK_SERVICE,
+    );
   });
 
   beforeEach(async () => {

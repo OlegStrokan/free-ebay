@@ -1,10 +1,8 @@
 import { Inject } from '@nestjs/common';
 import { Category } from 'src/catalog/core/category/entity/category';
-import {
-  CATEGORY_REPOSITORY,
-  ICategoryRepository,
-} from 'src/catalog/core/category/repository/category.repository';
+import { ICategoryRepository } from 'src/catalog/core/category/repository/category.repository';
 import { IGetAllCategoriesUseCase } from './get-all-categories.interface';
+import { CATEGORY_REPOSITORY } from '../../injection-tokens/repository.token';
 
 export class GetAllCategoriesUseCase implements IGetAllCategoriesUseCase {
   constructor(

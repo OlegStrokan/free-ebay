@@ -3,8 +3,8 @@ import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IGetAllCategoriesUseCase } from './get-all-categories.interface';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
-import { CategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.service';
-import { GetAllCategoriesUseCase } from './get-all-categories.use-case';
+import { CATEGORY_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { GET_ALL_CATEGORIES_USE_CASE } from '../../injection-tokens/use-case.token';
 
 describe('GetAllCategoriesTests', () => {
   let getAllCategoriesUseCase: IGetAllCategoriesUseCase;
@@ -15,9 +15,11 @@ describe('GetAllCategoriesTests', () => {
     module = await createTestingModule();
 
     getAllCategoriesUseCase = module.get<IGetAllCategoriesUseCase>(
-      GetAllCategoriesUseCase,
+      GET_ALL_CATEGORIES_USE_CASE,
     );
-    categoryMockService = module.get<ICategoryMockService>(CategoryMockService);
+    categoryMockService = module.get<ICategoryMockService>(
+      CATEGORY_MOCK_SERVICE,
+    );
   });
 
   afterAll(async () => {

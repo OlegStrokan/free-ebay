@@ -1,12 +1,10 @@
 import { Inject } from '@nestjs/common';
 import { Category } from 'src/catalog/core/category/entity/category';
-import {
-  CATEGORY_REPOSITORY,
-  ICategoryRepository,
-} from 'src/catalog/core/category/repository/category.repository';
+import { ICategoryRepository } from 'src/catalog/core/category/repository/category.repository';
 import { CreateCategoryDto } from 'src/catalog/interface/dtos/create-category.dto';
 import { ICreateCategoryUseCase } from './create-category.interface';
 import { CategoryAlreadyExistsException } from 'src/catalog/core/category/entity/exceptions/category-already-exists.exception';
+import { CATEGORY_REPOSITORY } from '../../injection-tokens/repository.token';
 
 export class CreateCategoryUseCase implements ICreateCategoryUseCase {
   constructor(

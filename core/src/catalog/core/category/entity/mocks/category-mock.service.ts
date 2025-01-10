@@ -2,19 +2,19 @@ import { faker } from '@faker-js/faker';
 import { Injectable, Inject } from '@nestjs/common';
 import { CategoryData, Category } from '../category';
 import { ICategoryRepository } from '../../repository/category.repository';
-import { CATEGORY_REPOSITORY } from '../../repository/category.repository';
 import { CreateCategoryDto } from 'src/catalog/interface/dtos/create-category.dto';
 import { ICategoryMockService } from './category-mock.interface';
-import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
+import { CATEGORY_REPOSITORY } from 'src/catalog/epplication/injection-tokens/repository.token';
+import { PRODUCT_MOCK_SERVICE } from 'src/product/epplication/injection-tokens/mock-services.token';
 
 @Injectable()
 export class CategoryMockService implements ICategoryMockService {
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,
-    @Inject(ProductMockService)
+    @Inject(PRODUCT_MOCK_SERVICE)
     private readonly productMockService: IProductMockService,
   ) {}
 

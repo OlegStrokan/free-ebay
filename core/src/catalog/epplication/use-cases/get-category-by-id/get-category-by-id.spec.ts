@@ -4,9 +4,9 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { faker } from '@faker-js/faker';
 import { IGetCategoryByIdUseCase } from './get-category-by-id.interface';
 import { CategoryNotFoundException } from 'src/catalog/core/category/entity/exceptions/category-not-found.exception';
-import { CategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.service';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
-import { GetCategoryByIdUseCase } from './get-category-by-id.use-case';
+import { CATEGORY_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { GET_CATEGORY_BY_ID_USE_CASE } from '../../injection-tokens/use-case.token';
 
 describe('GetCategoryByIdTest', () => {
   let getCategoryById: IGetCategoryByIdUseCase;
@@ -17,9 +17,11 @@ describe('GetCategoryByIdTest', () => {
     module = await createTestingModule();
 
     getCategoryById = module.get<IGetCategoryByIdUseCase>(
-      GetCategoryByIdUseCase,
+      GET_CATEGORY_BY_ID_USE_CASE,
     );
-    categoryMockService = module.get<ICategoryMockService>(CategoryMockService);
+    categoryMockService = module.get<ICategoryMockService>(
+      CATEGORY_MOCK_SERVICE,
+    );
   });
 
   afterAll(async () => {

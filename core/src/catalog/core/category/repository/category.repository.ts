@@ -1,8 +1,5 @@
 import { Category } from '../entity/category';
 
-export const CATEGORY_REPOSITORY = Symbol('CATEGORY_REPOSITORY');
-export const CATEGORY_MAPPER = Symbol('CATEGORY_MAPPER');
-
 export interface ICategoryRepository {
   save(category: Category): Promise<Category>;
   findById(id: string): Promise<Category | null>;

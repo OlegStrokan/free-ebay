@@ -1,11 +1,11 @@
 import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { DeleteCategoryUseCase } from './delete-category.use-case';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
-import { CategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.service';
 import { IDeleteCategoryUseCase } from './delete-category.interface';
 import { CategoryNotFoundException } from 'src/catalog/core/category/entity/exceptions/category-not-found.exception';
+import { CATEGORY_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { DELETE_CATEGORY_USE_CASE } from '../../injection-tokens/use-case.token';
 
 describe('GeleteCategoryUseCaseTest', () => {
   let deleteCategoryUseCase: IDeleteCategoryUseCase;
@@ -16,9 +16,11 @@ describe('GeleteCategoryUseCaseTest', () => {
     module = await createTestingModule();
 
     deleteCategoryUseCase = module.get<IDeleteCategoryUseCase>(
-      DeleteCategoryUseCase,
+      DELETE_CATEGORY_USE_CASE,
     );
-    categoryMockService = module.get<ICategoryMockService>(CategoryMockService);
+    categoryMockService = module.get<ICategoryMockService>(
+      CATEGORY_MOCK_SERVICE,
+    );
   });
 
   afterAll(async () => {

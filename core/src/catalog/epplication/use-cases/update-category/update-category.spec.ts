@@ -6,8 +6,8 @@ import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { IUpdateCategoryUseCase } from './update-category.interface';
-import { UpdateCategoryUseCase } from './update-category.use-case';
-import { CategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.service';
+import { CATEGORY_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { UPDATE_CATEGORY_USE_CASE } from '../../injection-tokens/use-case.token';
 
 describe('UpdateCategoryUseCaseTest', () => {
   let updateCategoryUseCase: IUpdateCategoryUseCase;
@@ -18,9 +18,11 @@ describe('UpdateCategoryUseCaseTest', () => {
     module = await createTestingModule();
 
     updateCategoryUseCase = module.get<IUpdateCategoryUseCase>(
-      UpdateCategoryUseCase,
+      UPDATE_CATEGORY_USE_CASE,
     );
-    categoryMockService = module.get<ICategoryMockService>(CategoryMockService);
+    categoryMockService = module.get<ICategoryMockService>(
+      CATEGORY_MOCK_SERVICE,
+    );
   });
 
   beforeAll(async () => {
