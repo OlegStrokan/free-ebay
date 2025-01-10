@@ -1,0 +1,1 @@
+export const CATEGORY_MOCK_SERVICE = Symbol('CATEGORY_MOCK_SERVICE');
