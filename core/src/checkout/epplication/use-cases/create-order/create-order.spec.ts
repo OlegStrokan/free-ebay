@@ -20,6 +20,9 @@ import {
   ORDER_MOCK_SERVICE,
 } from '../../injection-tokens/mock-services.token';
 import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
+import { ClientKafka } from '@nestjs/microservices';
+import { of } from 'rxjs';
+import { Kafka } from 'kafkajs';
 
 describe('CreateOrderUseCase', () => {
   let createOrderUseCase: ICreateOrderUseCase;
@@ -28,6 +31,7 @@ describe('CreateOrderUseCase', () => {
   let userMockService: IUserMockService;
   let cartItemMockService: ICartItemMockService;
   let cartRepository: ICartRepository;
+  let kafkaClient: ClientKafka;
   let module: TestingModule;
 
   beforeAll(async () => {
@@ -39,6 +43,7 @@ describe('CreateOrderUseCase', () => {
     cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
     cartMockService = module.get(CART_MOCK_SERVICE);
     cartRepository = module.get(CART_REPOSITORY);
+    kafkaClient = module.get('KAFKA_PRODUCER');
 
     await clearRepos(module);
   });
@@ -67,10 +72,23 @@ describe('CreateOrderUseCase', () => {
     const dto = orderMockService.getOneToCreate({
       cartId: cart.id,
       shippingAddress: '123 Test St',
-      paymentMethod: PaymentMethod.CashOnDelivery,
+      paymentMethod: PaymentMethod.ApplePay,
     });
 
     await userMockService.createOne({ id: userId });
+
+    const sendSpy = jest
+      .spyOn(kafkaClient, 'send')
+      .mockImplementation((pattern: any, data: unknown) => {
+        console.log(
+          'Kafka send called with pattern:',
+          pattern,
+          'and data:',
+          data,
+        );
+
+        return of(true);
+      });
 
     const order = await createOrderUseCase.execute(dto);
 
@@ -80,8 +98,78 @@ describe('CreateOrderUseCase', () => {
     expect(clearedCart?.totalPrice).toEqual(Money.getDefaultMoney(0));
     expect(order).toBeDefined();
     expect(order.items.length).toBeGreaterThan(0);
+    expect(sendSpy).toHaveBeenCalledWith(
+      'payment',
+      expect.objectContaining({
+        orderId: expect.any(String),
+        amount: expect.any(Object),
+        paymentMethod: PaymentMethod.ApplePay,
+      }),
+    );
+
+    sendSpy.mockRestore();
     // expect(order.data.shipment).toBeDefined();
     // expect(order.data.payment).toBeDefined();
+  });
+
+  it('should successfully create an order and send message to Kafka (real)', async () => {
+    const cartId = generateUlid();
+    const cartItemId = generateUlid();
+    const userId = generateUlid();
+
+    const price = Money.getDefaultMoney(100);
+    const cartItem = cartItemMockService.getOne({
+      cartId,
+      id: cartItemId,
+      quantity: 1,
+      price,
+    });
+    const cart = await cartMockService.createOne({
+      id: cartId,
+      userId,
+      items: [cartItem.data],
+    });
+    const dto = orderMockService.getOneToCreate({
+      cartId: cart.id,
+      shippingAddress: '123 Test St',
+      paymentMethod: PaymentMethod.CashOnDelivery,
+    });
+
+    await userMockService.createOne({ id: userId });
+
+    const kafka = new Kafka({
+      clientId: 'test-client',
+      brokers: ['localhost:9092'],
+    });
+
+    const consumer = kafka.consumer({ groupId: 'test-group' });
+    await consumer.connect();
+    await consumer.subscribe({ topic: 'payment', fromBeginning: true });
+
+    // Create a promise to wait for the message
+    const messageReceived = new Promise((resolve) => {
+      consumer.run({
+        eachMessage: async ({ topic, partition, message }) => {
+          const receivedData = JSON.parse(message.value?.toString() ?? '');
+          expect(receivedData).toEqual(
+            expect.objectContaining({
+              orderId: expect.any(String),
+              amount: expect.any(Object),
+              paymentMethod: PaymentMethod.CashOnDelivery,
+            }),
+          );
+          resolve(true);
+        },
+      });
+    });
+
+    // Execute the use case
+    await createOrderUseCase.execute(dto);
+
+    // Wait for the message to be received
+    await messageReceived;
+
+    await consumer.disconnect(); // Clean up the consumer
   });
 
   it('should throw CartNotFoundException if cart does not exist', async () => {
