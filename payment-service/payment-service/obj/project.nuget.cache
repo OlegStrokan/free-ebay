@@ -1,8 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "SQGDa8wEtCk=",
+  "dgSpecHash": "dJPbF0DRp9E=",
   "success": true,
   "projectFilePath": "/Users/stroka01/Development/free-ebay/payment-service/payment-service/payment-service.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "/Users/stroka01/.nuget/packages/confluent.kafka/2.8.0/confluent.kafka.2.8.0.nupkg.sha512",
+    "/Users/stroka01/.nuget/packages/librdkafka.redist/2.8.0/librdkafka.redist.2.8.0.nupkg.sha512",
+    "/Users/stroka01/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512"
+  ],
   "logs": []
 }
