@@ -22,8 +22,10 @@ import {
 import { Money } from 'src/shared/types/money';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
-import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
 import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/cart-items-not-found.exception';
+import { ClientKafka } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
+import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
 
 @Injectable()
 export class CreateOrderUseCase implements ICreateOrderUseCase {
@@ -36,6 +38,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     private readonly shipmentRepository: IShipmentRepository,
     @Inject(PAYMENT_REPOSITORY)
     private readonly paymentRepository: IPaymentRepository,
+    @Inject('KAFKA_PRODUCER') private client: ClientKafka,
   ) {}
 
   async execute(dto: CreateOrderDto): Promise<Order> {
@@ -60,8 +63,11 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     );
 
     if (dto.paymentMethod !== PaymentMethod.CashOnDelivery) {
-      const paymentResult = await this.initiatePayment(order, dto, true);
-      if (!paymentResult.success) {
+      const response = await firstValueFrom(
+        await this.processPaymentInfo(payment),
+      );
+      console.log('response', response);
+      if (response.status !== 'success') {
         throw new PaymentFailedException(order.id);
       }
     }
@@ -113,19 +119,12 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     return payment;
   }
 
-  private initiatePayment(
-    order: Order,
-    dto: CreateOrderDto,
-    simulateSuccess: boolean,
-  ): Promise<{ success: boolean }> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (simulateSuccess) {
-          resolve({ success: true });
-        } else {
-          reject(new Error('Payment simulation failed.'));
-        }
-      }, 1000);
-    });
+  private async processPaymentInfo(payment: Payment) {
+    const paymentInfo = {
+      orderId: payment.orderId,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+    };
+    return await this.client.emit('payment', paymentInfo);
   }
 }

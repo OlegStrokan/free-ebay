@@ -1,4 +1,3 @@
-// path/to/base.entity.ts
 import { CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export class BaseEntity {
