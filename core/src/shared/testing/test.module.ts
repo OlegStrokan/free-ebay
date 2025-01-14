@@ -7,7 +7,7 @@ import { UserModule } from 'src/user/user.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 import { CatalogModule } from 'src/catalog/catalog.module';
-import { CategoryDb } from 'src/catalog/infrastructure/entity/category';
+import { CategoryDb } from 'src/catalog/infrastructure/entity/category.entity';
 import { TestDbConfig } from './database/database.config';
 import { CheckoutModule } from 'src/checkout/checkout.module';
 import { CartDb } from 'src/checkout/infrastructure/entity/cart.entity';

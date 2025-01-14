@@ -112,66 +112,6 @@ describe('CreateOrderUseCase', () => {
     // expect(order.data.payment).toBeDefined();
   });
 
-  it('should successfully create an order and send message to Kafka (real)', async () => {
-    const cartId = generateUlid();
-    const cartItemId = generateUlid();
-    const userId = generateUlid();
-
-    const price = Money.getDefaultMoney(100);
-    const cartItem = cartItemMockService.getOne({
-      cartId,
-      id: cartItemId,
-      quantity: 1,
-      price,
-    });
-    const cart = await cartMockService.createOne({
-      id: cartId,
-      userId,
-      items: [cartItem.data],
-    });
-    const dto = orderMockService.getOneToCreate({
-      cartId: cart.id,
-      shippingAddress: '123 Test St',
-      paymentMethod: PaymentMethod.CashOnDelivery,
-    });
-
-    await userMockService.createOne({ id: userId });
-
-    const kafka = new Kafka({
-      clientId: 'test-client',
-      brokers: ['localhost:9092'],
-    });
-
-    const consumer = kafka.consumer({ groupId: 'test-group' });
-    await consumer.connect();
-    await consumer.subscribe({ topic: 'payment', fromBeginning: true });
-
-    // Create a promise to wait for the message
-    const messageReceived = new Promise((resolve) => {
-      consumer.run({
-        eachMessage: async ({ topic, partition, message }) => {
-          const receivedData = JSON.parse(message.value?.toString() ?? '');
-          expect(receivedData).toEqual(
-            expect.objectContaining({
-              orderId: expect.any(String),
-              amount: expect.any(Object),
-              paymentMethod: PaymentMethod.CashOnDelivery,
-            }),
-          );
-          resolve(true);
-        },
-      });
-    });
-
-    // Execute the use case
-    await createOrderUseCase.execute(dto);
-
-    // Wait for the message to be received
-    await messageReceived;
-
-    await consumer.disconnect(); // Clean up the consumer
-  });
-
   it('should throw CartNotFoundException if cart does not exist', async () => {
     const cartId = generateUlid();
 

@@ -5,10 +5,8 @@ import {
   CategoryData,
   Category,
 } from 'src/catalog/core/category/entity/category';
-import { CategoryDb } from '../entity/category';
-import { CategoryMapper } from './category.mapper';
+import { CategoryDb } from '../entity/category.entity';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
-import { CategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.service';
 import { CATEGORY_MAPPER } from 'src/catalog/epplication/injection-tokens/mapper.token';
 import { CATEGORY_MOCK_SERVICE } from 'src/catalog/epplication/injection-tokens/mock-services.token';
 

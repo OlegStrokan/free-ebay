@@ -6,7 +6,7 @@ import {
 } from 'src/catalog/core/category/entity/category';
 import { CategoryNotFoundException } from 'src/catalog/core/category/entity/exceptions/category-not-found.exception';
 import { Repository } from 'typeorm';
-import { CategoryDb } from '../entity/category';
+import { CategoryDb } from '../entity/category.entity';
 import { ICategoryMapper } from '../mapper/category.mapper.interface';
 import { ICategoryRepository } from 'src/catalog/core/category/repository/category.repository';
 import { IClearableRepository } from 'src/shared/types/clearable';

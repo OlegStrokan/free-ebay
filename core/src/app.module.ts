@@ -8,7 +8,7 @@ import { UserDb } from './user/infrastructure/entity/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { CatalogModule } from './catalog/catalog.module';
-import { CategoryDb } from './catalog/infrastructure/entity/category';
+import { CategoryDb } from './catalog/infrastructure/entity/category.entity';
 import { CartDb } from './checkout/infrastructure/entity/cart.entity';
 import { CartItemDb } from './checkout/infrastructure/entity/cart-item.entity';
 import { PaymentDb } from './checkout/infrastructure/entity/payment.entity';

@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryColumn, JoinColumn, ManyToOne } from 'typeorm';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { BaseEntity } from 'src/shared/types/base-entity/base.entity';
-import { CategoryDb } from 'src/catalog/infrastructure/entity/category';
+import { CategoryDb } from 'src/catalog/infrastructure/entity/category.entity';
 
 @Entity('products')
 export class ProductDb extends BaseEntity {

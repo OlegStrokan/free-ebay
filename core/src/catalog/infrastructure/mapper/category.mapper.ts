@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Category } from 'src/catalog/core/category/entity/category';
-import { CategoryDb } from '../entity/category';
+import { CategoryDb } from '../entity/category.entity';
 import { CategoryData } from 'src/catalog/core/category/entity/category';
 import { ICategoryMapper } from './category.mapper.interface';
 import { IProductMapper } from 'src/product/infrastructure/mappers/product/product.mapper.interface';

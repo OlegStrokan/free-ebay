@@ -1,5 +1,5 @@
 import { registerAs } from '@nestjs/config';
-import { CategoryDb } from 'src/catalog/infrastructure/entity/category';
+import { CategoryDb } from 'src/catalog/infrastructure/entity/category.entity';
 import { CartItemDb } from 'src/checkout/infrastructure/entity/cart-item.entity';
 import { CartDb } from 'src/checkout/infrastructure/entity/cart.entity';
 import { OrderItemDb } from 'src/checkout/infrastructure/entity/order-item.entity';
