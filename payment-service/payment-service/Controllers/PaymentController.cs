@@ -1,9 +1,9 @@
+// Controllers/PaymentController.cs
 using Microsoft.AspNetCore.Mvc;
 using payment_service.Entities;
-using payment_service.Services;
 
-namespace payment_service.Controllers;
-
+namespace payment_service.Controllers
+{
     [ApiController]
     [Route("api/[controller]")]
     public class PaymentController : ControllerBase
@@ -15,16 +15,18 @@ namespace payment_service.Controllers;
             _paymentService = paymentService;
         }
 
-        [HttpPost]
-        public IActionResult ProcessPayment([FromBody] Payment payment)
+        [HttpPost("ProcessPayment")]
+        public async Task<IActionResult> ProcessPayment([FromBody] Payment payment)
         {
-            if (payment == null)
+            try
             {
-                return BadRequest(new { Message = "Payment data is required." });
+                var result = await _paymentService.ProcessPayment(payment);
+                return Ok(result);
             }
-
-            var result = _paymentService.ProcessMessage(payment);
-
-            return Ok(result);
+            catch (Exception e)
+            {
+                return BadRequest(new { error = e.Message });
+            }
         }
     }
+}
