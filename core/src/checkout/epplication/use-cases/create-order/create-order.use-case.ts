@@ -26,6 +26,7 @@ import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/ca
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class CreateOrderUseCase implements ICreateOrderUseCase {
@@ -38,7 +39,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     private readonly shipmentRepository: IShipmentRepository,
     @Inject(PAYMENT_REPOSITORY)
     private readonly paymentRepository: IPaymentRepository,
-    @Inject('KAFKA_PRODUCER') private client: ClientKafka,
+    private readonly httpService: HttpService,
   ) {}
 
   async execute(dto: CreateOrderDto): Promise<Order> {
@@ -67,7 +68,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
         await this.processPaymentInfo(payment),
       );
       console.log('response', response);
-      if (response.status !== 'success') {
+      if (response.status === 500) {
         throw new PaymentFailedException(order.id);
       }
     }
@@ -125,6 +126,9 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
       amount: payment.amount,
       paymentMethod: payment.paymentMethod,
     };
-    return await this.client.emit('payment', paymentInfo);
+    return this.httpService.post(
+      'http://localhost:5012/api/Payment/ProcessPayment',
+      { paymentInfo },
+    );
   }
 }
