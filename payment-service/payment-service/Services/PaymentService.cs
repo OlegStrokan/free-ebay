@@ -2,6 +2,8 @@
 
 using payment_service.Entities;
 
+namespace payment_service.Services;
+
 public class PaymentService
 {
     private readonly ILogger<PaymentService> _logger;
@@ -17,11 +19,11 @@ public class PaymentService
         try
         {
             // Save Payment to the Database
-            using (var dbContext = new PaymentDbContext())
-            {
-                await dbContext.Payments.AddAsync(payment);
-                await dbContext.SaveChangesAsync();
-            }
+            // using (var dbContext = new PaymentDbContext())
+            // {
+            //     await dbContext.Payments.AddAsync(payment);
+            //     await dbContext.SaveChangesAsync();
+            // }
 
             return payment;
         }
@@ -30,7 +32,5 @@ public class PaymentService
             throw new Exception("Error processing payment", ex);
         }
     }
-
-
 }
 
