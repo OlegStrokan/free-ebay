@@ -23,7 +23,6 @@ import { Money } from 'src/shared/types/money';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
 import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/cart-items-not-found.exception';
-import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
 import { HttpService } from '@nestjs/axios';
@@ -67,8 +66,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
       const response = await firstValueFrom(
         await this.processPaymentInfo(payment),
       );
-      console.log('response', response);
-      if (response.status === 500) {
+      if (response.status !== 200) {
         throw new PaymentFailedException(order.id);
       }
     }
@@ -123,12 +121,17 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
   private async processPaymentInfo(payment: Payment) {
     const paymentInfo = {
       orderId: payment.orderId,
-      amount: payment.amount,
+      amount: {
+        amount: payment.amount.getAmount(),
+        fraction: payment.amount.getFraction(),
+        currency: payment.amount.getCurrency(),
+      },
       paymentMethod: payment.paymentMethod,
     };
+    console.info(paymentInfo);
     return this.httpService.post(
       'http://localhost:5012/api/Payment/ProcessPayment',
-      { paymentInfo },
+      paymentInfo,
     );
   }
 }

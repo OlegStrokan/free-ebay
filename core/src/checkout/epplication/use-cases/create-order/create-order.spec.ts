@@ -20,9 +20,9 @@ import {
   ORDER_MOCK_SERVICE,
 } from '../../injection-tokens/mock-services.token';
 import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
-import { ClientKafka } from '@nestjs/microservices';
 import { of } from 'rxjs';
-import { Kafka } from 'kafkajs';
+import { HttpService } from '@nestjs/axios';
+import { AxiosResponse } from 'axios';
 
 describe('CreateOrderUseCase', () => {
   let createOrderUseCase: ICreateOrderUseCase;
@@ -31,7 +31,7 @@ describe('CreateOrderUseCase', () => {
   let userMockService: IUserMockService;
   let cartItemMockService: ICartItemMockService;
   let cartRepository: ICartRepository;
-  let kafkaClient: ClientKafka;
+  let httpClient: HttpService;
   let module: TestingModule;
 
   beforeAll(async () => {
@@ -43,7 +43,7 @@ describe('CreateOrderUseCase', () => {
     cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
     cartMockService = module.get(CART_MOCK_SERVICE);
     cartRepository = module.get(CART_REPOSITORY);
-    kafkaClient = module.get('KAFKA_PRODUCER');
+    httpClient = module.get(HttpService);
 
     await clearRepos(module);
   });
@@ -77,18 +77,19 @@ describe('CreateOrderUseCase', () => {
 
     await userMockService.createOne({ id: userId });
 
-    const sendSpy = jest
-      .spyOn(kafkaClient, 'send')
-      .mockImplementation((pattern: any, data: unknown) => {
-        console.log(
-          'Kafka send called with pattern:',
-          pattern,
-          'and data:',
-          data,
-        );
+    const mockResponse: AxiosResponse = {
+      data: { status: 'success', transactionId: generateUlid() },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {
+        url: 'http://localhost:5012/api/Payment/ProcessPayment',
+      } as any,
+    };
 
-        return of(true);
-      });
+    const sendSpy = jest
+      .spyOn(httpClient, 'post')
+      .mockImplementation(() => of(mockResponse));
 
     const order = await createOrderUseCase.execute(dto);
 
@@ -99,7 +100,7 @@ describe('CreateOrderUseCase', () => {
     expect(order).toBeDefined();
     expect(order.items.length).toBeGreaterThan(0);
     expect(sendSpy).toHaveBeenCalledWith(
-      'payment',
+      'http://localhost:5012/api/Payment/ProcessPayment',
       expect.objectContaining({
         orderId: expect.any(String),
         amount: expect.any(Object),
