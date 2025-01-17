@@ -1,5 +1,5 @@
-export interface IPaymentMapper<TClient, TDomain, TDatabase> {
-  toDb(domain: TDomain): TDatabase;
+export interface IPaymentMapper<TData, TDomain, TDatabase> {
+  toDb(domain: TData): TDatabase;
   toDomain(db: TDatabase): TDomain;
-  toClient(domain: TDomain): TClient;
+  toClient(domain: TDomain): TData;
 }

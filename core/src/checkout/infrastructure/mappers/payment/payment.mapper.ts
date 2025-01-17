@@ -31,15 +31,15 @@ export class PaymentMapper
     return new Payment(paymentData);
   }
 
-  toDb(payment: Payment): PaymentDb {
+  toDb(payment: PaymentData): PaymentDb {
     const paymentDb = new PaymentDb();
     paymentDb.id = payment.id;
     // Assuming order is set elsewhere
     paymentDb.amount = this.moneyMapper.toDb(payment.amount);
     paymentDb.paymentMethod = payment.paymentMethod;
-    paymentDb.paymentStatus = payment.payment.status;
-    paymentDb.createdAt = payment.payment.createdAt;
-    paymentDb.updatedAt = payment.payment.updatedAt;
+    paymentDb.paymentStatus = payment.status;
+    paymentDb.createdAt = payment.createdAt;
+    paymentDb.updatedAt = payment.updatedAt;
 
     return paymentDb;
   }
