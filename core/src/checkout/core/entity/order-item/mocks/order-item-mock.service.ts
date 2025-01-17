@@ -13,7 +13,7 @@ export class OrderItemMockService implements IOrderItemMockService {
       id: overrides.id ?? generateUlid(),
       productId: overrides.productId ?? generateUlid(),
       orderId: overrides.orderId ?? generateUlid(),
-      quantity: overrides.quantity ?? faker.number.int(10),
+      quantity: overrides.quantity ?? faker.number.int({ max: 10, min: 1 }),
       priceAtPurchase:
         overrides.priceAtPurchase ??
         new Money(faker.number.int(100), 'USD', 100),
