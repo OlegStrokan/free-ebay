@@ -25,7 +25,7 @@ export class ShipmentMapper
     return new Shipment(shipmentData);
   }
 
-  toDb(shipment: Shipment): ShipmentDb {
+  toDb(shipment: ShipmentData): ShipmentDb {
     const shipmentDb = new ShipmentDb();
     shipmentDb.id = shipment.id;
     // Assuming order is set elsewhere
@@ -33,8 +33,8 @@ export class ShipmentMapper
     shipmentDb.trackingNumber = shipment.trackingNumber;
     shipmentDb.shippedAt = shipment.shippedAt;
     shipmentDb.estimatedArrival = shipment.estimatedArrival;
-    shipmentDb.createdAt = shipment.data.createdAt;
-    shipmentDb.updatedAt = shipment.data.updatedAt;
+    shipmentDb.createdAt = shipment.createdAt;
+    shipmentDb.updatedAt = shipment.updatedAt;
     return shipmentDb;
   }
 
