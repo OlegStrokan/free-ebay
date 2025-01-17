@@ -4,6 +4,7 @@ import { Money } from 'src/shared/types/money';
 import { OrderItemData } from '../order-item/order-item';
 import { ShipmentData } from '../shipment/shipment';
 import { PaymentData } from '../payment/payment';
+import { InvalidOrderItemsException } from '../../exceptions/order/invalid-order-items.exception';
 
 export enum OrderStatus {
   Pending = 'Pending',
@@ -34,7 +35,7 @@ export class Order implements Clonable<Order> {
   ) =>
     new Order({
       ...orderData,
-      status: OrderStatus.Cancelled,
+      status: OrderStatus.Pending,
       id: generateUlid(),
       items: [],
       createdAt: new Date(),
@@ -114,6 +115,9 @@ export class Order implements Clonable<Order> {
 
   addItem = (item: OrderItemData) => {
     const clone = this.clone();
+    if (item.quantity === 0) {
+      throw new InvalidOrderItemsException();
+    }
     clone.order.items.push(item);
     clone.order.totalPrice = this.calculateTotalPrice(clone.order.items);
     return clone;
@@ -121,6 +125,10 @@ export class Order implements Clonable<Order> {
 
   addItems = (items: OrderItemData[]) => {
     const clone = this.clone();
+
+    if (items.some((item) => item.quantity === 0)) {
+      throw new InvalidOrderItemsException();
+    }
     clone.order.items.push(...items);
     clone.order.totalPrice = this.calculateTotalPrice(clone.order.items);
     return clone;
