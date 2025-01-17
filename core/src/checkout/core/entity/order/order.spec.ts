@@ -6,6 +6,7 @@ import { ORDER_ITEM_MOCK_SERVICE } from 'src/checkout/epplication/injection-toke
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { TestingModule } from '@nestjs/testing';
+import { InvalidOrderItemsException } from '../../exceptions/order/invalid-order-items.exception';
 
 describe('Order', () => {
   let orderData: OrderData;
@@ -45,7 +46,7 @@ describe('Order', () => {
     });
     expect(newOrder).toBeInstanceOf(Order);
     expect(newOrder.data.userId).toBe('user2');
-    expect(newOrder.data.status).toBe(OrderStatus.Cancelled);
+    expect(newOrder.data.status).toBe(OrderStatus.Pending);
     expect(newOrder.data.items).toHaveLength(0);
   });
 
@@ -57,6 +58,15 @@ describe('Order', () => {
     const updatedOrder = order.addItem(item.data);
     expect(updatedOrder.items).toHaveLength(1);
     expect(updatedOrder.totalPrice.getAmount()).toBe(50);
+  });
+
+  test('should throw InvalidOrderItems exception in addItem', () => {
+    const item: OrderItem = orderItemMockService.getOne({
+      id: 'item1',
+      quantity: 0,
+      priceAtPurchase: new Money(50, 'USD', 100),
+    });
+    expect(() => order.addItem(item.data)).toThrow(InvalidOrderItemsException);
   });
 
   test('should remove an item successfully', () => {
@@ -95,7 +105,7 @@ describe('Order', () => {
     expect(updatedOrder.data.status).toBe(OrderStatus.Shipped);
   });
 
-  test('should handle adding multiple items', () => {
+  test('should throw InvalidOrderItems exception in addItems', () => {
     const [item1, item2]: OrderItem[] = orderItemMockService.getMany(2, [
       {
         id: 'item2',
@@ -107,6 +117,20 @@ describe('Order', () => {
     const updatedOrder = order.addItems([item1.data, item2.data]);
     expect(updatedOrder.items).toHaveLength(2);
     expect(updatedOrder.totalPrice.getAmount()).toBe(80);
+  });
+  test('should handle adding multiple items', () => {
+    const [item1, item2]: OrderItem[] = orderItemMockService.getMany(2, [
+      {
+        id: 'item2',
+        priceAtPurchase: new Money(30, 'USD', 100),
+        quantity: 0,
+      },
+      { id: 'item1', priceAtPurchase: new Money(50, 'USD', 100) },
+    ]);
+
+    expect(() => order.addItems([item1.data, item2.data])).toThrow(
+      InvalidOrderItemsException,
+    );
   });
 
   test('should handle removing multiple items', () => {
