@@ -20,7 +20,7 @@ export class PaymentRepository
   ) {}
 
   async save(payment: Payment): Promise<Payment> {
-    const dbPayment = this.mapper.toDb(payment);
+    const dbPayment = this.mapper.toDb(payment.data);
     const createdPayment = await this.paymentRepository.save(dbPayment);
     return this.mapper.toDomain(createdPayment);
   }
@@ -33,7 +33,7 @@ export class PaymentRepository
   }
 
   async update(payment: Payment): Promise<Payment> {
-    const dbPayment = this.mapper.toDb(payment);
+    const dbPayment = this.mapper.toDb(payment.data);
 
     const updatedPayment = await this.paymentRepository.save(dbPayment);
 

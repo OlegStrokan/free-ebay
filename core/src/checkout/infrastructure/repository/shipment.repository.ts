@@ -27,7 +27,7 @@ export class ShipmentRepository
   ) {}
 
   async save(shipment: Shipment): Promise<Shipment> {
-    const dbShipment = this.mapper.toDb(shipment);
+    const dbShipment = this.mapper.toDb(shipment.data);
     const createdShipment = await this.shipmentRepository.save(dbShipment);
     return this.mapper.toDomain(createdShipment);
   }
@@ -40,7 +40,7 @@ export class ShipmentRepository
   }
 
   async update(shipment: Shipment): Promise<Shipment> {
-    const dbShipment = this.mapper.toDb(shipment);
+    const dbShipment = this.mapper.toDb(shipment.data);
 
     const updatedShipment = await this.shipmentRepository.save(dbShipment);
 
