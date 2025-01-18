@@ -7,11 +7,36 @@ import { OrderItemDb } from '../../entity/order-item.entity';
 import { IOrderMapper } from './order.mapper.interface';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
+import {
+  PAYMENT_MAPPER,
+  SHIPMENT_MAPPER,
+} from 'src/checkout/epplication/injection-tokens/mapper.token';
+import { IPaymentMapper } from '../payment/payment.mapper.inteface';
+import { IShipmentMapper } from '../shipment/shipment.mapper.interface';
+import { Payment, PaymentData } from 'src/checkout/core/entity/payment/payment';
+import { PaymentDb } from '../../entity/payment.entity';
+import {
+  Shipment,
+  ShipmentData,
+} from 'src/checkout/core/entity/shipment/shipment';
+import { ShipmentDb } from '../../entity/shipment.entity';
 
 export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
   constructor(
     @Inject(MONEY_MAPPER)
     private readonly moneyMapper: IMoneyMapper,
+    @Inject(PAYMENT_MAPPER)
+    private readonly paymentMapper: IPaymentMapper<
+      PaymentData,
+      Payment,
+      PaymentDb
+    >,
+    @Inject(SHIPMENT_MAPPER)
+    private readonly shipmentMapper: IShipmentMapper<
+      ShipmentData,
+      Shipment,
+      ShipmentDb
+    >,
   ) {}
 
   toDomain(orderDB: OrderDb): Order {
@@ -37,6 +62,8 @@ export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
         Money.getDefaultMoney(),
       createdAt: orderDB.createdAt,
       updatedAt: orderDB.updatedAt,
+      payment: this.paymentMapper.toDomain(orderDB.payment).data,
+      shipment: this.shipmentMapper.toDomain(orderDB.shipment).data,
     };
 
     return new Order(orderData);
@@ -62,7 +89,14 @@ export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
     orderDb.totalPrice = JSON.stringify(order.totalPrice);
     orderDb.createdAt = order.data.createdAt;
     orderDb.updatedAt = order.data.updatedAt;
+    if (order.data.payment) {
+      orderDb.payment = this.paymentMapper.toDb(order.data.payment);
+    }
 
+    // Dynamically add shipment if defined
+    if (order.data.shipment) {
+      orderDb.shipment = this.shipmentMapper.toDb(order.data.shipment);
+    }
     return orderDb;
   }
 
