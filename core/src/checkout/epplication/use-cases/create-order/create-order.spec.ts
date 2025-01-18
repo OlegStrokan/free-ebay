@@ -109,8 +109,8 @@ describe('CreateOrderUseCase', () => {
     );
 
     sendSpy.mockRestore();
-    // expect(order.data.shipment).toBeDefined();
-    // expect(order.data.payment).toBeDefined();
+    expect(order.data.shipment).toBeDefined();
+    expect(order.data.payment).toBeDefined();
   });
 
   it('should throw CartNotFoundException if cart does not exist', async () => {
