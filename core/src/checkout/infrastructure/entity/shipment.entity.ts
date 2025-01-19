@@ -19,8 +19,11 @@ export class ShipmentDb extends BaseEntity {
   })
   shipmentStatus!: ShipmentStatus;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 80 })
   trackingNumber!: string;
+
+  @Column({ type: 'varchar', length: 80 })
+  address!: string;
 
   @Column({ type: 'timestamp', nullable: true })
   shippedAt?: Date;

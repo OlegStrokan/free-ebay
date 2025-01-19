@@ -15,21 +15,23 @@ export interface ShipmentData {
   orderId: string;
   shipmentStatus: ShipmentStatus;
   trackingNumber: string;
-  shippedAt?: Date;
-  estimatedArrival?: Date;
   createdAt: Date;
   updatedAt: Date;
+  shippingAddress: string;
+  shippedAt?: Date;
+  estimatedArrival?: Date;
 }
 
 export class Shipment implements Clonable<Shipment> {
   constructor(public shipment: ShipmentData) {}
 
-  static create = (orderId: string): Shipment => {
+  static create = (orderId: string, shippingAddress: string): Shipment => {
     const createdAt = new Date();
     const formattedDate = createdAt.toISOString();
     const generateTrackingNumber = `shipment-${orderId}-${formattedDate}`;
     return new Shipment({
       id: generateUlid(),
+      shippingAddress,
       orderId,
       shipmentStatus: ShipmentStatus.Pending,
       trackingNumber: generateTrackingNumber,
