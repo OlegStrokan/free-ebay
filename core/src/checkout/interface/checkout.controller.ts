@@ -15,7 +15,7 @@ import { IClearCartUseCase } from '../epplication/use-cases/clear-cart/clear-car
 import { ICreateOrderUseCase } from '../epplication/use-cases/create-order/create-order.interface';
 import { IGetAllUserOrdersUseCase } from '../epplication/use-cases/get-all-user-orders/get-all-user-orders.interface';
 import { IGetOrderDetailsUseCase } from '../epplication/use-cases/get-order-detail/get-order-detail.interface';
-import { IProceedPaymentUseCase } from '../epplication/use-cases/process-payment/process-payment.interface';
+import { IProceedPaymentUseCase } from '../epplication/use-cases/initiate-payment/initiate-payment.interface';
 import { IRetrieveCartUseCase } from '../epplication/use-cases/retrieve-cart/retrieve-cart.interface';
 import { IShipOrderUseCase } from '../epplication/use-cases/ship-order/ship-order.interface';
 import { ICreateCartUseCase } from '../epplication/use-cases/create-cart/create-cart.interface';

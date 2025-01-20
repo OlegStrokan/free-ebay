@@ -47,7 +47,7 @@ import { CreateCartUseCase } from './epplication/use-cases/create-cart/create-ca
 import { CreateOrderUseCase } from './epplication/use-cases/create-order/create-order.use-case';
 import { GetAllUserOrdersUseCase } from './epplication/use-cases/get-all-user-orders/get-all-user-orders.use-case';
 import { GetOrderDetailsUseCase } from './epplication/use-cases/get-order-detail/get-order-detail.use-case';
-import { ProceedPaymentUseCase } from './epplication/use-cases/process-payment/process-payment.use-case';
+import { ProceedPaymentUseCase } from './epplication/use-cases/initiate-payment/initiate-payment.use-case';
 import { RemoveFromCartUseCase } from './epplication/use-cases/remove-from-cart/remove-from-cart.use-case';
 import { RetrieveCartUseCase } from './epplication/use-cases/retrieve-cart/retrieve-cart.use-case';
 import { ShipOrderUseCase } from './epplication/use-cases/ship-order/ship-order.use-case';
