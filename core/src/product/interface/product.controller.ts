@@ -9,6 +9,13 @@ import {
   Patch,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/auth/interface/guards/auth.guard';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Product } from '../core/product/entity/product';
 import { ProductData } from '../core/product/entity/product.interface';
 import { PRODUCT_MAPPER } from '../epplication/injection-tokens/mapper.token';
@@ -29,7 +36,9 @@ import { IMarkAsOutOfStockUseCase } from '../epplication/use-cases/mark-as-out-o
 import { ProductDb } from '../infrastructure/entity/product.entity';
 import { IProductMapper } from '../infrastructure/mappers/product/product.mapper.interface';
 import { CreateProductDto } from './dtos/create-product.dto';
+import { ProductDto } from './dtos/product.dto';
 
+@ApiTags('Products')
 @Controller('products')
 export class ProductsController {
   constructor(
@@ -46,40 +55,79 @@ export class ProductsController {
     @Inject(DELETE_PRODUCT_USE_CASE)
     private readonly deleteProductUseCase: IDeleteProductUseCase,
     @Inject(PRODUCT_MAPPER)
-    private readonly mapper: IProductMapper<ProductData, Product, ProductDb>,
+    private readonly mapper: IProductMapper<ProductDto, Product, ProductDb>,
   ) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new product' })
+  @ApiBody({ type: CreateProductDto })
+  @ApiResponse({ status: 201, description: 'Product successfully created.' })
+  @ApiResponse({ status: 400, description: 'Invalid request payload.' })
   public async create(@Body() dto: CreateProductDto): Promise<void> {
     await this.createProductUseCase.execute(dto);
   }
 
   @UseGuards(AuthGuard)
   @Get()
-  public async findAll(): Promise<ProductData[]> {
+  @ApiOperation({ summary: 'Retrieve all products' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of products successfully retrieved.',
+    type: [ProductDto],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  public async findAll(): Promise<ProductDto[]> {
     const products = await this.findProductsUseCase.execute();
     return products.map((product) => this.mapper.toClient(product));
   }
 
   @Get(':id')
-  public async findOne(@Param('id') id: string): Promise<ProductData> {
+  @ApiOperation({ summary: 'Retrieve a product by ID' })
+  @ApiParam({ name: 'id', description: 'Product ID', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Product successfully retrieved.',
+    type: ProductDto,
+  })
+  @ApiResponse({ status: 404, description: 'Product not found.' })
+  public async findOne(@Param('id') id: string): Promise<ProductDto> {
     const product = await this.findProductUseCase.execute(id);
     return this.mapper.toClient(product);
   }
 
   @Patch(':id/closed')
-  public async markAsOutOfStock(@Param('id') id: string): Promise<ProductData> {
+  @ApiOperation({ summary: 'Mark a product as out of stock' })
+  @ApiParam({ name: 'id', description: 'Product ID', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Product marked as out of stock.',
+    type: ProductDto,
+  })
+  @ApiResponse({ status: 404, description: 'Product not found.' })
+  public async markAsOutOfStock(@Param('id') id: string): Promise<ProductDto> {
     const product = await this.markAsOutOfStockUseCae.execute(id);
     return this.mapper.toClient(product);
   }
 
   @Patch(':id/open')
-  public async markAsAvailable(@Param('id') id: string): Promise<ProductData> {
+  @ApiOperation({ summary: 'Mark a product as available' })
+  @ApiParam({ name: 'id', description: 'Product ID', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Product marked as available.',
+    type: ProductDto,
+  })
+  @ApiResponse({ status: 404, description: 'Product not found.' })
+  public async markAsAvailable(@Param('id') id: string): Promise<ProductDto> {
     const product = await this.markAsAvailableUseCase.execute(id);
     return this.mapper.toClient(product);
   }
 
   @Patch(':id/delete')
+  @ApiOperation({ summary: 'Delete a product' })
+  @ApiParam({ name: 'id', description: 'Product ID', type: String })
+  @ApiResponse({ status: 204, description: 'Product successfully deleted.' })
+  @ApiResponse({ status: 404, description: 'Product not found.' })
   public async delete(@Param('id') id: string): Promise<void> {
     await this.deleteProductUseCase.execute(id);
   }
