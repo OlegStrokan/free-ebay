@@ -6,6 +6,7 @@ import { IMoneyMapper } from '../money/money.mapper.interface';
 import { IProductMapper } from './product.mapper.interface';
 import { Money } from 'src/shared/types/money';
 import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
+import { ProductDto } from 'src/product/interface/dtos/product.dto';
 
 @Injectable()
 export class ProductMapper
@@ -54,7 +55,8 @@ export class ProductMapper
     return new Product(productData);
   }
 
-  toClient(product: Product): ProductData {
+  // TODO update
+  toClient(product: Product): ProductDto {
     return product.data;
   }
 }

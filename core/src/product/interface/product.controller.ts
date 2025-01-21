@@ -17,7 +17,6 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { Product } from '../core/product/entity/product';
-import { ProductData } from '../core/product/entity/product.interface';
 import { PRODUCT_MAPPER } from '../epplication/injection-tokens/mapper.token';
 import {
   CREATE_PRODUCT_USE_CASE,

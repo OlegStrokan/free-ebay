@@ -30,7 +30,7 @@ import {
   SHIP_ORDER_USE_CASE,
   CREATE_CART_USE_CASE,
   GET_ORDER_DETAIL_USE_CASE,
-  PROCEED_PAYMENT_USE_CASE,
+  INITIATE_PAYMENT_USE_CASE,
   REMOVE_FROM_CART_USE_CASE,
 } from '../epplication/injection-tokens/use-case.token';
 import { AddToCartDto } from './dtos/add-to-cart.dto';
@@ -59,7 +59,7 @@ export class CheckoutController {
     private cancelOrderUseCase: ICancelOrderUseCase,
     @Inject(SHIP_ORDER_USE_CASE)
     private shipOrderUseCase: IShipOrderUseCase,
-    @Inject(PROCEED_PAYMENT_USE_CASE)
+    @Inject(INITIATE_PAYMENT_USE_CASE)
     private proceedPaymentUseCase: IProceedPaymentUseCase,
     @Inject(CHECK_PAYMENT_STATUS_USE_CASE)
     private checkPaymentStatusUseCase: ICheckPaymentStatusUseCase,
