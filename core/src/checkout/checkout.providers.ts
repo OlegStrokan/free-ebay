@@ -36,7 +36,7 @@ import {
   GET_ALL_USER_ORDERS_USE_CASE,
   CANCEL_ORDER_USE_CASE,
   SHIP_ORDER_USE_CASE,
-  PROCEED_PAYMENT_USE_CASE,
+  INITIATE_PAYMENT_USE_CASE,
   CHECK_PAYMENT_STATUS_USE_CASE,
 } from './epplication/injection-tokens/use-case.token';
 import { AddToCartUseCase } from './epplication/use-cases/add-to-cart/add-to-cart.use-case';
@@ -47,7 +47,6 @@ import { CreateCartUseCase } from './epplication/use-cases/create-cart/create-ca
 import { CreateOrderUseCase } from './epplication/use-cases/create-order/create-order.use-case';
 import { GetAllUserOrdersUseCase } from './epplication/use-cases/get-all-user-orders/get-all-user-orders.use-case';
 import { GetOrderDetailsUseCase } from './epplication/use-cases/get-order-detail/get-order-detail.use-case';
-import { ProceedPaymentUseCase } from './epplication/use-cases/initiate-payment/initiate-payment.use-case';
 import { RemoveFromCartUseCase } from './epplication/use-cases/remove-from-cart/remove-from-cart.use-case';
 import { RetrieveCartUseCase } from './epplication/use-cases/retrieve-cart/retrieve-cart.use-case';
 import { ShipOrderUseCase } from './epplication/use-cases/ship-order/ship-order.use-case';
@@ -59,6 +58,7 @@ import { CartRepository } from './infrastructure/repository/cart.repository';
 import { OrderRepository } from './infrastructure/repository/order.repository';
 import { PaymentRepository } from './infrastructure/repository/payment.repository';
 import { ShipmentRepository } from './infrastructure/repository/shipment.repository';
+import { InitiatePaymentUseCase } from './epplication/use-cases/initiate-payment/initiate-payment.use-case';
 
 export const checkoutProviders: Provider[] = [
   {
@@ -126,8 +126,8 @@ export const checkoutProviders: Provider[] = [
     useClass: ShipOrderUseCase,
   },
   {
-    provide: PROCEED_PAYMENT_USE_CASE,
-    useClass: ProceedPaymentUseCase,
+    provide: INITIATE_PAYMENT_USE_CASE,
+    useClass: InitiatePaymentUseCase,
   },
   {
     provide: CHECK_PAYMENT_STATUS_USE_CASE,
