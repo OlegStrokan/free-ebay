@@ -14,12 +14,13 @@ describe('Shipment', () => {
       trackingNumber: 'shipment-order1-2023-01-01T00:00:00.000Z',
       createdAt: new Date(),
       updatedAt: new Date(),
+      shippingAddress: 'address1',
     };
     shipment = new Shipment(shipmentData);
   });
 
   test('should create a shipment successfully', () => {
-    const newShipment = Shipment.create('order2');
+    const newShipment = Shipment.create('order2', 'address1');
     expect(newShipment).toBeInstanceOf(Shipment);
     expect(newShipment.orderId).toBe('order2');
     expect(newShipment.shipmentStatus).toBe(ShipmentStatus.Pending);

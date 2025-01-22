@@ -22,8 +22,10 @@ export class ShipmentMockService implements IShipmentMockService {
       id: overrides.id ?? generateUlid(),
       orderId: overrides.orderId ?? generateUlid(),
       shipmentStatus: overrides.shipmentStatus ?? ShipmentStatus.Pending,
-      trackingNumber: overrides.trackingNumber ?? faker.datatype.uuid(),
+      trackingNumber: overrides.trackingNumber ?? faker.string.uuid(),
       shippedAt: overrides.shippedAt ?? new Date(),
+      shippingAddress:
+        overrides.shipmentStatus ?? faker.location.streetAddress(),
       estimatedArrival: overrides.estimatedArrival ?? new Date(),
       createdAt: overrides.createdAt ?? new Date(),
       updatedAt: overrides.updatedAt ?? new Date(),
