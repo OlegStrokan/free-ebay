@@ -1,6 +1,6 @@
 import { Clonable } from 'src/shared/types/clonable';
 import { ProductStatus } from './product-status';
-import { Money, ZERO_AMOUNT_MONEY } from 'src/shared/types/money';
+import { Money } from 'src/shared/types/money';
 import { ProductData } from './product.interface';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { InvalidProductStatusException } from '../exceptions/invalid-product-status.exception';
