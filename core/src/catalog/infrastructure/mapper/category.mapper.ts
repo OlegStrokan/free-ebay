@@ -4,10 +4,11 @@ import { CategoryDb } from '../entity/category.entity';
 import { CategoryData } from 'src/catalog/core/category/entity/category';
 import { ICategoryMapper } from './category.mapper.interface';
 import { IProductMapper } from 'src/product/infrastructure/mappers/product/product.mapper.interface';
-import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
 import { PRODUCT_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
+import { CategoryDto } from 'src/catalog/interface/dtos/category.dto';
+import { ProductDto } from 'src/product/interface/dtos/product.dto';
 
 @Injectable()
 export class CategoryMapper
@@ -16,7 +17,7 @@ export class CategoryMapper
   constructor(
     @Inject(PRODUCT_MAPPER)
     private readonly productMapper: IProductMapper<
-      ProductData,
+      ProductDto,
       Product,
       ProductDb
     >,
@@ -72,7 +73,16 @@ export class CategoryMapper
     return new Category(categoryData);
   }
 
-  toClient({ data }: Category): CategoryData {
-    return data;
-  }
+  toClient(categoryData: CategoryData): CategoryDto {
+    const childrenDto = categoryData.children.map((child) => this.toClient(child));
+    const productsDto = categoryData.products.map((product) => this.productMapper.toClient(product));
+
+    return {
+      id: categoryData.id,
+      name: categoryData.name,
+      description: categoryData.description,
+      parentCategoryId: categoryData.parentCategoryId,
+      children: childrenDto,
+      products: productsDto,
+    };
 }
