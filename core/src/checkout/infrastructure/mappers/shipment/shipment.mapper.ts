@@ -15,6 +15,7 @@ export class ShipmentMapper
       // TODO fix it
       orderId: shipmentDb?.order?.id ?? generateUlid(),
       shipmentStatus: shipmentDb.shipmentStatus,
+      shippingAddress: shipmentDb.address,
       trackingNumber: shipmentDb.trackingNumber,
       shippedAt: shipmentDb.shippedAt,
       estimatedArrival: shipmentDb.estimatedArrival,

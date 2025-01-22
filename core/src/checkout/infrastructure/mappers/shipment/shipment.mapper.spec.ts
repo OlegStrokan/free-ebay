@@ -53,6 +53,7 @@ describe('ShipmentMapperTest', () => {
       estimatedArrival: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      shippingAddress: 'address',
     });
 
     const dtoShipment = shipmentMapper.toClient(domainShipment);
