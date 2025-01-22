@@ -55,7 +55,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
 
     const order = this.createOrderFromCart(cart);
 
-    const shipment = await this.createShipment(dto.shippingAddress);
+    const shipment = await this.createShipment(order.id, dto.shippingAddress);
     const payment = await this.createPayment(
       order.id,
       dto.paymentMethod,
@@ -102,8 +102,11 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     return orderWithItems;
   }
 
-  private async createShipment(orderId: string): Promise<Shipment> {
-    const shipment = Shipment.create(orderId);
+  private async createShipment(
+    orderId: string,
+    shippingAddress: string,
+  ): Promise<Shipment> {
+    const shipment = Shipment.create(orderId, shippingAddress);
     await this.shipmentRepository.save(shipment);
     return shipment;
   }
