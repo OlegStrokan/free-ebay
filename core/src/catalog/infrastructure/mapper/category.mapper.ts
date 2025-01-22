@@ -12,7 +12,7 @@ import { ProductDto } from 'src/product/interface/dtos/product.dto';
 
 @Injectable()
 export class CategoryMapper
-  implements ICategoryMapper<CategoryData, Category, CategoryDb>
+  implements ICategoryMapper<CategoryDto, Category, CategoryDb>
 {
   constructor(
     @Inject(PRODUCT_MAPPER)
@@ -74,8 +74,12 @@ export class CategoryMapper
   }
 
   toClient(categoryData: CategoryData): CategoryDto {
-    const childrenDto = categoryData.children.map((child) => this.toClient(child));
-    const productsDto = categoryData.products.map((product) => this.productMapper.toClient(product));
+    const childrenDto = categoryData.children.map((child) =>
+      this.toClient(child),
+    );
+    const productsDto = categoryData.products.map((product) =>
+      this.productMapper.toClient(product),
+    );
 
     return {
       id: categoryData.id,
@@ -85,4 +89,5 @@ export class CategoryMapper
       children: childrenDto,
       products: productsDto,
     };
+  }
 }
