@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { Category } from 'src/catalog/core/category/entity/category';
 import { CategoryDb } from '../entity/category.entity';
 import { CategoryData } from 'src/catalog/core/category/entity/category';
@@ -15,7 +15,7 @@ export class CategoryMapper
   implements ICategoryMapper<CategoryDto, Category, CategoryDb>
 {
   constructor(
-    @Inject(PRODUCT_MAPPER)
+    @Inject(forwardRef(() => PRODUCT_MAPPER))
     private readonly productMapper: IProductMapper<
       ProductDto,
       Product,

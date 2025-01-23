@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { Product } from 'src/product/core/product/entity/product';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { ProductDb } from '../../entity/product.entity';
@@ -20,7 +20,7 @@ export class ProductMapper
   constructor(
     @Inject(MONEY_MAPPER)
     private readonly moneyMapper: IMoneyMapper,
-    @Inject(CATEGORY_MAPPER)
+    @Inject(forwardRef(() => CATEGORY_MAPPER))
     private readonly categoryMapper: ICategoryMapper<
       CategoryDto,
       Category,
