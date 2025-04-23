@@ -20,6 +20,7 @@ const validateShipmentDataStructure = (
     shipmentStatus: expect.any(String),
     trackingNumber: expect.any(String),
     shippedAt: expect.any(Date),
+    shippingAddress: expect.any(String),
     estimatedArrival: expect.any(Date),
     createdAt: expect.any(Date),
     updatedAt: expect.any(Date),
@@ -68,6 +69,7 @@ describe('ShipmentMapperTest', () => {
     shipmentDb.trackingNumber = 'tracking123';
     shipmentDb.shippedAt = new Date();
     shipmentDb.estimatedArrival = new Date();
+    shipmentDb.address = 'address1';
     shipmentDb.createdAt = new Date();
     shipmentDb.updatedAt = new Date();
 

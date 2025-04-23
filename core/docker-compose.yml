@@ -1,51 +1,64 @@
 services:
-  exchange_db:
-    container_name: exchange_db
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: free-ebay
+    environment:
+      - PORT=${PORT}
+    ports:
+      - '3000:3000'
+      - '9229:9229'
+
+    command: yarn start:dev
+    depends_on:
+      - exchange
+    volumes:
+      - ./src:/app/src
+
+  exchange:
     image: postgres:13
     environment:
       POSTGRES_USER: stroka01
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: exchange
+    container_name: exchange
     ports:
       - '6433:5432'
     volumes:
-      - exchange:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data
     restart: always
 
-  test_exchange_db:
-    container_name: test_exchange_db
-    image: postgres:13
-    environment:
-      POSTGRES_USER: stroka01
-      POSTGRES_PASSWORD: test
-      POSTGRES_DB: test_exchange_db
-    ports:
-      - '6434:5432'
-    volumes:
-      - test_exchange_db:/var/lib/postgresql/data
-    restart: always
+  # test_exchange_db:
+  #   container_name: test_exchange_db
+  #   image: postgres:13
+  #   environment:
+  #     POSTGRES_USER: stroka01
+  #     POSTGRES_PASSWORD: test
+  #     POSTGRES_DB: test_exchange_db
+  #   ports:
+  #     - '6434:5432'
+  #   volumes:
+  #     - test_exchange_db:/var/lib/postgresql/data
+  #   restart: always
 
-  kafka:
-    image: landoop/fast-data-dev:latest
-    container_name: kafka
-    ports:
-      - 3181:3181
-      - 3040:3040
-      - 7082:7082
-      - 7083:7083
-      - 9092:9092
-    environment:
-      ADV_HOST: 127.0.0.1
-      RUNTESTS: 0
-      SAMPLEDATA: 0
-      BROKER_PORT: 9092
-      REST_PORT: 7082
-      CONNECT_PORT: 7083
-      ZK_PORT: 3181
-      WEB_PORT: 3040
-      REGISTRY_PORT: 8081
-    restart: always
-
-volumes:
-  exchange: {}
-  test_exchange_db: {}
+  # kafka:
+  #   image: landoop/fast-data-dev:latest
+  #   container_name: kafka
+  #   ports:
+  #     - 3181:3181
+  #     - 3040:3040
+  #     - 7082:7082
+  #     - 7083:7083
+  #     - 9092:9092
+  #   environment:
+  #     ADV_HOST: 127.0.0.1
+  #     RUNTESTS: 0
+  #     SAMPLEDATA: 0
+  #     BROKER_PORT: 9092
+  #     REST_PORT: 7082
+  #     CONNECT_PORT: 7083
+  #     ZK_PORT: 3181
+  #     WEB_PORT: 3040
+  #     REGISTRY_PORT: 8081
+  #   restart: always

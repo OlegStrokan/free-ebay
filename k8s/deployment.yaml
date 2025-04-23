@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: free-ebay-svc
+  namespace: free-ebay
+spec:
+  selector:
+    app: free-ebay
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 3000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: free-ebay
+  namespace: free-ebay
+  labels:
+    app: free-ebay
+spec:
+  selector:
+    matchLabels:
+      app: free-ebay
+  template:
+    metadata:
+      labels:
+        app: free-ebay
+    spec:
+      containers:
+        - name: free-ebay
+          image: 258120/free-ebay:0.0.1
+          env:
+            - name: DB_HOST
+              value: "postgres-svc"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "exchange"
+            - name: DB_USER
+              value: "stroka01"
+            - name: DB_PASSWORD
+              value: "admin"
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+      serviceAccountName: default

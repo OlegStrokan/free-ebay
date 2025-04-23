@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Money } from 'src/shared/types/money';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { CategoryDto } from 'src/catalog/interface/dtos/category.dto';
+import { MoneyDto } from 'src/shared/types/money.dto';
 
 export class ProductDto {
   @ApiProperty({
@@ -30,9 +31,9 @@ export class ProductDto {
 
   @ApiProperty({
     description: 'Price of the product',
-    example: { currency: 'USD', amount: 49.99 },
+    example: { currency: 'USD', amount: 49.99, fraction: 100 },
   })
-  price!: Money;
+  price!: MoneyDto;
 
   @ApiProperty({
     description: 'Current status of the product',

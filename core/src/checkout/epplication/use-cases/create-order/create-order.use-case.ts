@@ -131,7 +131,6 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
       },
       paymentMethod: payment.paymentMethod,
     };
-    console.info(paymentInfo);
     return this.httpService.post(
       'http://localhost:5012/api/Payment/ProcessPayment',
       paymentInfo,

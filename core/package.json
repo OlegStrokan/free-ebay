@@ -29,10 +29,10 @@
     "migration:show": "yarn typeorm migration:show -- -d ./src/shared/database/database.datasource.ts"
   },
   "dependencies": {
-    "@nestjs/common": "^9.0.0",
-    "@nestjs/config": "^3.3.0",
-    "@nestjs/core": "^9.0.0",
-    "@nestjs/microservices": "^10.4.15",
+    "@nestjs/common": "^11.0.4",
+    "@nestjs/config": " ^4.0.0",
+    "@nestjs/core": "^11.0.4",
+    "@nestjs/microservices": "^11.0.4",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/typeorm": "^10.0.2",
     "bcrypt": "^5.1.1",

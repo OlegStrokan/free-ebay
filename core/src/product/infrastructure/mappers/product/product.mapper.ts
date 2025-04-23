@@ -73,7 +73,7 @@ export class ProductMapper
       sku: data.sku,
       name: data.name,
       description: data.description,
-      price: data.price,
+      price: this.moneyMapper.toClient(data.price),
       status: data.status,
       stock: data.stock,
       createdAt: data.createdAt,

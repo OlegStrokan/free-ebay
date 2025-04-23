@@ -32,6 +32,7 @@ export class ShipmentMapper
     // Assuming order is set elsewhere
     shipmentDb.shipmentStatus = shipment.shipmentStatus;
     shipmentDb.trackingNumber = shipment.trackingNumber;
+    shipmentDb.address = shipment.shippingAddress;
     shipmentDb.shippedAt = shipment.shippedAt;
     shipmentDb.estimatedArrival = shipment.estimatedArrival;
     shipmentDb.createdAt = shipment.createdAt;

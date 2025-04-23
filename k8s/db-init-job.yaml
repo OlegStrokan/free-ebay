@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init
+  namespace: free-ebay
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      containers:
+        - name: db-init
+          image: postgres:13
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "Waiting for PostgreSQL to be ready..."
+              until PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -c '\q'; do
+                echo "PostgreSQL is unavailable - sleeping"
+                sleep 2
+              done
+              
+              echo "PostgreSQL is up - executing init script"
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -f /scripts/init.sql
+              
+              echo "Database initialization completed"
+          env:
+            - name: POSTGRES_HOST
+              value: "postgres-svc"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: free-ebay-db-credentials
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: free-ebay-db-credentials
+                  key: DB_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: free-ebay-config
+                  key: DB_NAME
+          volumeMounts:
+            - name: init-script
+              mountPath: /scripts
+      volumes:
+        - name: init-script
+          configMap:
+            name: db-init-script
+      restartPolicy: OnFailure

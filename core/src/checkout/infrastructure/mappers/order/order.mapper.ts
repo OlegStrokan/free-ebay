@@ -62,8 +62,12 @@ export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
         Money.getDefaultMoney(),
       createdAt: orderDB.createdAt,
       updatedAt: orderDB.updatedAt,
-      payment: this.paymentMapper.toDomain(orderDB.payment).data,
-      shipment: this.shipmentMapper.toDomain(orderDB.shipment).data,
+      payment: orderDB.payment
+        ? this.paymentMapper.toDomain(orderDB.payment).data
+        : undefined,
+      shipment: orderDB.shipment
+        ? this.shipmentMapper.toDomain(orderDB.shipment).data
+        : undefined,
     };
 
     return new Order(orderData);
