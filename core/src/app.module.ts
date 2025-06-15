@@ -8,6 +8,7 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { MetricsInterceptor } from './shared/interceptors/metrics.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DatabaseModule } from './shared/database/database.module';
+import { AiChatBotModule } from './ai-chatbot/ai-chatbot.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DatabaseModule } from './shared/database/database.module';
     CatalogModule,
     CheckoutModule,
     DatabaseModule,
+    AiChatBotModule,
   ],
   exports: [],
   providers: [
