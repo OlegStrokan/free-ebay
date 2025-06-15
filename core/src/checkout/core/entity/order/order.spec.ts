@@ -2,7 +2,6 @@ import { Order, OrderData, OrderStatus } from './order';
 import { Money } from 'src/shared/types/money';
 import { OrderItem } from '../order-item/order-item';
 import { IOrderItemMockService } from '../order-item/mocks/order-item-mock.interface';
-import { ORDER_ITEM_MOCK_SERVICE } from 'src/checkout/epplication/injection-tokens/mock-services.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { TestingModule } from '@nestjs/testing';
@@ -17,7 +16,7 @@ describe('Order', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    orderItemMockService = module.get(ORDER_ITEM_MOCK_SERVICE);
+    orderItemMockService = module.get(IOrderItemMockService);
 
     await clearRepos(module);
   });

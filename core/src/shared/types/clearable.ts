@@ -1,3 +1,3 @@
-export interface IClearableRepository {
-  clear(): Promise<void>;
+export abstract class IClearableRepository {
+  abstract clear(): Promise<void>;
 }

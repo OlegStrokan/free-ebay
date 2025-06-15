@@ -4,8 +4,6 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { IMarkAsOutOfStockUseCase } from './mark-as-out-of-stock.interface';
-import { MARK_AS_OUT_OF_STOCK_USE_CASE } from '../../injection-tokens/use-case.token';
-import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('MarkAsOutOfStockUseCaseTest', () => {
   let markAsOutOfStockUseCase: IMarkAsOutOfStockUseCase;
@@ -15,10 +13,8 @@ describe('MarkAsOutOfStockUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    markAsOutOfStockUseCase = module.get<IMarkAsOutOfStockUseCase>(
-      MARK_AS_OUT_OF_STOCK_USE_CASE,
-    );
-    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
+    markAsOutOfStockUseCase = module.get(IMarkAsOutOfStockUseCase);
+    productMockService = module.get(IProductMockService);
   });
 
   afterAll(async () => {

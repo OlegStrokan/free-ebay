@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Money } from 'src/shared/types/money';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
 import { CategoryDto } from 'src/catalog/interface/dtos/category.dto';
 import { MoneyDto } from 'src/shared/types/money.dto';

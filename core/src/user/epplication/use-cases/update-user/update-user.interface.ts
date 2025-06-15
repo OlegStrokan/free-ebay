@@ -1,5 +1,11 @@
-import { IUseCase } from 'src/shared/types/use-case.interface';
 import { User } from 'src/user/core/entity/user';
-import { UpdateUserRequest } from './update-user.use-case';
+import { UpdateUserDto } from 'src/user/interface/dtos/update-user.dto';
 
-export type IUpdateUserUseCase = IUseCase<UpdateUserRequest, User>;
+export type UpdateUserRequest = {
+  id: string;
+  dto: UpdateUserDto;
+};
+
+export abstract class IUpdateUserUseCase {
+  abstract execute(request: UpdateUserRequest): Promise<User>;
+}

@@ -1,6 +1,0 @@
-export const CREATE_USER_USE_CASE = Symbol('CREATE_USER_USE_CASE');
-export const UPDATE_USER_USE_CASE = Symbol('UPDATE_USER_USE_CASE');
-export const DELETE_USER_USE_CASE = Symbol('DELETE_USER_USE_CASE');
-export const GET_USER_BY_EMAIL_USE_CASE = Symbol('GET_USER_BY_EMAIL_USE_CASE');
-export const GET_USER_BY_ID_USE_CASE = Symbol('GET_USER_BY_ID_USE_CASE');
-export const GET_USERS_USE_CASE = Symbol('GET_USERS_USE_CASE');

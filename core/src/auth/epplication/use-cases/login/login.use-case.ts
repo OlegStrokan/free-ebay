@@ -1,19 +1,17 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { LoginRequestDto } from 'src/auth/interface/dtos/login-request.dto';
-import { TokenService } from '../../service/token.service';
 import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { User } from 'src/user/core/entity/user';
-import { USER_REPOSITORY } from 'src/user/epplication/injection-tokens/repository.token';
-import { ILoginUseCase } from './login.interface';
 import { InvalidLoginCredentialsException } from 'src/auth/core/exceptions/invalid-login-credentials.exception';
+import { ILoginUseCase } from './login.interface';
+import { ITokenService } from '../../service/token.service.interface';
 
 @Injectable()
 export class LoginUseCase implements ILoginUseCase {
   constructor(
-    @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-    private readonly tokenService: TokenService,
+    private readonly tokenService: ITokenService,
   ) {}
 
   async execute(dto: LoginRequestDto) {

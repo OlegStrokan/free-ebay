@@ -6,7 +6,6 @@ import { Cart } from 'src/checkout/core/entity/cart/cart';
 import { CartDb } from '../../entity/cart.entity';
 import { Money } from 'src/shared/types/money';
 import { CartItemDb } from '../../entity/cart-item.entity';
-import { CART_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 
 const validateCartDataStructure = (cartData: CartData | undefined) => {
@@ -41,12 +40,12 @@ const validateCartDataStructure = (cartData: CartData | undefined) => {
 
 describe('CartMapperTest', () => {
   let module: TestingModule;
-  let cartMapper: ICartMapper<CartData, Cart, CartDb>;
+  let cartMapper: ICartMapper;
 
   beforeAll(async () => {
     module = await createTestingModule();
 
-    cartMapper = module.get<ICartMapper<CartData, Cart, CartDb>>(CART_MAPPER);
+    cartMapper = module.get(ICartMapper);
   });
 
   afterAll(async () => {

@@ -1,5 +1,4 @@
 import { LoginRequestDto } from 'src/auth/interface/dtos/login-request.dto';
-import { IUseCase } from 'src/shared/types/use-case.interface';
 import { User } from 'src/user/core/entity/user';
 
 export type LoginResponseType = {
@@ -8,4 +7,6 @@ export type LoginResponseType = {
   refreshToken: string;
 };
 
-export type ILoginUseCase = IUseCase<LoginRequestDto, LoginResponseType>;
+export abstract class ILoginUseCase {
+  abstract execute(dto: LoginRequestDto): Promise<LoginResponseType>;
+}

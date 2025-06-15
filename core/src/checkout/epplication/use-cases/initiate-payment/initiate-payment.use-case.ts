@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import {
   Payment,
@@ -11,16 +11,15 @@ import { IPaymentRepository } from 'src/checkout/core/repository/payment.reposit
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
 import { Money } from 'src/shared/types/money';
 import {
-  SHIPMENT_REPOSITORY,
-  PAYMENT_REPOSITORY,
-} from '../../injection-tokens/repository.token';
+  IInitiatePaymentUseCase,
+  InitiatePaymentDto,
+  PaymentResult,
+} from './initiate-payment.interface';
 
 @Injectable()
-export class InitiatePaymentUseCase {
+export class InitiatePaymentUseCase implements IInitiatePaymentUseCase {
   constructor(
-    @Inject(SHIPMENT_REPOSITORY)
     private readonly shipmentRepository: IShipmentRepository,
-    @Inject(PAYMENT_REPOSITORY)
     private readonly paymentRepository: IPaymentRepository,
     private readonly httpService: HttpService,
   ) {}
@@ -88,16 +87,4 @@ export class InitiatePaymentUseCase {
       paymentInfo,
     );
   }
-}
-
-interface InitiatePaymentDto {
-  orderId: string;
-  paymentMethod: PaymentMethod;
-  amount: Money;
-  shippingAddress: string;
-}
-
-interface PaymentResult {
-  shipment: Shipment;
-  payment: Payment;
 }

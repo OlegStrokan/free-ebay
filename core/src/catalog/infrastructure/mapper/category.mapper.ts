@@ -4,23 +4,13 @@ import { CategoryDb } from '../entity/category.entity';
 import { CategoryData } from 'src/catalog/core/category/entity/category';
 import { ICategoryMapper } from './category.mapper.interface';
 import { IProductMapper } from 'src/product/infrastructure/mappers/product/product.mapper.interface';
-import { Product } from 'src/product/core/product/entity/product';
-import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
-import { PRODUCT_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 import { CategoryDto } from 'src/catalog/interface/dtos/category.dto';
-import { ProductDto } from 'src/product/interface/dtos/product.dto';
 
 @Injectable()
-export class CategoryMapper
-  implements ICategoryMapper<CategoryDto, Category, CategoryDb>
-{
+export class CategoryMapper implements ICategoryMapper {
   constructor(
-    @Inject(forwardRef(() => PRODUCT_MAPPER))
-    private readonly productMapper: IProductMapper<
-      ProductDto,
-      Product,
-      ProductDb
-    >,
+    @Inject(forwardRef(() => IProductMapper))
+    private readonly productMapper: IProductMapper,
   ) {}
   toDb({
     id,

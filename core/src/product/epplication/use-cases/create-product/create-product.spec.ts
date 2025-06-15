@@ -5,9 +5,6 @@ import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { ProductAlreadyExistsException } from 'src/product/core/product/exceptions/product-already-exists.exception';
-import { CREATE_PRODUCT_USE_CASE } from '../../injection-tokens/use-case.token';
-import { PRODUCT_REPOSITORY } from '../../injection-tokens/repository.token';
-import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('CreateProductUseCaseTest', () => {
   let createProductUseCase: ICreateProductUseCase;
@@ -18,11 +15,9 @@ describe('CreateProductUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    createProductUseCase = module.get<ICreateProductUseCase>(
-      CREATE_PRODUCT_USE_CASE,
-    );
-    productRepository = module.get<IProductRepository>(PRODUCT_REPOSITORY);
-    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
+    createProductUseCase = module.get(ICreateProductUseCase);
+    productRepository = module.get(IProductRepository);
+    productMockService = module.get(IProductMockService);
 
     await clearRepos(module);
   });

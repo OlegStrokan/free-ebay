@@ -1,6 +1,5 @@
 import {
   Controller,
-  Inject,
   Post,
   Body,
   UseGuards,
@@ -16,23 +15,12 @@ import {
   ApiBody,
   ApiParam,
 } from '@nestjs/swagger';
-import { Product } from '../core/product/entity/product';
-import { PRODUCT_MAPPER } from '../epplication/injection-tokens/mapper.token';
-import {
-  CREATE_PRODUCT_USE_CASE,
-  FIND_PRODUCTS_USE_CASE,
-  FIND_PRODUCT_USE_CASE,
-  MARK_AS_OUT_OF_STOCK_USE_CASE,
-  MARK_AS_AVAILABLE_USE_CASE,
-  DELETE_PRODUCT_USE_CASE,
-} from '../epplication/injection-tokens/use-case.token';
 import { ICreateProductUseCase } from '../epplication/use-cases/create-product/create-product.interface';
 import { IDeleteProductUseCase } from '../epplication/use-cases/delete-product/delete-product.interface';
 import { IFindProductUseCase } from '../epplication/use-cases/find-product/find-product.interface';
 import { IFindProductsUseCase } from '../epplication/use-cases/find-products/find-product.interface';
 import { IMarkAsAvailableUseCase } from '../epplication/use-cases/mark-as-available/mark-as-available.interface';
 import { IMarkAsOutOfStockUseCase } from '../epplication/use-cases/mark-as-out-of-stock/mark-as-out-of-stock.interface';
-import { ProductDb } from '../infrastructure/entity/product.entity';
 import { IProductMapper } from '../infrastructure/mappers/product/product.mapper.interface';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { ProductDto } from './dtos/product.dto';
@@ -41,20 +29,13 @@ import { ProductDto } from './dtos/product.dto';
 @Controller('products')
 export class ProductsController {
   constructor(
-    @Inject(CREATE_PRODUCT_USE_CASE)
     private readonly createProductUseCase: ICreateProductUseCase,
-    @Inject(FIND_PRODUCTS_USE_CASE)
     private readonly findProductsUseCase: IFindProductsUseCase,
-    @Inject(FIND_PRODUCT_USE_CASE)
     private readonly findProductUseCase: IFindProductUseCase,
-    @Inject(MARK_AS_OUT_OF_STOCK_USE_CASE)
     private readonly markAsOutOfStockUseCae: IMarkAsOutOfStockUseCase,
-    @Inject(MARK_AS_AVAILABLE_USE_CASE)
     private readonly markAsAvailableUseCase: IMarkAsAvailableUseCase,
-    @Inject(DELETE_PRODUCT_USE_CASE)
     private readonly deleteProductUseCase: IDeleteProductUseCase,
-    @Inject(PRODUCT_MAPPER)
-    private readonly mapper: IProductMapper<ProductDto, Product, ProductDb>,
+    private readonly mapper: IProductMapper,
   ) {}
 
   @Post()

@@ -1,1 +1,0 @@
-export const PRODUCT_MOCK_SERVICE = Symbol('PRODUCT_MOCK_SERVICE');

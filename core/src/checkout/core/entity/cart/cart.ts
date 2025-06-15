@@ -17,7 +17,7 @@ export class Cart implements Clonable<Cart> {
   constructor(public cart: CartData) {}
 
   /**
-   * Creation of cart require only userId, because we create cart when user open application and didn't add it to cart
+   * Creation of cart require only userId, because we create cart when user open website
    */
 
   static create = (userId: string): Cart => {

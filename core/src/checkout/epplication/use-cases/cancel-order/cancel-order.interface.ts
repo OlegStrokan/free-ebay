@@ -1,4 +1,5 @@
-import { Order } from 'src/checkout/core/entity/order/order';
-import { IUseCase } from 'src/shared/types/use-case.interface';
+import { Order, OrderData } from 'src/checkout/core/entity/order/order';
 
-export type ICancelOrderUseCase = IUseCase<string, Order>;
+export abstract class ICancelOrderUseCase {
+  abstract execute(orderId: OrderData['id']): Promise<Order>;
+}

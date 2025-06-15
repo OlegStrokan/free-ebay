@@ -1,13 +1,11 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { CHECK_PAYMENT_STATUS_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICheckPaymentStatusUseCase } from './check-payment-status.interface';
 import { IPaymentMockService } from 'src/checkout/core/entity/payment/mocks/payment-mock.inteface';
 import { PaymentStatus } from 'src/checkout/core/entity/payment/payment';
 import { PaymentNotFoundException } from 'src/checkout/core/exceptions/payment/payment-not-found.exception';
-import { PAYMENT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('CheckPaymentStatusUseCaseTest', () => {
   let checkPaymentStatusUseCase: ICheckPaymentStatusUseCase;
@@ -17,8 +15,8 @@ describe('CheckPaymentStatusUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    checkPaymentStatusUseCase = module.get(CHECK_PAYMENT_STATUS_USE_CASE);
-    paymentMockService = module.get(PAYMENT_MOCK_SERVICE);
+    checkPaymentStatusUseCase = module.get(ICheckPaymentStatusUseCase);
+    paymentMockService = module.get(IPaymentMockService);
 
     await clearRepos(module);
   });

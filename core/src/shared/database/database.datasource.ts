@@ -1,36 +1,30 @@
 import { DataSource } from 'typeorm';
-import { config } from 'dotenv';
-import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
-import { UserDb } from 'src/user/infrastructure/entity/user.entity';
-import { CategoryDb } from 'src/catalog/infrastructure/entity/category.entity';
-import { CartDb } from 'src/checkout/infrastructure/entity/cart.entity';
-import { OrderDb } from 'src/checkout/infrastructure/entity/order.entity';
-import { PaymentDb } from 'src/checkout/infrastructure/entity/payment.entity';
-import { ShipmentDb } from 'src/checkout/infrastructure/entity/shipment.entity';
-import { CartItemDb } from 'src/checkout/infrastructure/entity/cart-item.entity';
-import { OrderItemDb } from 'src/checkout/infrastructure/entity/order-item.entity';
+import { join } from 'path';
+import { ConfigService } from '@nestjs/config';
+import { glob } from 'glob';
+// @non-required-fix: I will hate myself for this hack in the future but for now i am fine
+import * as dotenv from 'dotenv';
 
-config();
+const envFile =
+  process.env.NODE_ENV === 'dev' ? '.development.env' : '.prod.env';
+dotenv.config({ path: envFile });
 
-export default new DataSource({
+const configService = new ConfigService();
+
+export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: 'exchange',
-  port: Number(process.env.DB_PORT) || 6433,
-  username: process.env.DB_USER || 'stroka01',
-  password: process.env.DB_PASSWORD || 'admin',
-  database: process.env.DB_NAME || 'exchange',
-  entities: [
-    ProductDb,
-    UserDb,
-    CategoryDb,
-    OrderDb,
-    CartDb,
-    CartItemDb,
-    OrderItemDb,
-    PaymentDb,
-    ShipmentDb,
-  ],
-  logging: process.env.NODE_ENV === 'development',
-  migrations: [`${__dirname}/migrations/*{.ts,.js}`],
+  host: configService.get<string>('POSTGRES_HOST'),
+  port: configService.get<number>('POSTGRES_PORT'),
+  username: configService.get<string>('POSTGRES_USER'),
+  password: configService.get<string>('POSTGRES_PASSWORD'),
+  database: configService.get<string>('POSTGRES_DB'),
+  entities: glob.sync(join(__dirname, '..', '..', '**', '*.entity.{ts,js}')),
+  migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
+  ssl:
+    configService.get<string>('NODE_ENV') === 'dev'
+      ? false
+      : { rejectUnauthorized: false },
   migrationsTableName: 'migrations',
+  synchronize: false,
+  logging: configService.get<string>('NODE_ENV') === 'prod',
 });

@@ -6,7 +6,6 @@ import { ICartItemMockService } from '../cart-item/mocks/cart-item-mock.interfac
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { TestingModule } from '@nestjs/testing';
-import { CART_ITEM_MOCK_SERVICE } from 'src/checkout/epplication/injection-tokens/mock-services.token';
 
 describe('Cart', () => {
   let cartData: CartData;
@@ -17,7 +16,7 @@ describe('Cart', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
+    cartItemMockService = module.get(ICartItemMockService);
 
     await clearRepos(module);
   });

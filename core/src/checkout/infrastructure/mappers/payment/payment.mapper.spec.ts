@@ -8,7 +8,6 @@ import {
 } from 'src/checkout/core/entity/payment/payment';
 import { PaymentDb } from '../../entity/payment.entity';
 import { Money } from 'src/shared/types/money';
-import { PAYMENT_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { IPaymentMapper } from './payment.mapper.inteface';
 
 export const validatePaymentDataStructure = (
@@ -33,15 +32,12 @@ export const validatePaymentDataStructure = (
 
 describe('PaymentMapperTest', () => {
   let module: TestingModule;
-  let paymentMapper: IPaymentMapper<PaymentData, Payment, PaymentDb>;
+  let paymentMapper: IPaymentMapper;
 
   beforeAll(async () => {
     module = await createTestingModule();
 
-    paymentMapper =
-      module.get<IPaymentMapper<PaymentData, Payment, PaymentDb>>(
-        PAYMENT_MAPPER,
-      );
+    paymentMapper = module.get(IPaymentMapper);
   });
 
   afterAll(async () => {

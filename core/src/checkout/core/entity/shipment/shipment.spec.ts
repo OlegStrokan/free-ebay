@@ -1,4 +1,3 @@
-// core/src/checkout/core/entity/shipment/shipment.spec.ts
 import { Shipment, ShipmentData, ShipmentStatus } from './shipment';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 

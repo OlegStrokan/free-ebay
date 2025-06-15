@@ -1,10 +1,10 @@
 import { Cart } from 'src/checkout/core/entity/cart/cart';
 
-export interface ICartRepository {
-  saveCart(cart: Cart): Promise<Cart>;
-  updateCart(cart: Cart): Promise<Cart>;
-  getCartByUserId(userId: string): Promise<Cart | null>;
-  getCartById(id: string): Promise<Cart | null>;
-  getOneByIdIdWithRelations(userId: string): Promise<Cart | null>;
-  getCartByUserIdWithRelations(userId: string): Promise<Cart | null>;
+export abstract class ICartRepository {
+  abstract saveCart(cart: Cart): Promise<Cart>;
+  abstract updateCart(cart: Cart): Promise<Cart>;
+  abstract getCartByUserId(userId: string): Promise<Cart | null>;
+  abstract getCartById(id: string): Promise<Cart | null>;
+  abstract getOneByIdIdWithRelations(userId: string): Promise<Cart | null>;
+  abstract getCartByUserIdWithRelations(userId: string): Promise<Cart | null>;
 }

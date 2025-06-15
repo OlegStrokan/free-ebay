@@ -1,4 +1,5 @@
 import { CreateProductDto } from 'src/product/interface/dtos/create-product.dto';
-import { IUseCase } from 'src/shared/types/use-case.interface';
 
-export type ICreateProductUseCase = IUseCase<CreateProductDto, void>;
+export abstract class ICreateProductUseCase {
+  abstract execute(dto: CreateProductDto): Promise<void>;
+}

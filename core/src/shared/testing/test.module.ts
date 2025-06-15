@@ -8,7 +8,6 @@ import { AuthModule } from 'src/auth/auth.module';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 import { CatalogModule } from 'src/catalog/catalog.module';
 import { CategoryDb } from 'src/catalog/infrastructure/entity/category.entity';
-import { TestDbConfig } from './database/database.config';
 import { CheckoutModule } from 'src/checkout/checkout.module';
 import { CartDb } from 'src/checkout/infrastructure/entity/cart.entity';
 import { CartItemDb } from 'src/checkout/infrastructure/entity/cart-item.entity';
@@ -16,22 +15,20 @@ import { ShipmentDb } from 'src/checkout/infrastructure/entity/shipment.entity';
 import { OrderItemDb } from 'src/checkout/infrastructure/entity/order-item.entity';
 import { PaymentDb } from 'src/checkout/infrastructure/entity/payment.entity';
 import { OrderDb } from 'src/checkout/infrastructure/entity/order.entity';
+import { DatabaseModule } from './database/database.module';
+import { authProviders } from 'src/auth/auth.providers';
+import { userProviders } from 'src/user/user.provider';
+import { checkoutProviders } from 'src/checkout/checkout.providers';
+import { productProviders } from 'src/product/product.provider';
+import { HttpService } from '@nestjs/axios';
+import { of } from 'rxjs';
 
 export const createTestingModule = async () => {
   return await Test.createTestingModule({
     imports: [
       ConfigModule.forRoot({
+        envFilePath: `.${process.env.NODE_ENV}.env`,
         isGlobal: true,
-        cache: true,
-        load: [TestDbConfig],
-        envFilePath: `.env`,
-      }),
-      TypeOrmModule.forRootAsync({
-        imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => ({
-          ...configService.get('test_exchange'),
-        }),
-        inject: [ConfigService],
       }),
       TypeOrmModule.forFeature([
         ProductDb,
@@ -44,6 +41,7 @@ export const createTestingModule = async () => {
         OrderItemDb,
         CartItemDb,
       ]),
+      DatabaseModule,
       ProductModule,
       AuthModule,
       UserModule,
@@ -51,6 +49,52 @@ export const createTestingModule = async () => {
       CheckoutModule,
     ],
     exports: [],
-    providers: [],
+    providers: [
+      ...authProviders,
+      ...userProviders,
+      ...checkoutProviders,
+      ...productProviders,
+      {
+        provide: HttpService,
+        useValue: {
+          get: jest.fn(() =>
+            of({
+              data: {},
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: {},
+            }),
+          ),
+          post: jest.fn(() =>
+            of({
+              data: {},
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: {},
+            }),
+          ),
+          put: jest.fn(() =>
+            of({
+              data: {},
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: {},
+            }),
+          ),
+          delete: jest.fn(() =>
+            of({
+              data: {},
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: {},
+            }),
+          ),
+        },
+      },
+    ],
   }).compile();
 };

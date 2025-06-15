@@ -4,7 +4,7 @@ import { User, UserData } from 'src/user/core/entity/user';
 import { UserDb } from '../entity/user.entity';
 
 @Injectable()
-export class UserMapper implements IUserMapper<UserData, User, UserDb> {
+export class UserMapper implements IUserMapper {
   toDb({ data }: User): UserDb {
     const userDb = new UserDb();
     userDb.id = data.id;

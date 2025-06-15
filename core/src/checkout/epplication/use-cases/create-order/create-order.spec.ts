@@ -1,6 +1,5 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { CREATE_ORDER_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
 import { ICreateOrderUseCase } from './create-order.interface';
@@ -10,16 +9,9 @@ import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/ca
 import { PaymentMethod } from 'src/checkout/core/entity/payment/payment';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
-import { CART_REPOSITORY } from '../../injection-tokens/repository.token';
 import { Money } from 'src/shared/types/money';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import {
-  CART_ITEM_MOCK_SERVICE,
-  CART_MOCK_SERVICE,
-  ORDER_MOCK_SERVICE,
-} from '../../injection-tokens/mock-services.token';
-import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
 import { of } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosResponse } from 'axios';
@@ -37,12 +29,12 @@ describe('CreateOrderUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    createOrderUseCase = module.get(CREATE_ORDER_USE_CASE);
-    orderMockService = module.get(ORDER_MOCK_SERVICE);
-    userMockService = module.get(USER_MOCK_SERVICE);
-    cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
-    cartMockService = module.get(CART_MOCK_SERVICE);
-    cartRepository = module.get(CART_REPOSITORY);
+    createOrderUseCase = module.get(ICreateOrderUseCase);
+    orderMockService = module.get(IOrderMockService);
+    userMockService = module.get(IUserMockService);
+    cartItemMockService = module.get(ICartItemMockService);
+    cartMockService = module.get(ICartMockService);
+    cartRepository = module.get(ICartRepository);
     httpClient = module.get(HttpService);
 
     await clearRepos(module);

@@ -1,10 +1,10 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { productProvider } from './product.provider';
 import { ProductsController } from './interface/product.controller';
 import { ProductDb } from './infrastructure/entity/product.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { CatalogModule } from 'src/catalog/catalog.module';
+import { productProviders } from './product.provider';
 
 @Module({
   imports: [
@@ -12,8 +12,8 @@ import { CatalogModule } from 'src/catalog/catalog.module';
     AuthModule,
     forwardRef(() => CatalogModule),
   ],
-  providers: [...productProvider],
-  exports: [...productProvider],
+  providers: [...productProviders],
+  exports: [...productProviders],
   controllers: [ProductsController],
 })
 export class ProductModule {}

@@ -1,6 +1,5 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { GET_ORDER_DETAIL_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
 import { OrderNotFoundException } from 'src/checkout/core/exceptions/order/order-not-found.exception';
@@ -8,7 +7,6 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { OrderStatus } from 'src/checkout/core/entity/order/order';
 import { IGetOrderDetailsUseCase } from './get-order-detail.interface';
 import { validateOrderDataStructure } from 'src/checkout/infrastructure/mappers/order/order.mapper.spec';
-import { ORDER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('GetOrderDetailUseCase', () => {
   let getOrderDetailUseCase: IGetOrderDetailsUseCase;
@@ -18,8 +16,8 @@ describe('GetOrderDetailUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    getOrderDetailUseCase = module.get(GET_ORDER_DETAIL_USE_CASE);
-    orderMockService = module.get(ORDER_MOCK_SERVICE);
+    getOrderDetailUseCase = module.get(IGetOrderDetailsUseCase);
+    orderMockService = module.get(IOrderMockService);
 
     await clearRepos(module);
   });

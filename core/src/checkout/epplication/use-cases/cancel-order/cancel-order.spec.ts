@@ -1,13 +1,12 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { CANCEL_ORDER_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { IOrderMockService } from 'src/checkout/core/entity/order/mocks/order-mock.interface';
 import { ICancelOrderUseCase } from './cancel-order.interface';
 import { OrderNotFoundException } from 'src/checkout/core/exceptions/order/order-not-found.exception';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { OrderStatus } from 'src/checkout/core/entity/order/order';
-import { ORDER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { IOrderItemMockService } from 'src/checkout/core/entity/order-item/mocks/order-item-mock.interface';
 
 describe('CancelOrderUseCase', () => {
   let cancelOrderUseCase: ICancelOrderUseCase;
@@ -17,8 +16,8 @@ describe('CancelOrderUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    cancelOrderUseCase = module.get(CANCEL_ORDER_USE_CASE);
-    orderMockService = module.get(ORDER_MOCK_SERVICE);
+    cancelOrderUseCase = module.get(ICancelOrderUseCase);
+    orderMockService = module.get(IOrderItemMockService);
 
     await clearRepos(module);
   });

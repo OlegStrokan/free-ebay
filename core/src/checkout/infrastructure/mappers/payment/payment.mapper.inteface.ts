@@ -1,5 +1,9 @@
-export interface IPaymentMapper<TData, TDomain, TDatabase> {
-  toDb(domain: TData): TDatabase;
-  toDomain(db: TDatabase): TDomain;
-  toClient(domain: TDomain): TData;
+import { Payment } from 'src/checkout/core/entity/payment/payment';
+import { PaymentDb } from '../../entity/payment.entity';
+import { PaymentData } from 'src/checkout/core/entity/payment/payment';
+
+export abstract class IPaymentMapper {
+  abstract toDb(domain: PaymentData): PaymentDb;
+  abstract toDomain(db: PaymentDb): Payment;
+  abstract toClient(domain: Payment): PaymentData;
 }

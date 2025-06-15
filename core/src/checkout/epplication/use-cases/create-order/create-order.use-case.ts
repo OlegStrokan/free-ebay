@@ -2,12 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ICreateOrderUseCase } from './create-order.interface';
 import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 
-import {
-  CART_REPOSITORY,
-  ORDER_REPOSITORY,
-  PAYMENT_REPOSITORY,
-  SHIPMENT_REPOSITORY,
-} from '../../injection-tokens/repository.token';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { IOrderRepository } from 'src/checkout/core/repository/order.repository';
 import { Order } from 'src/checkout/core/entity/order/order';
@@ -30,13 +24,9 @@ import { HttpService } from '@nestjs/axios';
 @Injectable()
 export class CreateOrderUseCase implements ICreateOrderUseCase {
   constructor(
-    @Inject(CART_REPOSITORY)
     private readonly cartRepository: ICartRepository,
-    @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: IOrderRepository,
-    @Inject(SHIPMENT_REPOSITORY)
     private readonly shipmentRepository: IShipmentRepository,
-    @Inject(PAYMENT_REPOSITORY)
     private readonly paymentRepository: IPaymentRepository,
     private readonly httpService: HttpService,
   ) {}

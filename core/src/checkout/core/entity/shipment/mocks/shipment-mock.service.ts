@@ -1,17 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { faker } from '@faker-js/faker';
-import { SHIPMENT_REPOSITORY } from 'src/checkout/epplication/injection-tokens/repository.token';
 import { ShipmentData, ShipmentStatus, Shipment } from '../shipment';
 import { IShipmentMockService } from './shipment-mock.interface';
 
 @Injectable()
 export class ShipmentMockService implements IShipmentMockService {
-  constructor(
-    @Inject(SHIPMENT_REPOSITORY)
-    private readonly shipmentRepository: IShipmentRepository,
-  ) {}
+  constructor(private readonly shipmentRepository: IShipmentRepository) {}
 
   getOneToCreate(overridesUserId: string): string {
     return overridesUserId ?? generateUlid();

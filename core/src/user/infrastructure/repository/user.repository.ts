@@ -7,19 +7,17 @@ import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { IUserMapper } from '../mappers/user.mapper.interface';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
 import { IClearableRepository } from 'src/shared/types/clearable';
-import { USER_MAPPER } from 'src/user/epplication/injection-tokens/mapper.token';
 
 @Injectable()
 export class UserRepository implements IUserRepository, IClearableRepository {
   constructor(
     @InjectRepository(UserDb)
     private readonly userRepository: Repository<UserDb>,
-    @Inject(USER_MAPPER)
-    private readonly userMapper: IUserMapper<UserData, User, UserDb>,
+    private readonly userMapper: IUserMapper,
   ) {}
 
   async save(user: User): Promise<void> {
-    //TODO - return user
+    //@fix - return user
     const userDb = this.userMapper.toDb(user);
     await this.userRepository.save(userDb);
   }

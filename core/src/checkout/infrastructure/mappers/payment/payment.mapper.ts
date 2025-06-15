@@ -5,15 +5,9 @@ import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.map
 import { IPaymentMapper } from './payment.mapper.inteface';
 import { Money } from 'src/shared/types/money';
 import { generateUlid } from 'src/shared/types/generate-ulid';
-import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
 
-export class PaymentMapper
-  implements IPaymentMapper<PaymentData, Payment, PaymentDb>
-{
-  constructor(
-    @Inject(MONEY_MAPPER)
-    private readonly moneyMapper: IMoneyMapper,
-  ) {}
+export class PaymentMapper implements IPaymentMapper {
+  constructor(private readonly moneyMapper: IMoneyMapper) {}
 
   toDomain(paymentDb: PaymentDb): Payment {
     const paymentData: PaymentData = {

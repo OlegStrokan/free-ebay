@@ -1,4 +1,8 @@
-import { Category } from 'src/catalog/core/category/entity/category';
-import { IUseCase } from 'src/shared/types/use-case.interface';
+import {
+  Category,
+  CategoryData,
+} from 'src/catalog/core/category/entity/category';
 
-export type IGetCategoryByIdUseCase = IUseCase<string, Category>;
+export abstract class IGetCategoryByIdUseCase {
+  abstract execute(categoryId: CategoryData['id']): Promise<Category>;
+}

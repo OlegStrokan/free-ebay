@@ -1,15 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ShipmentDb } from '../entity/shipment.entity';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
-import {
-  Shipment,
-  ShipmentData,
-} from 'src/checkout/core/entity/shipment/shipment';
-import { SHIPMENT_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
-import { IShipmentMapper } from '../mappers/shipment/shipment.mapper.interface';
+import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
 import { IClearableRepository } from 'src/shared/types/clearable';
+import { ShipmentDb } from '../entity/shipment.entity';
+import { IShipmentMapper } from '../mappers/shipment/shipment.mapper.interface';
 
 @Injectable()
 export class ShipmentRepository
@@ -18,12 +14,7 @@ export class ShipmentRepository
   constructor(
     @InjectRepository(ShipmentDb)
     private readonly shipmentRepository: Repository<ShipmentDb>,
-    @Inject(SHIPMENT_MAPPER)
-    private readonly mapper: IShipmentMapper<
-      ShipmentData,
-      Shipment,
-      ShipmentDb
-    >,
+    private readonly mapper: IShipmentMapper,
   ) {}
 
   async save(shipment: Shipment): Promise<Shipment> {

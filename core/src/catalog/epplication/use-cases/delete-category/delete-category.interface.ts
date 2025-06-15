@@ -1,3 +1,5 @@
-import { IUseCase } from 'src/shared/types/use-case.interface';
+import { CategoryData } from 'src/catalog/core/category/entity/category';
 
-export type IDeleteCategoryUseCase = IUseCase<string, void>;
+export abstract class IDeleteCategoryUseCase {
+  abstract execute(categoryId: CategoryData['id']): Promise<void>;
+}

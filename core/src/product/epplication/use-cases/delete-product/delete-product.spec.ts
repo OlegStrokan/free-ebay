@@ -4,8 +4,6 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { IDeleteProductUseCase } from './delete-product.interface';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
-import { DELETE_PRODUCT_USE_CASE } from '../../injection-tokens/use-case.token';
-import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('DeleteProductUseCaseTest', () => {
   let deleteProductUseCase: IDeleteProductUseCase;
@@ -15,10 +13,8 @@ describe('DeleteProductUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    deleteProductUseCase = module.get<IDeleteProductUseCase>(
-      DELETE_PRODUCT_USE_CASE,
-    );
-    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
+    deleteProductUseCase = module.get(IDeleteProductUseCase);
+    productMockService = module.get(IProductMockService);
   });
 
   afterAll(async () => {

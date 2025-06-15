@@ -1,4 +1,22 @@
-import { Payment } from 'src/checkout/core/entity/payment/payment';
-import { IUseCase } from 'src/shared/types/use-case.interface';
+import {
+  Payment,
+  PaymentMethod,
+} from 'src/checkout/core/entity/payment/payment';
+import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
+import { Money } from 'src/shared/types/money';
 
-export type IProceedPaymentUseCase = IUseCase<Payment, void>;
+export interface InitiatePaymentDto {
+  orderId: string;
+  paymentMethod: PaymentMethod;
+  amount: Money;
+  shippingAddress: string;
+}
+
+export interface PaymentResult {
+  shipment: Shipment;
+  payment: Payment;
+}
+
+export abstract class IInitiatePaymentUseCase {
+  abstract execute(payment: InitiatePaymentDto): Promise<PaymentResult>;
+}

@@ -8,7 +8,7 @@ export class Migrations1735830452711 implements MigrationInterface {
       `ALTER TABLE "categories" DROP CONSTRAINT "FK_ccde635bce518afe7c110858cc4"`,
     );
     await queryRunner.query(
-      `CREATE TABLE "cart_items" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "quantity" integer NOT NULL, "price" jsonb NOT NULL, "cartId" character varying, "productId" character varying, CONSTRAINT "PK_6fccf5ec03c172d27a28a82928b" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "cart_items" ("id" uuid NOT NULL, "quantity" integer NOT NULL, "price" jsonb NOT NULL, "cartId" character varying, "productId" character varying, CONSTRAINT "PK_6fccf5ec03c172d27a28a82928b" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE TABLE "carts" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" character varying NOT NULL, "userId" character varying NOT NULL, "totalPrice" jsonb NOT NULL, CONSTRAINT "PK_b5f695a59f5ebb50af3c8160816" PRIMARY KEY ("id"))`,

@@ -6,9 +6,6 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { IDeleteUserUseCase } from './delete-user.interface';
 import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
-import { DELETE_USER_USE_CASE } from '../../injection-tokens/use-case.token';
-import { USER_REPOSITORY } from '../../injection-tokens/repository.token';
-import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('DeleteUserUseCaseTest', () => {
   let deleteUserUseCase: IDeleteUserUseCase;
@@ -20,9 +17,9 @@ describe('DeleteUserUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    deleteUserUseCase = module.get<IDeleteUserUseCase>(DELETE_USER_USE_CASE);
-    userRepository = module.get<IUserRepository>(USER_REPOSITORY);
-    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
+    deleteUserUseCase = module.get(IDeleteUserUseCase);
+    userRepository = module.get(IUserRepository);
+    userMockService = module.get(IUserMockService);
   });
 
   beforeAll(async () => {

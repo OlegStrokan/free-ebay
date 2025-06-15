@@ -1,6 +1,5 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { ADD_TO_CART_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
@@ -9,9 +8,6 @@ import { IProductMockService } from 'src/product/core/product/entity/mocks/produ
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
-import { CART_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
-import { CART_ITEM_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
-import { PRODUCT_MOCK_SERVICE } from 'src/product/epplication/injection-tokens/mock-services.token';
 
 describe('CreateCartUseCase', () => {
   let addToCartUseCase: IAddToCartUseCase;
@@ -23,10 +19,10 @@ describe('CreateCartUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    addToCartUseCase = module.get(ADD_TO_CART_USE_CASE);
-    cartMockService = module.get(CART_MOCK_SERVICE);
-    cartItemMockService = module.get(CART_ITEM_MOCK_SERVICE);
-    productMockService = module.get(PRODUCT_MOCK_SERVICE);
+    addToCartUseCase = module.get(IAddToCartUseCase);
+    cartMockService = module.get(ICartItemMockService);
+    cartItemMockService = module.get(ICartItemMockService);
+    productMockService = module.get(IProductMockService);
 
     await clearRepos(module);
   });

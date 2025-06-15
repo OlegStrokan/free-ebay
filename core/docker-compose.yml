@@ -1,27 +1,25 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: free-ebay
-    environment:
-      - PORT=${PORT}
-    ports:
-      - '3000:3000'
-      - '9229:9229'
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: free-ebay
+  #   environment:
+  #     - PORT=${PORT}
+  #   ports:
+  #     - '3000:3000'
+  #     - '9229:9229'
 
-    command: yarn start:dev
-    depends_on:
-      - exchange
-    volumes:
-      - ./src:/app/src
+  #   command: yarn start:dev
+  #   depends_on:
+  #     - exchange
+  #   volumes:
+  #     - ./src:/app/src
 
   exchange:
     image: postgres:13
-    environment:
-      POSTGRES_USER: stroka01
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: exchange
+    env_file:
+      - .development.env
     container_name: exchange
     ports:
       - '6433:5432'

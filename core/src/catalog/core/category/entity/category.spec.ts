@@ -4,7 +4,6 @@ import { Money } from 'src/shared/types/money';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { PRODUCT_MOCK_SERVICE } from 'src/product/epplication/injection-tokens/mock-services.token';
 
 describe('Category', () => {
   let productMockService: IProductMockService;
@@ -15,7 +14,7 @@ describe('Category', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    productMockService = module.get(PRODUCT_MOCK_SERVICE);
+    productMockService = module.get(IProductMockService);
   }),
     beforeEach(() => {
       categoryData = {

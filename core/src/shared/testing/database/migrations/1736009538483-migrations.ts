@@ -5,7 +5,7 @@ export class Migrations1736009538483 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE "order_items" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" uuid NOT NULL DEFAULT uuid_generate_v4(), "productId" character varying NOT NULL, "quantity" integer NOT NULL, "priceAtPurchase" jsonb NOT NULL, "orderId" character varying NOT NULL, CONSTRAINT "PK_005269d8574e6fac0493715c308" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "order_items" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" uuid NOT NULL, "productId" character varying NOT NULL, "quantity" integer NOT NULL, "priceAtPurchase" jsonb NOT NULL, "orderId" character varying NOT NULL, CONSTRAINT "PK_005269d8574e6fac0493715c308" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE TYPE "public"."shipments_shipmentstatus_enum" AS ENUM('Pending', 'Shipped', 'InTransit', 'Delivered', 'Returned', 'Cancelled')`,

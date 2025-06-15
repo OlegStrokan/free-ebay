@@ -7,7 +7,6 @@ import { OrderDb } from '../../entity/order.entity';
 import { Money } from 'src/shared/types/money';
 import { OrderItemDb } from '../../entity/order-item.entity';
 import { generateUlid } from 'src/shared/types/generate-ulid';
-import { ORDER_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 
 export const validateOrderDataStructure = (
@@ -45,13 +44,12 @@ export const validateOrderDataStructure = (
 
 describe('OrderMapperTest', () => {
   let module: TestingModule;
-  let orderMapper: IOrderMapper<OrderData, Order, OrderDb>;
+  let orderMapper: IOrderMapper;
 
   beforeAll(async () => {
     module = await createTestingModule();
 
-    orderMapper =
-      module.get<IOrderMapper<OrderData, Order, OrderDb>>(ORDER_MAPPER);
+    orderMapper = module.get(IOrderMapper);
   });
 
   afterAll(async () => {

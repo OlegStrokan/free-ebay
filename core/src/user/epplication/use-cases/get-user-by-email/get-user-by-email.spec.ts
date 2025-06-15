@@ -5,8 +5,6 @@ import { faker } from '@faker-js/faker';
 import { IGetUserByEmailUseCase } from './get-user-by-email.interface';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
-import { GET_USER_BY_EMAIL_USE_CASE } from '../../injection-tokens/use-case.token';
-import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('GetUserByEmailTest', () => {
   let getUserByEmailUseCase: IGetUserByEmailUseCase;
@@ -16,10 +14,8 @@ describe('GetUserByEmailTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    getUserByEmailUseCase = module.get<IGetUserByEmailUseCase>(
-      GET_USER_BY_EMAIL_USE_CASE,
-    );
-    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
+    getUserByEmailUseCase = module.get(IGetUserByEmailUseCase);
+    userMockService = module.get(IUserMockService);
   });
 
   afterAll(async () => {
@@ -31,16 +27,16 @@ describe('GetUserByEmailTest', () => {
   });
 
   it('should succesfully retrieve user', async () => {
-    const productName = faker.internet.email();
-    await userMockService.createOne({ email: productName });
-    const retrievedUser = await getUserByEmailUseCase.execute();
+    const userEmail = faker.internet.email();
+    await userMockService.createOne({ email: userEmail });
+    const retrievedUser = await getUserByEmailUseCase.execute(userEmail);
 
     expect(retrievedUser).toBeDefined();
-    expect(retrievedUser.email).toBe(productName);
+    expect(retrievedUser.email).toBe(userEmail);
   });
   it("should throw error if user doesn't exist", async () => {
-    await expect(getUserByEmailUseCase.execute()).rejects.toThrow(
-      UserNotFoundException,
-    );
+    await expect(
+      getUserByEmailUseCase.execute('non_existing_email'),
+    ).rejects.toThrow(UserNotFoundException);
   });
 });

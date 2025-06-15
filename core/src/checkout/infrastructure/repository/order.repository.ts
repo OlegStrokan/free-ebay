@@ -1,11 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderDb } from '../entity/order.entity';
 import { IOrderRepository } from 'src/checkout/core/repository/order.repository';
-import { Order, OrderData } from 'src/checkout/core/entity/order/order';
+import { Order } from 'src/checkout/core/entity/order/order';
 import { IOrderMapper } from '../mappers/order/order.mapper.interface';
-import { ORDER_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { OrderItemDb } from '../entity/order-item.entity';
 import { IClearableRepository } from 'src/shared/types/clearable';
 
@@ -16,8 +15,8 @@ export class OrderRepository implements IOrderRepository, IClearableRepository {
     private readonly orderRepository: Repository<OrderDb>,
     @InjectRepository(OrderDb)
     private readonly orderItemRepository: Repository<OrderItemDb>,
-    @Inject(ORDER_MAPPER)
-    private readonly mapper: IOrderMapper<OrderData, Order, OrderDb>,
+
+    private readonly mapper: IOrderMapper,
   ) {}
 
   async save(orderData: Order): Promise<Order> {

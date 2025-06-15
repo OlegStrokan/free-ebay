@@ -1,20 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
-
+import { Injectable } from '@nestjs/common';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { Money } from 'src/shared/types/money';
 import { CreatePaymentDto } from 'src/checkout/interface/dtos/create-payment.dto';
 import { faker } from '@faker-js/faker';
-import { PAYMENT_REPOSITORY } from 'src/checkout/epplication/injection-tokens/repository.token';
 import { PaymentMethod, PaymentData, Payment, PaymentStatus } from '../payment';
 import { IPaymentMockService } from './payment-mock.inteface';
 
 @Injectable()
 export class PaymentMockService implements IPaymentMockService {
-  constructor(
-    @Inject(PAYMENT_REPOSITORY)
-    private readonly paymentRepository: IPaymentRepository,
-  ) {}
+  constructor(private readonly paymentRepository: IPaymentRepository) {}
 
   getOneToCreate(overrides: Partial<CreatePaymentDto> = {}): CreatePaymentDto {
     return {

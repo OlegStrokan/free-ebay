@@ -4,8 +4,6 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
 import { IDeleteCategoryUseCase } from './delete-category.interface';
 import { CategoryNotFoundException } from 'src/catalog/core/category/entity/exceptions/category-not-found.exception';
-import { CATEGORY_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
-import { DELETE_CATEGORY_USE_CASE } from '../../injection-tokens/use-case.token';
 
 describe('GeleteCategoryUseCaseTest', () => {
   let deleteCategoryUseCase: IDeleteCategoryUseCase;
@@ -15,12 +13,8 @@ describe('GeleteCategoryUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    deleteCategoryUseCase = module.get<IDeleteCategoryUseCase>(
-      DELETE_CATEGORY_USE_CASE,
-    );
-    categoryMockService = module.get<ICategoryMockService>(
-      CATEGORY_MOCK_SERVICE,
-    );
+    deleteCategoryUseCase = module.get(IDeleteCategoryUseCase);
+    categoryMockService = module.get(ICategoryMockService);
   });
 
   afterAll(async () => {

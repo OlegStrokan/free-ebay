@@ -1,10 +1,10 @@
 import { Order } from '../entity/order/order';
 
-export interface IOrderRepository {
-  save(orderData: Order): Promise<Order>;
-  update(cart: Order): Promise<Order>;
-  findById(orderId: string): Promise<Order | null>;
-  findByIdWithRelations(orderId: string): Promise<Order | null>;
-  findAll(): Promise<Order[]>;
-  findAllByUserId(userId: string): Promise<Order[]>;
+export abstract class IOrderRepository {
+  abstract save(orderData: Order): Promise<Order>;
+  abstract update(cart: Order): Promise<Order>;
+  abstract findById(orderId: string): Promise<Order | null>;
+  abstract findByIdWithRelations(orderId: string): Promise<Order | null>;
+  abstract findAll(): Promise<Order[]>;
+  abstract findAllByUserId(userId: string): Promise<Order[]>;
 }

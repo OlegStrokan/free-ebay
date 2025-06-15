@@ -1,9 +1,7 @@
-import { Controller, Inject, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger'; // Import Swagger decorators
 import { ILoginUseCase } from '../epplication/use-cases/login/login.interface';
-import { LoginUseCase } from '../epplication/use-cases/login/login.use-case';
 import { IRegisterUseCase } from '../epplication/use-cases/register/register.interface';
-import { RegisterUseCase } from '../epplication/use-cases/register/register.use-case';
 import { LoginRequestDto } from './dtos/login-request.dto';
 import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
 import { LoginResponseDto } from './dtos/login-response.dto';
@@ -12,10 +10,7 @@ import { LoginResponseDto } from './dtos/login-response.dto';
 @Controller('auth')
 export class AuthController {
   constructor(
-    @Inject(RegisterUseCase)
     private readonly registerUseCase: IRegisterUseCase,
-
-    @Inject(LoginUseCase)
     private readonly loginUseCase: ILoginUseCase,
   ) {}
 

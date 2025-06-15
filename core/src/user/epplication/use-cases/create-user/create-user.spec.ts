@@ -6,9 +6,6 @@ import { createTestingModule } from 'src/shared/testing/test.module';
 import { ICreateUserUseCase } from './create-user.interface';
 import { UserAlreadyExistsException } from 'src/user/core/exceptions/user-already-exists';
 import { faker } from '@faker-js/faker';
-import { CREATE_USER_USE_CASE } from '../../injection-tokens/use-case.token';
-import { USER_REPOSITORY } from '../../injection-tokens/repository.token';
-import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('CreateUserUseCaseTest', () => {
   let createUserUseCase: ICreateUserUseCase;
@@ -19,9 +16,9 @@ describe('CreateUserUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    createUserUseCase = module.get<ICreateUserUseCase>(CREATE_USER_USE_CASE);
-    userRepository = module.get<IUserRepository>(USER_REPOSITORY);
-    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
+    createUserUseCase = module.get<ICreateUserUseCase>(ICreateUserUseCase);
+    userRepository = module.get<IUserRepository>(IUserRepository);
+    userMockService = module.get<IUserMockService>(IUserMockService);
   });
 
   beforeAll(async () => {

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from 'src/product/core/product/entity/product';
@@ -9,16 +9,14 @@ import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { IProductMapper } from '../mappers/product/product.mapper.interface';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 import { FailedToRetrieveProductException } from 'src/product/core/product/exceptions/failed-to-retrieve-product.exception';
-import { PRODUCT_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
-import { ProductDto } from 'src/product/interface/dtos/product.dto';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
   constructor(
     @InjectRepository(ProductDb)
     private readonly productRepository: Repository<ProductDb>,
-    @Inject(PRODUCT_MAPPER)
-    private readonly mapper: IProductMapper<ProductDto, Product, ProductDb>,
+
+    private readonly mapper: IProductMapper,
   ) {}
 
   async save(product: Product): Promise<Product> {

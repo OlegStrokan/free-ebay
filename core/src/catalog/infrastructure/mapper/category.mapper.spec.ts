@@ -7,11 +7,10 @@ import {
 } from 'src/catalog/core/category/entity/category';
 import { CategoryDb } from '../entity/category.entity';
 import { ICategoryMockService } from 'src/catalog/core/category/entity/mocks/category-mock.interface';
-import { CATEGORY_MAPPER } from 'src/catalog/epplication/injection-tokens/mapper.token';
-import { CATEGORY_MOCK_SERVICE } from 'src/catalog/epplication/injection-tokens/mock-services.token';
+import { CategoryDto } from 'src/catalog/interface/dtos/category.dto';
 
 const validateCategoryDataStructure = (
-  categoryData: CategoryData | undefined,
+  categoryData: CategoryData | CategoryDto | undefined,
 ) => {
   if (!categoryData) throw new Error('Category not found test error');
 
@@ -29,20 +28,15 @@ const validateCategoryDataStructure = (
 
 describe('CategoryMapperTest', () => {
   let module: TestingModule;
-  let categoryMapper: ICategoryMapper<CategoryData, Category, CategoryDb>;
+  let categoryMapper: ICategoryMapper;
   let categoryMockService: ICategoryMockService;
 
   beforeAll(async () => {
     module = await createTestingModule();
 
-    categoryMapper =
-      module.get<ICategoryMapper<CategoryData, Category, CategoryDb>>(
-        CATEGORY_MAPPER,
-      );
+    categoryMapper = module.get(ICategoryMapper);
 
-    categoryMockService = module.get<ICategoryMockService>(
-      CATEGORY_MOCK_SERVICE,
-    );
+    categoryMockService = module.get(ICategoryMockService);
   });
 
   afterAll(async () => {

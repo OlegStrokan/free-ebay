@@ -3,8 +3,6 @@ import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IFindProductsUseCase } from './find-product.interface';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
-import { FIND_PRODUCTS_USE_CASE } from '../../injection-tokens/use-case.token';
-import { PRODUCT_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
 
 describe('FindProductsUseCaseTest', () => {
   let findProductsUseCase: IFindProductsUseCase;
@@ -14,10 +12,8 @@ describe('FindProductsUseCaseTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    findProductsUseCase = module.get<IFindProductsUseCase>(
-      FIND_PRODUCTS_USE_CASE,
-    );
-    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
+    findProductsUseCase = module.get(IFindProductsUseCase);
+    productMockService = module.get(IProductMockService);
   });
 
   afterAll(async () => {

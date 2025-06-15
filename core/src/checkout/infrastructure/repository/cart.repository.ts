@@ -1,11 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CartDb } from '../entity/cart.entity';
-import { Cart, CartData } from 'src/checkout/core/entity/cart/cart';
+import { Cart } from 'src/checkout/core/entity/cart/cart';
 import { ICartMapper } from '../mappers/cart/cart.mapper.interface';
 import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
-import { CART_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { IClearableRepository } from 'src/shared/types/clearable';
 import { CartItemDb } from '../entity/cart-item.entity';
 
@@ -16,16 +15,16 @@ export class CartRepository implements ICartRepository, IClearableRepository {
     private readonly cartRepository: Repository<CartDb>,
     @InjectRepository(CartItemDb)
     private readonly cartItemRepository: Repository<CartItemDb>,
-    @Inject(CART_MAPPER)
-    private readonly mapper: ICartMapper<CartData, Cart, CartDb>,
+    private readonly mapper: ICartMapper,
   ) {}
 
   async saveCart(cart: Cart): Promise<Cart> {
     const dbCart = this.mapper.toDb(cart);
     await this.cartRepository.save(dbCart);
     const savedCart = await this.getOneByIdIdWithRelations(cart.id);
+    // @fix
     if (!savedCart) {
-      throw new Error('FIX IT');
+      throw new Error('Unhandled exception');
     }
     return savedCart;
   }

@@ -1,18 +1,14 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CartData } from '../cart';
 import { Cart } from '../cart';
 import { Money } from 'src/shared/types/money';
 import { ICartMockService } from './cart-mock.interface';
-import { CART_REPOSITORY } from 'src/checkout/epplication/injection-tokens/repository.token';
 import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 
 @Injectable()
 export class CartMockService implements ICartMockService {
-  constructor(
-    @Inject(CART_REPOSITORY)
-    private readonly cartRepository: ICartRepository,
-  ) {}
+  constructor(private readonly cartRepository: ICartRepository) {}
 
   getOneToCreate(): Partial<CartData> {
     return {

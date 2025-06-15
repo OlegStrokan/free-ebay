@@ -7,7 +7,6 @@ import {
   ShipmentStatus,
 } from 'src/checkout/core/entity/shipment/shipment';
 import { ShipmentDb } from '../../entity/shipment.entity';
-import { SHIPMENT_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 
 const validateShipmentDataStructure = (
   shipmentData: ShipmentData | undefined,
@@ -29,15 +28,12 @@ const validateShipmentDataStructure = (
 
 describe('ShipmentMapperTest', () => {
   let module: TestingModule;
-  let shipmentMapper: IShipmentMapper<ShipmentData, Shipment, ShipmentDb>;
+  let shipmentMapper: IShipmentMapper;
 
   beforeAll(async () => {
     module = await createTestingModule();
 
-    shipmentMapper =
-      module.get<IShipmentMapper<ShipmentData, Shipment, ShipmentDb>>(
-        SHIPMENT_MAPPER,
-      );
+    shipmentMapper = module.get(IShipmentMapper);
   });
 
   afterAll(async () => {

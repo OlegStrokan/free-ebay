@@ -1,14 +1,11 @@
 import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
-import { RETRIEVE_CART_USE_CASE } from '../../injection-tokens/use-case.token';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { ICartMockService } from 'src/checkout/core/entity/cart/mocks/cart-mock.interface';
 import { IRetrieveCartUseCase } from './retrieve-cart.interface';
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { CART_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
-import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
 
 describe('RetrieveUserCartUseCase', () => {
   let retrieveCartUseCase: IRetrieveCartUseCase;
@@ -19,9 +16,9 @@ describe('RetrieveUserCartUseCase', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    retrieveCartUseCase = module.get(RETRIEVE_CART_USE_CASE);
-    cartMockService = module.get(CART_MOCK_SERVICE);
-    userMockService = module.get(USER_MOCK_SERVICE);
+    retrieveCartUseCase = module.get(IRetrieveCartUseCase);
+    cartMockService = module.get(ICartMockService);
+    userMockService = module.get(IUserMockService);
 
     await clearRepos(module);
   });

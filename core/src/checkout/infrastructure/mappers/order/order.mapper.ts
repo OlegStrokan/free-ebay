@@ -1,42 +1,18 @@
 import { Money } from 'src/shared/types/money';
-import { Inject } from '@nestjs/common';
 import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
 import { Order, OrderData } from 'src/checkout/core/entity/order/order';
 import { OrderDb } from '../../entity/order.entity';
 import { OrderItemDb } from '../../entity/order-item.entity';
 import { IOrderMapper } from './order.mapper.interface';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
-import { MONEY_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
-import {
-  PAYMENT_MAPPER,
-  SHIPMENT_MAPPER,
-} from 'src/checkout/epplication/injection-tokens/mapper.token';
 import { IPaymentMapper } from '../payment/payment.mapper.inteface';
 import { IShipmentMapper } from '../shipment/shipment.mapper.interface';
-import { Payment, PaymentData } from 'src/checkout/core/entity/payment/payment';
-import { PaymentDb } from '../../entity/payment.entity';
-import {
-  Shipment,
-  ShipmentData,
-} from 'src/checkout/core/entity/shipment/shipment';
-import { ShipmentDb } from '../../entity/shipment.entity';
 
-export class OrderMapper implements IOrderMapper<OrderData, Order, OrderDb> {
+export class OrderMapper implements IOrderMapper {
   constructor(
-    @Inject(MONEY_MAPPER)
     private readonly moneyMapper: IMoneyMapper,
-    @Inject(PAYMENT_MAPPER)
-    private readonly paymentMapper: IPaymentMapper<
-      PaymentData,
-      Payment,
-      PaymentDb
-    >,
-    @Inject(SHIPMENT_MAPPER)
-    private readonly shipmentMapper: IShipmentMapper<
-      ShipmentData,
-      Shipment,
-      ShipmentDb
-    >,
+    private readonly paymentMapper: IPaymentMapper,
+    private readonly shipmentMapper: IShipmentMapper,
   ) {}
 
   toDomain(orderDB: OrderDb): Order {

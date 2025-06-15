@@ -1,8 +1,8 @@
 import { Money } from 'src/shared/types/money';
 import { MoneyDto } from 'src/shared/types/money.dto';
 
-export interface IMoneyMapper {
-  toDb(money: Money): string;
-  toClient(money: Money): MoneyDto;
-  toDomain(moneyString: string | null): Money | null;
+export abstract class IMoneyMapper {
+  abstract toDb(money: Money): string;
+  abstract toDomain(moneyString: string | null): Money | null;
+  abstract toClient(money: Money): MoneyDto;
 }

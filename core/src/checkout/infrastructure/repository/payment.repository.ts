@@ -4,9 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { PaymentDb } from '../entity/payment.entity';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
 import { IPaymentMapper } from '../mappers/payment/payment.mapper.inteface';
-import { Payment, PaymentData } from 'src/checkout/core/entity/payment/payment';
+import { Payment } from 'src/checkout/core/entity/payment/payment';
 import { IClearableRepository } from 'src/shared/types/clearable';
-import { PAYMENT_MAPPER } from 'src/checkout/epplication/injection-tokens/mapper.token';
 
 @Injectable()
 export class PaymentRepository
@@ -15,8 +14,7 @@ export class PaymentRepository
   constructor(
     @InjectRepository(PaymentDb)
     private readonly paymentRepository: Repository<PaymentDb>,
-    @Inject(PAYMENT_MAPPER)
-    private readonly mapper: IPaymentMapper<PaymentData, Payment, PaymentDb>,
+    private readonly mapper: IPaymentMapper,
   ) {}
 
   async save(payment: Payment): Promise<Payment> {

@@ -1,3 +1,3 @@
-import { IUseCase } from 'src/shared/types/use-case.interface';
-
-export type IDeleteProductUseCase = IUseCase<string, void>;
+export abstract class IDeleteProductUseCase {
+  abstract execute(productId: string): Promise<void>;
+}

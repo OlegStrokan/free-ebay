@@ -6,9 +6,7 @@ import { ShipmentDb } from '../../entity/shipment.entity';
 import { IShipmentMapper } from './shipment.mapper.interface';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 
-export class ShipmentMapper
-  implements IShipmentMapper<ShipmentData, Shipment, ShipmentDb>
-{
+export class ShipmentMapper implements IShipmentMapper {
   toDomain(shipmentDb: ShipmentDb): Shipment {
     const shipmentData: ShipmentData = {
       id: shipmentDb.id,

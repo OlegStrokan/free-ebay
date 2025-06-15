@@ -1,12 +1,4 @@
 import { Provider } from '@nestjs/common';
-import {
-  CREATE_USER_USE_CASE,
-  DELETE_USER_USE_CASE,
-  GET_USER_BY_EMAIL_USE_CASE,
-  GET_USER_BY_ID_USE_CASE,
-  GET_USERS_USE_CASE,
-  UPDATE_USER_USE_CASE,
-} from './epplication/injection-tokens/use-case.token';
 import { CreateUserUseCase } from './epplication/use-cases/create-user/create-user.use-case';
 import { UpdateUserUseCase } from './epplication/use-cases/update-user/update-user.use-case';
 import { GetUserByEmailUseCase } from './epplication/use-cases/get-user-by-email/get-user-by-email.use-case';
@@ -14,47 +6,53 @@ import { GetUserByIdUseCase } from './epplication/use-cases/get-user-by-id/get-u
 import { GetUsersUseCase } from './epplication/use-cases/get-users/get-users.use-case';
 import { DeleteUserUseCase } from './epplication/use-cases/delete-user/delete-user.use-case';
 import { UserMockService } from './core/entity/mocks/user-mock.service';
-import { USER_MOCK_SERVICE } from './epplication/injection-tokens/mock-services.token';
 import { UserMapper } from './infrastructure/mappers/user.mapper';
-import { USER_MAPPER } from './epplication/injection-tokens/mapper.token';
 import { UserRepository } from './infrastructure/repository/user.repository';
-import { USER_REPOSITORY } from './epplication/injection-tokens/repository.token';
+import { IUserRepository } from './core/repository/user.repository';
+import { IUserMapper } from './infrastructure/mappers/user.mapper.interface';
+import { IUserMockService } from './core/entity/mocks/user-mock.interface';
+import { ICreateUserUseCase } from './epplication/use-cases/create-user/create-user.interface';
+import { IDeleteUserUseCase } from './epplication/use-cases/delete-user/delete-user.interface';
+import { IGetUserByEmailUseCase } from './epplication/use-cases/get-user-by-email/get-user-by-email.interface';
+import { IGetUserByIdUseCase } from './epplication/use-cases/get-user-by-id/get-user-by-id.interface';
+import { IGetUsersUseCase } from './epplication/use-cases/get-users/get-users.interface';
+import { IUpdateUserUseCase } from './epplication/use-cases/update-user/update-user.interface';
 
-export const userProvider: Provider[] = [
+export const userProviders: Provider[] = [
   {
-    useClass: UserMapper,
-    provide: USER_MAPPER,
-  },
-  {
+    provide: IUserRepository,
     useClass: UserRepository,
-    provide: USER_REPOSITORY,
   },
   {
-    useClass: CreateUserUseCase,
-    provide: CREATE_USER_USE_CASE,
+    provide: IUserMapper,
+    useClass: UserMapper,
   },
   {
-    useClass: UpdateUserUseCase,
-    provide: UPDATE_USER_USE_CASE,
-  },
-  {
-    useClass: GetUserByEmailUseCase,
-    provide: GET_USER_BY_EMAIL_USE_CASE,
-  },
-  {
-    useClass: GetUserByIdUseCase,
-    provide: GET_USER_BY_ID_USE_CASE,
-  },
-  {
-    useClass: GetUsersUseCase,
-    provide: GET_USERS_USE_CASE,
-  },
-  {
-    useClass: DeleteUserUseCase,
-    provide: DELETE_USER_USE_CASE,
-  },
-  {
+    provide: IUserMockService,
     useClass: UserMockService,
-    provide: USER_MOCK_SERVICE,
+  },
+  {
+    provide: ICreateUserUseCase,
+    useClass: CreateUserUseCase,
+  },
+  {
+    provide: IUpdateUserUseCase,
+    useClass: UpdateUserUseCase,
+  },
+  {
+    provide: IGetUserByEmailUseCase,
+    useClass: GetUserByEmailUseCase,
+  },
+  {
+    provide: IGetUserByIdUseCase,
+    useClass: GetUserByIdUseCase,
+  },
+  {
+    provide: IGetUsersUseCase,
+    useClass: GetUsersUseCase,
+  },
+  {
+    provide: IDeleteUserUseCase,
+    useClass: DeleteUserUseCase,
   },
 ];

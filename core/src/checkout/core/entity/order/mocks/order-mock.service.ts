@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Money } from 'src/shared/types/money';
 import { IOrderMockService } from './order-mock.interface';
 import { IOrderRepository } from 'src/checkout/core/repository/order.repository';
@@ -6,7 +6,6 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { faker } from '@faker-js/faker';
 import { Order } from '../order';
 import { OrderStatus } from '../order';
-import { ORDER_REPOSITORY } from 'src/checkout/epplication/injection-tokens/repository.token';
 import { OrderData } from '../order';
 import { CreateOrderDto } from 'src/checkout/interface/dtos/create-order.dto';
 import { PaymentMethod } from '../../payment/payment';
@@ -14,17 +13,12 @@ import { UserData } from 'src/user/core/entity/user';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { IOrderItemMockService } from '../../order-item/mocks/order-item-mock.interface';
 import { OrderItemData } from '../../order-item/order-item';
-import { ORDER_ITEM_MOCK_SERVICE } from 'src/checkout/epplication/injection-tokens/mock-services.token';
-import { USER_MOCK_SERVICE } from 'src/user/epplication/injection-tokens/mock-services.token';
 
 @Injectable()
 export class OrderMockService implements IOrderMockService {
   constructor(
-    @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: IOrderRepository,
-    @Inject(USER_MOCK_SERVICE)
     private readonly userMockService: IUserMockService,
-    @Inject(ORDER_ITEM_MOCK_SERVICE)
     private readonly orderItemMockService: IOrderItemMockService,
   ) {}
 

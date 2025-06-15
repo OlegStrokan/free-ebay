@@ -1,7 +1,7 @@
 import { Shipment, ShipmentData } from '../shipment';
 
-export interface IShipmentMockService {
-  getOneToCreate(userIdOverrides?: string): string;
-  getOne(overrides: Partial<ShipmentData>): Shipment;
-  createOne(overrides: Partial<ShipmentData>): Promise<Shipment>;
+export abstract class IShipmentMockService {
+  abstract getOneToCreate(userIdOverrides?: string): string;
+  abstract getOne(overrides: Partial<ShipmentData>): Shipment;
+  abstract createOne(overrides: Partial<ShipmentData>): Promise<Shipment>;
 }

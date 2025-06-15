@@ -2,16 +2,14 @@ import { TestingModule } from '@nestjs/testing';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IProductMapper } from './product.mapper.interface';
 import { ProductData } from 'src/product/core/product/entity/product.interface';
-import { Product } from 'src/product/core/product/entity/product';
 import { ProductDb } from '../../entity/product.entity';
-import { ProductMapper } from './product.mapper';
 import { IProductMockService } from 'src/product/core/product/entity/mocks/product-mock.interface';
-import { ProductMockService } from 'src/product/core/product/entity/mocks/product-mock.service';
 import { ProductStatus } from 'src/product/core/product/entity/product-status';
-import { PRODUCT_MAPPER } from 'src/product/epplication/injection-tokens/mapper.token';
-import { PRODUCT_MOCK_SERVICE } from 'src/product/epplication/injection-tokens/mock-services.token';
+import { ProductDto } from 'src/product/interface/dtos/product.dto';
 
-const validateProductDataStructure = (productData: ProductData | undefined) => {
+const validateProductDataStructure = (
+  productData: ProductData | ProductDto | undefined,
+) => {
   if (!productData) throw new Error('Product not found test error');
 
   expect(productData).toEqual({
@@ -36,18 +34,15 @@ const validateProductDataStructure = (productData: ProductData | undefined) => {
 
 describe('ProductMapperTest', () => {
   let module: TestingModule;
-  let productMapper: IProductMapper<ProductData, Product, ProductDb>;
+  let productMapper: IProductMapper;
   let productMockService: IProductMockService;
 
   beforeAll(async () => {
     module = await createTestingModule();
 
-    productMapper =
-      module.get<IProductMapper<ProductData, Product, ProductDb>>(
-        PRODUCT_MAPPER,
-      );
+    productMapper = module.get(IProductMapper);
 
-    productMockService = module.get<IProductMockService>(PRODUCT_MOCK_SERVICE);
+    productMockService = module.get(IProductMockService);
   });
 
   afterAll(async () => {

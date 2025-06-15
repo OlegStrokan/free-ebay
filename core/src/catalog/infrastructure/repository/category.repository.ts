@@ -1,16 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  Category,
-  CategoryData,
-} from 'src/catalog/core/category/entity/category';
+import { Category } from 'src/catalog/core/category/entity/category';
 import { CategoryNotFoundException } from 'src/catalog/core/category/entity/exceptions/category-not-found.exception';
 import { Repository } from 'typeorm';
 import { CategoryDb } from '../entity/category.entity';
 import { ICategoryMapper } from '../mapper/category.mapper.interface';
 import { ICategoryRepository } from 'src/catalog/core/category/repository/category.repository';
 import { IClearableRepository } from 'src/shared/types/clearable';
-import { CATEGORY_MAPPER } from 'src/catalog/epplication/injection-tokens/mapper.token';
 
 @Injectable()
 export class CategoryRepository
@@ -19,12 +15,7 @@ export class CategoryRepository
   constructor(
     @InjectRepository(CategoryDb)
     private readonly categoryRepository: Repository<CategoryDb>,
-    @Inject(CATEGORY_MAPPER)
-    private readonly mapper: ICategoryMapper<
-      CategoryData,
-      Category,
-      CategoryDb
-    >,
+    private readonly mapper: ICategoryMapper,
   ) {}
 
   async save(category: Category): Promise<Category> {

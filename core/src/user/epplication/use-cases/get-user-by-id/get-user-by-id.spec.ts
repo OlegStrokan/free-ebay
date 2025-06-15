@@ -1,12 +1,10 @@
-import { faker } from '@faker-js/faker';
 import { TestingModule } from '@nestjs/testing';
 import { clearRepos } from 'src/shared/testing/clear-repos';
 import { createTestingModule } from 'src/shared/testing/test.module';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
 import { IGetUserByIdUseCase } from './get-user-by-id.interface';
 import { UserNotFoundException } from 'src/user/core/exceptions/user-not-found.exception';
-import { GET_USER_BY_ID_USE_CASE } from '../../injection-tokens/use-case.token';
-import { USER_MOCK_SERVICE } from '../../injection-tokens/mock-services.token';
+import { generateUlid } from 'src/shared/types/generate-ulid';
 
 describe('GetUserByEmailTest', () => {
   let getUserByIdUseCase: IGetUserByIdUseCase;
@@ -16,10 +14,8 @@ describe('GetUserByEmailTest', () => {
   beforeAll(async () => {
     module = await createTestingModule();
 
-    getUserByIdUseCase = module.get<IGetUserByIdUseCase>(
-      GET_USER_BY_ID_USE_CASE,
-    );
-    userMockService = module.get<IUserMockService>(USER_MOCK_SERVICE);
+    getUserByIdUseCase = module.get(IGetUserByIdUseCase);
+    userMockService = module.get(IUserMockService);
   });
 
   afterAll(async () => {
@@ -31,15 +27,15 @@ describe('GetUserByEmailTest', () => {
   });
 
   it('should succesfully retrieve user', async () => {
-    const productName = faker.internet.email();
-    await userMockService.createOne({ email: productName });
-    const retrievedUser = await getUserByIdUseCase.execute();
+    const userId = generateUlid();
+    await userMockService.createOne({ id: userId });
+    const retrievedUser = await getUserByIdUseCase.execute(userId);
 
     expect(retrievedUser).toBeDefined();
-    expect(retrievedUser.email).toBe(productName);
+    expect(retrievedUser.id).toBe(userId);
   });
   it("should throw error if user doesn't exist", async () => {
-    await expect(getUserByIdUseCase.execute()).rejects.toThrow(
+    await expect(getUserByIdUseCase.execute('non_existing_id')).rejects.toThrow(
       UserNotFoundException,
     );
   });
