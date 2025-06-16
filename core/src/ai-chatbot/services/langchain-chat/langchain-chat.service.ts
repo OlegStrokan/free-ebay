@@ -96,14 +96,19 @@ export class LangchainChatService {
         model: 'gpt-4-turbo',
       });
 
+      //@fix delete ts-ignore
       const agent = await createOpenAIFunctionsAgent({
         llm,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //@ts-ignore
         tools,
         prompt,
       });
 
       const agentExecutor = new AgentExecutor({
         agent,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //@ts-ignore
         tools,
       });
 
@@ -145,7 +150,7 @@ export class LangchainChatService {
     );
   }
 
-  private exceptionHandling(e: unknown) {
+  private exceptionHandling(e: unknown): never {
     throw new HttpException(
       customMessage(HttpStatus.INTERNAL_SERVER_ERROR, 'server-error'),
       HttpStatus.INTERNAL_SERVER_ERROR,

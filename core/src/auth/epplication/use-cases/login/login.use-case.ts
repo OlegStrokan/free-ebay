@@ -5,7 +5,7 @@ import { IUserRepository } from 'src/user/core/repository/user.repository';
 import { User } from 'src/user/core/entity/user';
 import { InvalidLoginCredentialsException } from 'src/auth/core/exceptions/invalid-login-credentials.exception';
 import { ILoginUseCase } from './login.interface';
-import { ITokenService } from '../../service/token.service.interface';
+import { ITokenService } from '../../service/token/token.service.interface';
 
 @Injectable()
 export class LoginUseCase implements ILoginUseCase {
