@@ -7,6 +7,8 @@ import { ILoginUseCase } from './epplication/use-cases/login/login.interface';
 import { LoginUseCase } from './epplication/use-cases/login/login.use-case';
 import { RegisterUseCase } from './epplication/use-cases/register/register.use-case';
 import { IRegisterUseCase } from './epplication/use-cases/register/register.interface';
+import { ICacheService } from 'src/shared/cache/cache.interface';
+import { CacheService } from 'src/shared/cache/cache.service';
 
 export const authProviders: Provider[] = [
   {
@@ -24,5 +26,9 @@ export const authProviders: Provider[] = [
   {
     provide: ITokenService,
     useClass: TokenService,
+  },
+  {
+    provide: ICacheService,
+    useClass: CacheService,
   },
 ];

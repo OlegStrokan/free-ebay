@@ -9,14 +9,15 @@ import { ProductData } from 'src/product/core/product/entity/product.interface';
 import { IProductMapper } from '../mappers/product/product.mapper.interface';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 import { FailedToRetrieveProductException } from 'src/product/core/product/exceptions/failed-to-retrieve-product.exception';
+import { ICacheService } from 'src/shared/cache/cache.interface';
 
 @Injectable()
 export class ProductRepository implements IProductRepository {
   constructor(
     @InjectRepository(ProductDb)
     private readonly productRepository: Repository<ProductDb>,
-
     private readonly mapper: IProductMapper,
+    private readonly cacheService: ICacheService,
   ) {}
 
   async save(product: Product): Promise<Product> {
@@ -30,8 +31,22 @@ export class ProductRepository implements IProductRepository {
   }
 
   async findById(id: string): Promise<Product | null> {
-    const productDb = await this.productRepository.findOneBy({ id });
-    return productDb ? this.mapper.toDomain(productDb) : null;
+    const cacheKey = `product:${id}`;
+    const ttl = 300;
+
+    const productDb = await this.cacheService.getOrSet<ProductDb | null>(
+      cacheKey,
+      ttl,
+      async () => {
+        return await this.productRepository.findOneBy({ id });
+      },
+    );
+
+    if (!productDb) {
+      return null;
+    }
+
+    return this.mapper.toDomain(productDb);
   }
 
   async findBySku(sku: string): Promise<Product | null> {

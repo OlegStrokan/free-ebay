@@ -1,13 +1,11 @@
-// token.service.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectRedis } from '@nestjs-modules/ioredis';
 import * as jwt from 'jsonwebtoken';
 import { UserData } from 'src/user/core/entity/user';
-import Redis from 'ioredis';
+import { ICacheService } from 'src/shared/cache/cache.interface';
 
 @Injectable()
 export class TokenService {
-  constructor(@InjectRedis() private readonly redis: Redis) {}
+  constructor(private readonly cacheService: ICacheService) {}
 
   async createAccessToken(user: UserData): Promise<string> {
     return jwt.sign({ id: user.id, email: user.email }, 'access_secret', {
@@ -20,7 +18,9 @@ export class TokenService {
       expiresIn: '7d',
     });
 
-    await this.redis.set(`refresh:${user.id}`, token, 'EX', 60 * 60 * 24 * 7);
+    await this.cacheService.set(`refresh:${user.id}`, token, {
+      ttl: 60 * 60 * 24 * 7,
+    });
 
     return token;
   }
@@ -34,7 +34,7 @@ export class TokenService {
   }
 
   async verifyRefreshToken(userId: string, token: string): Promise<boolean> {
-    const stored = await this.redis.get(`refresh:${userId}`);
+    const stored = await this.cacheService.get<string>(`refresh:${userId}`);
     if (!stored || stored !== token) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -42,6 +42,6 @@ export class TokenService {
   }
 
   async revokeRefreshToken(userId: string): Promise<void> {
-    await this.redis.del(`refresh:${userId}`);
+    await this.cacheService.invalidate(`refresh:${userId}`);
   }
 }

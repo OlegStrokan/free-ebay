@@ -19,12 +19,18 @@ import { IFindProductsUseCase } from './epplication/use-cases/find-products/find
 import { IMarkAsAvailableUseCase } from './epplication/use-cases/mark-as-available/mark-as-available.interface';
 import { IMarkAsOutOfStockUseCase } from './epplication/use-cases/mark-as-out-of-stock/mark-as-out-of-stock.interface';
 import { IMoneyMapper } from './infrastructure/mappers/money/money.mapper.interface';
+import { ICacheService } from 'src/shared/cache/cache.interface';
+import { CacheService } from 'src/shared/cache/cache.service';
 
 export const productProviders: Provider[] = [
   {
     provide: IProductRepository,
     useClass: ProductRepository,
   },
+  {
+    provide: ICacheService,
+    useClass: CacheService,
+  }
   {
     provide: IProductMapper,
     useClass: ProductMapper,
