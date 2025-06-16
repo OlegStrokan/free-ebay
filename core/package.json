@@ -31,6 +31,9 @@
     "migration:show": "NODE_ENV=dev yarn typeorm migration:show -- -d ./src/shared/database/database.datasource.ts"
   },
   "dependencies": {
+    "@langchain/community": "^0.0.40",
+    "@langchain/core": "^0.3.58",
+    "@langchain/openai": "^0.5.13",
     "@nestjs/common": "^11.0.4",
     "@nestjs/config": " ^4.0.0",
     "@nestjs/core": "^11.0.4",
@@ -42,6 +45,7 @@
     "class-validator": "^0.14.1",
     "jsonwebtoken": "^9.0.2",
     "kafkajs": "^2.2.4",
+    "langchain": "^0.3.28",
     "openai": "^5.3.0",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.1.13",
