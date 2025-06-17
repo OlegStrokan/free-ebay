@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
-import { UserData } from 'src/user/core/entity/user';
 import { ICacheService } from 'src/shared/cache/cache.interface';
+import { UserData } from 'src/user/core/entity/user';
 
 @Injectable()
 export class TokenService {
@@ -18,30 +18,40 @@ export class TokenService {
       expiresIn: '7d',
     });
 
-    await this.cacheService.set(`refresh:${user.id}`, token, {
-      ttl: 60 * 60 * 24 * 7,
-    });
+    await this.cacheService.getOrSet(
+      `refresh:${user.id}`,
+      60 * 60 * 24 * 7,
+      async () => token,
+    );
 
     return token;
   }
 
-  verifyAccessToken(token: string): any {
-    try {
-      return jwt.verify(token, 'access_secret');
-    } catch (error) {
-      throw new UnauthorizedException('Invalid access token');
-    }
-  }
-
   async verifyRefreshToken(userId: string, token: string): Promise<boolean> {
-    const stored = await this.cacheService.get<string>(`refresh:${userId}`);
-    if (!stored || stored !== token) {
+    const storedToken = await this.cacheService.getOrSet(
+      `refresh:${userId}`,
+      60 * 60 * 24 * 7,
+      async () => {
+        throw new UnauthorizedException('Refresh token not found');
+      },
+    );
+
+    if (storedToken !== token) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+
     return true;
   }
 
   async revokeRefreshToken(userId: string): Promise<void> {
     await this.cacheService.invalidate(`refresh:${userId}`);
+  }
+
+  verifyAccessToken(token: string): any {
+    try {
+      return jwt.verify(token, 'access_secret');
+    } catch {
+      throw new UnauthorizedException('Invalid access token');
+    }
   }
 }
