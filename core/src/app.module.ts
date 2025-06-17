@@ -1,5 +1,6 @@
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Client } from '@elastic/elasticsearch';
 import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -37,12 +38,28 @@ import { RedisModule } from '@nestjs-modules/ioredis';
     DatabaseModule,
     AiChatBotModule,
   ],
-  exports: [],
   providers: [
     {
       provide: APP_INTERCEPTOR,
       useClass: MetricsInterceptor,
     },
+    {
+      provide: 'ELASTIC_CLIENT',
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        return new Client({
+          node: configService.get<string>(
+            'ELASTIC_NODE',
+            'http://localhost:9200',
+          ),
+          auth: {
+            username: configService.get<string>('ELASTIC_USERNAME')!,
+            password: configService.get<string>('ELASTIC_PASSWORD')!,
+          },
+        });
+      },
+    },
   ],
+  exports: ['ELASTIC_CLIENT'],
 })
 export class AppModule {}

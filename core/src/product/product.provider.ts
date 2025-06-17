@@ -21,6 +21,7 @@ import { IMarkAsOutOfStockUseCase } from './epplication/use-cases/mark-as-out-of
 import { IMoneyMapper } from './infrastructure/mappers/money/money.mapper.interface';
 import { ICacheService } from 'src/shared/cache/cache.interface';
 import { CacheService } from 'src/shared/cache/cache.service';
+import { SearchProductsUseCase } from './epplication/use-cases/search-products/search-products.use-case';
 
 export const productProviders: Provider[] = [
   {
@@ -30,7 +31,7 @@ export const productProviders: Provider[] = [
   {
     provide: ICacheService,
     useClass: CacheService,
-  }
+  },
   {
     provide: IProductMapper,
     useClass: ProductMapper,
@@ -54,6 +55,10 @@ export const productProviders: Provider[] = [
   {
     provide: IFindProductUseCase,
     useClass: FindProductUseCase,
+  },
+  {
+    provide: IFindProductUseCase,
+    useClass: SearchProductsUseCase,
   },
   {
     provide: IFindProductsUseCase,

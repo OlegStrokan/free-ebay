@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/auth/interface/guards/auth.guard';
 import {
@@ -21,6 +22,7 @@ import { IFindProductUseCase } from '../epplication/use-cases/find-product/find-
 import { IFindProductsUseCase } from '../epplication/use-cases/find-products/find-product.interface';
 import { IMarkAsAvailableUseCase } from '../epplication/use-cases/mark-as-available/mark-as-available.interface';
 import { IMarkAsOutOfStockUseCase } from '../epplication/use-cases/mark-as-out-of-stock/mark-as-out-of-stock.interface';
+import { ISearchProductsUseCase } from '../epplication/use-cases/search-products/search-products.interface';
 import { IProductMapper } from '../infrastructure/mappers/product/product.mapper.interface';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { ProductDto } from './dtos/product.dto';
@@ -32,6 +34,7 @@ export class ProductsController {
     private readonly createProductUseCase: ICreateProductUseCase,
     private readonly findProductsUseCase: IFindProductsUseCase,
     private readonly findProductUseCase: IFindProductUseCase,
+    private readonly searchProductsUseCase: ISearchProductsUseCase,
     private readonly markAsOutOfStockUseCae: IMarkAsOutOfStockUseCase,
     private readonly markAsAvailableUseCase: IMarkAsAvailableUseCase,
     private readonly deleteProductUseCase: IDeleteProductUseCase,
@@ -69,6 +72,18 @@ export class ProductsController {
     description: 'Product successfully retrieved.',
     type: ProductDto,
   })
+  @Get('search')
+  @ApiOperation({ summary: 'Search products by keyword' })
+  @ApiResponse({
+    status: 200,
+    description: 'Search results.',
+    type: [ProductDto],
+  })
+  public async search(@Query('q') query: string): Promise<ProductDto[]> {
+    const products = await this.searchProductsUseCase.execute(query);
+    return products.map((product) => this.mapper.toClient(product));
+  }
+
   @ApiResponse({ status: 404, description: 'Product not found.' })
   public async findOne(@Param('id') id: string): Promise<ProductDto> {
     const product = await this.findProductUseCase.execute(id);

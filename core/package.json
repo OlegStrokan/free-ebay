@@ -31,6 +31,7 @@
     "migration:show": "NODE_ENV=dev yarn typeorm migration:show -- -d ./src/shared/database/database.datasource.ts"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^9.0.2",
     "@langchain/community": "^0.0.40",
     "@langchain/core": "^0.3.58",
     "@langchain/openai": "^0.5.13",
@@ -38,12 +39,14 @@
     "@nestjs/common": "^11.0.4",
     "@nestjs/config": " ^4.0.0",
     "@nestjs/core": "^11.0.4",
+    "@nestjs/elasticsearch": "^11.1.0",
     "@nestjs/microservices": "^11.0.4",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/typeorm": "^10.0.2",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "elasticsearch": "^16.7.3",
     "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
     "kafkajs": "^2.2.4",
