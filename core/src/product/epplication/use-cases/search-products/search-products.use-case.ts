@@ -12,7 +12,7 @@ export class SearchProductsUseCase {
       query: {
         multi_match: {
           query,
-          fields: ['title^3', 'description', 'category'],
+          fields: ['description'],
           fuzziness: 'AUTO',
         },
       },
