@@ -12,23 +12,23 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "install:clean": "rm -rf node_modules && rm yarn.lock && yarn install",
     "start": "nest start",
-    "start:dev": "NODE_ENV=dev nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "NODE_ENV=local node dist/main",
+    "start:dev": "NODE_ENV=development nest start --watch",
+    "start:debug": "nest development --debug --watch",
+    "start:prod": "NODE_ENV=development node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "NODE_ENV=dev jest --runInBand",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm": "ts-node --require tsconfig-paths/register ./node_modules/typeorm/cli",
-    "migration:run": "NODE_ENV=prod yarn typeorm migration:run -- -d ./src/shared/database/database.datasource.ts",
-    "migration:test:run": "NODE_ENV=dev NODE_ENV=dev yarn typeorm migration:run -- -d ./src/shared/testing/database/database.datasource.ts",
-    "migration:test:generate": "NODE_ENV=dev yarn typeorm -- -d ./src/shared/testing/database/database.datasource.ts migration:generate ./src/shared/testing/database/migrations/$npm_config_name",
-    "migration:generate": "NODE_ENV=prod yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:generate ./src/shared/database/migrations/$npm_config_name",
-    "migration:create": "NODE_ENV=dev yarn typeorm -- migration:create ./src/shared/database/migrations/$npm_config_name",
-    "migration:revert": "NODE_ENV=dev yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:revert",
-    "migration:show": "NODE_ENV=dev yarn typeorm migration:show -- -d ./src/shared/database/database.datasource.ts"
+    "typeorm": "NODE_ENV=development  ts-node --require tsconfig-paths/register ./node_modules/typeorm/cli",
+    "migration:run": "NODE_ENV=development yarn typeorm migration:run -- -d ./src/shared/database/database.datasource.ts",
+    "migration:test:run": "NODE_ENV=development yarn typeorm migration:run -- -d ./src/shared/testing/database/database.datasource.ts",
+    "migration:test:generate": "NODE_ENV=development yarn typeorm -- -d ./src/shared/testing/database/database.datasource.ts migration:generate ./src/shared/testing/database/migrations/$npm_config_name",
+    "migration:generate": "NODE_ENV=development yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:generate ./src/shared/database/migrations/$npm_config_name",
+    "migration:create": "NODE_ENV=development yarn typeorm -- migration:create ./src/shared/database/migrations/$npm_config_name",
+    "migration:revert": "NODE_ENV=development yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:revert",
+    "migration:show": "NODE_ENV=development yarn typeorm migration:show -- -d ./src/shared/database/database.datasource.ts"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.0.2",
@@ -40,7 +40,7 @@
     "@nestjs/config": " ^4.0.0",
     "@nestjs/core": "^11.0.4",
     "@nestjs/elasticsearch": "^11.1.0",
-    "@nestjs/microservices": "^11.0.4",
+    "@nestjs/microservices": "^11.1.3",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/typeorm": "^10.0.2",
     "bcrypt": "^5.1.1",
@@ -89,7 +89,7 @@
     "ts-loader": "^9.2.3",
     "ts-node": "^10.0.0",
     "tsconfig-paths": "4.1.0",
-    "typescript": "^4.7.4"
+    "typescript": "^5.1.6"
   },
   "jest": {
     "moduleFileExtensions": [

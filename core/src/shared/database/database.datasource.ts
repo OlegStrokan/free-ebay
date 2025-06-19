@@ -6,7 +6,7 @@ import { glob } from 'glob';
 import * as dotenv from 'dotenv';
 
 const envFile =
-  process.env.NODE_ENV === 'dev' ? '.development.env' : '.prod.env';
+  process.env.NODE_ENV === 'development' ? '.development.env' : '.prod.env';
 dotenv.config({ path: envFile });
 
 const configService = new ConfigService();
@@ -21,7 +21,7 @@ export const AppDataSource = new DataSource({
   entities: glob.sync(join(__dirname, '..', '..', '**', '*.entity.{ts,js}')),
   migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
   ssl:
-    configService.get<string>('NODE_ENV') === 'dev'
+    configService.get<string>('NODE_ENV') === 'development'
       ? false
       : { rejectUnauthorized: false },
   migrationsTableName: 'migrations',

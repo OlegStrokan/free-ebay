@@ -39,12 +39,24 @@ export class Product implements Clonable<Product> {
     return this.product.status;
   }
 
+  get createdAt(): Date {
+    return this.product.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.product.updatedAt;
+  }
+
   get price(): Money {
     return this.product.price;
   }
 
   get name(): string {
     return this.product.name;
+  }
+
+  get sku(): string {
+    return this.product.sku;
   }
 
   get description(): string {

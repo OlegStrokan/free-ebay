@@ -1,4 +1,4 @@
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
@@ -22,6 +22,8 @@ import { checkoutProviders } from 'src/checkout/checkout.providers';
 import { productProviders } from 'src/product/product.provider';
 import { HttpService } from '@nestjs/axios';
 import { of } from 'rxjs';
+import { KafkaModule } from '../kafka/kafka.module';
+import { CacheModule } from '../cache/cache.module';
 
 export const createTestingModule = async () => {
   return await Test.createTestingModule({
@@ -47,6 +49,8 @@ export const createTestingModule = async () => {
       UserModule,
       CatalogModule,
       CheckoutModule,
+      KafkaModule,
+      CacheModule,
     ],
     exports: [],
     providers: [

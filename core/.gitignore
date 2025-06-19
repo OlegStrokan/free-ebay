@@ -4,6 +4,7 @@
 dist
 tmp
 /out-tsc
+pgdata
 
 # dependencies
 node_modules

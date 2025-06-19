@@ -22,6 +22,7 @@ import { IMoneyMapper } from './infrastructure/mappers/money/money.mapper.interf
 import { ICacheService } from 'src/shared/cache/cache.interface';
 import { CacheService } from 'src/shared/cache/cache.service';
 import { SearchProductsUseCase } from './epplication/use-cases/search-products/search-products.use-case';
+import { ISearchProductsUseCase } from './epplication/use-cases/search-products/search-products.interface';
 
 export const productProviders: Provider[] = [
   {
@@ -57,7 +58,7 @@ export const productProviders: Provider[] = [
     useClass: FindProductUseCase,
   },
   {
-    provide: IFindProductUseCase,
+    provide: ISearchProductsUseCase,
     useClass: SearchProductsUseCase,
   },
   {
