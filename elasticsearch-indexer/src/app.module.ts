@@ -10,21 +10,6 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
       envFilePath: `.${process.env.NODE_ENV}.env`,
       isGlobal: true,
     }),
-    ClientsModule.register([
-      {
-        name: 'KAFKA_PRODUCT_PRODUCER',
-        transport: Transport.KAFKA,
-        options: {
-          client: {
-            clientId: 'product',
-            brokers: ['localhost:9092'],
-          },
-          consumer: {
-            groupId: 'product-consumer',
-          },
-        },
-      },
-    ]),
     ElasticsearchConfigModule,
     ProductIndexingModule,
   ],

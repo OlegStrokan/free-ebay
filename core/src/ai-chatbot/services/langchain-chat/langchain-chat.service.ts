@@ -9,16 +9,11 @@ import { ChatOpenAI } from '@langchain/openai';
 import { HttpResponseOutputParser } from 'langchain/output_parsers';
 import { AgentExecutor, createOpenAIFunctionsAgent } from 'langchain/agents';
 
-import {
-  AIMessage,
-  BaseMessageChunk,
-  HumanMessage,
-} from '@langchain/core/messages';
-import { RunnableLike } from '@langchain/core/runnables';
+import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { AI_TEMPLATES } from 'src/ai-chatbot/utils/constants/templates.constants';
 import { customMessage } from 'src/ai-chatbot/utils/responses/custom-message.response';
 import { ContextAwareMessagesDto } from 'src/ai-chatbot/interfaces/dtos/context-aware-message.dto';
-import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
+import { TavilySearch } from '@langchain/tavily';
 
 // copied from 'ai' vercel library
 // @fix remove shit for 10 lines below
@@ -34,6 +29,11 @@ export enum vercelRoles {
 
 @Injectable()
 export class LangchainChatService {
+  constructor(
+    private readonly tavilySearch: TavilySearch,
+    private readonly chatOpenAI: ChatOpenAI,
+  ) {}
+
   async basicChat(dto: UserMessageDto) {
     try {
       const chain = this.loadSingleChain(AI_TEMPLATES.BASIC_CHAT_TEMPLATE);
@@ -72,7 +72,12 @@ export class LangchainChatService {
 
   async agentChat(dto: ContextAwareMessagesDto) {
     try {
-      const tools = [new TavilySearchResults({ maxResults: 1 })];
+      const tools = [
+        new TavilySearch({
+          ...this.tavilySearch,
+          maxResults: 1,
+        }),
+      ];
 
       const messages = dto.messages ?? [];
       const formattedPreviousMessages = messages
@@ -82,33 +87,26 @@ export class LangchainChatService {
       const currentMessageContent = messages[messages.length - 1].content;
 
       const prompt = ChatPromptTemplate.fromMessages([
-        [
-          'system',
-          'You are an agent that follows SI system standards and responds normally ',
-        ],
-        new MessagesPlaceholder({ variableName: 'chat_history ' }),
+        ['system', 'you is doctor agent. you answer only on medical question'],
+        new MessagesPlaceholder({ variableName: 'chat_history' }),
         ['user', '{input}'],
         new MessagesPlaceholder({ variableName: 'agent_scratchpad' }),
       ]);
 
       const llm = new ChatOpenAI({
+        ...this.chatOpenAI,
         temperature: 0.8,
-        model: 'gpt-4-turbo',
+        model: 'gpt-4.1-nano',
       });
 
-      //@fix delete ts-ignore
       const agent = await createOpenAIFunctionsAgent({
         llm,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
         tools,
         prompt,
       });
 
       const agentExecutor = new AgentExecutor({
         agent,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
         tools,
       });
 
@@ -127,18 +125,16 @@ export class LangchainChatService {
     const prompt = PromptTemplate.fromTemplate(template);
 
     const model = new ChatOpenAI({
-      model: 'gpt-4-turbo',
+      ...this.chatOpenAI,
+      model: 'gpt-4.1-nano',
       temperature: 0.8,
     });
 
-    const outputParser =
-      new HttpResponseOutputParser() as unknown as RunnableLike<
-        BaseMessageChunk,
-        Uint8Array
-      >;
+    const outputParser = new HttpResponseOutputParser();
 
     return prompt.pipe(model).pipe(outputParser);
   }
+
   //@fix - remove this shit. service shoudn't handle this type of logic
   private successResponse(response: Uint8Array) {
     customMessage(
@@ -151,6 +147,7 @@ export class LangchainChatService {
   }
 
   private exceptionHandling(e: unknown): never {
+    console.error('error', e);
     throw new HttpException(
       customMessage(HttpStatus.INTERNAL_SERVER_ERROR, 'server-error'),
       HttpStatus.INTERNAL_SERVER_ERROR,
@@ -162,7 +159,7 @@ export class LangchainChatService {
   }
 
   private formatBaseMessages(message: Message) {
-    message.role === vercelRoles.user
+    return message.role === vercelRoles.user
       ? new HumanMessage({ content: message.content, additional_kwargs: {} })
       : new AIMessage({ content: message.content, additional_kwargs: {} });
   }

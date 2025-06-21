@@ -36,6 +36,7 @@ export class CreateProductUseCase implements ICreateProductUseCase {
     const product = Product.create({ ...dto });
     await this.productsRepo.save(product);
 
+    //@non-required-fix: create eventType enum + kafka topics enum
     const productEvent: ProductKafkaEvent = {
       eventType: 'productCreated',
       productId: product.id,

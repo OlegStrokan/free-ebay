@@ -12,7 +12,11 @@ async function bootstrap() {
           brokers: ['localhost:9092'],
         },
         consumer: {
-          groupId: 'product-consumer',
+          groupId: 'elasticsearch-indexer-consumer-server',
+          allowAutoTopicCreation: true,
+        },
+        subscribe: {
+          fromBeginning: true,
         },
       },
     },

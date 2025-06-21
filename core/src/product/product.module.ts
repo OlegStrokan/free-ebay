@@ -6,7 +6,6 @@ import { AuthModule } from 'src/auth/auth.module';
 import { CatalogModule } from 'src/catalog/catalog.module';
 import { productProviders } from './product.provider';
 import { KafkaModule } from 'src/shared/kafka/kafka.module';
-import { ElasticsearchModule } from '@nestjs/elasticsearch';
 import { ElasticsearchConfigModule } from 'src/shared/elastic-search/elastic-search.module';
 
 @Module({
@@ -15,7 +14,6 @@ import { ElasticsearchConfigModule } from 'src/shared/elastic-search/elastic-sea
     TypeOrmModule.forFeature([ProductDb]),
     AuthModule,
     KafkaModule,
-    ElasticsearchModule,
     forwardRef(() => CatalogModule),
   ],
   providers: [...productProviders],

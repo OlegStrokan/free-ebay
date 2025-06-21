@@ -1,6 +1,11 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import {
+  EventPattern,
+  Payload,
+  Ctx,
+  KafkaContext,
+} from '@nestjs/microservices';
 
 interface ProductKafkaEventPayload {
   eventType: 'productCreated' | 'productUpdated' | 'productDeleted';
@@ -8,7 +13,7 @@ interface ProductKafkaEventPayload {
   name: string;
   description: string;
   sku: string;
-  price: number;
+  price: { currency: string; amount: number };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -21,7 +26,9 @@ export class ProductIndexingService implements OnModuleInit {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
   async onModuleInit() {
+    this.logger.log('Initializing ProductIndexingService...');
     await this.ensureProductIndexExists();
+    this.logger.log('ProductIndexingService initialized successfully');
   }
 
   private async ensureProductIndexExists(): Promise<void> {
@@ -56,12 +63,23 @@ export class ProductIndexingService implements OnModuleInit {
           `Failed to ensure Elasticsearch index exists: ${String(error)}`,
         );
       }
+      throw error; // Re-throw to prevent service from starting with broken ES connection
     }
   }
 
-  @EventPattern('product-events')
-  async handleProductEvent(@Payload() message: ProductKafkaEventPayload) {
-    this.logger.log(`Received product event: ${JSON.stringify(message)}`);
+  public async handleProductEvent(
+    message: ProductKafkaEventPayload,
+    context: KafkaContext,
+  ) {
+    const originalMessage = context.getMessage();
+    const partition = context.getPartition();
+    const offset = originalMessage.offset;
+
+    this.logger.log(
+      `Received product event from partition ${partition}, offset ${offset}: ${JSON.stringify(
+        message,
+      )}`,
+    );
 
     const { eventType, productId, ...productData } = message;
 
@@ -80,9 +98,8 @@ export class ProductIndexingService implements OnModuleInit {
               createdAt: productData.createdAt,
               updatedAt: productData.updatedAt,
             },
-            op_type: 'index',
           });
-          this.logger.log(`Product ${productId} indexed/updated successfully.`);
+          this.logger.log(`Product ${productId} indexed successfully.`);
           break;
 
         case 'productUpdated':
@@ -126,6 +143,7 @@ export class ProductIndexingService implements OnModuleInit {
           )}`,
         );
       }
+      throw error; // Re-throw to let Kafka handle retry logic
     }
   }
 }

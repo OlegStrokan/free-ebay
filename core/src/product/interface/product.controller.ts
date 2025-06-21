@@ -72,7 +72,7 @@ export class ProductsController {
     description: 'Product successfully retrieved.',
     type: ProductDto,
   })
-  @Get('search')
+  @Get('/search')
   @ApiOperation({ summary: 'Search products by keyword' })
   @ApiResponse({
     status: 200,
@@ -81,7 +81,8 @@ export class ProductsController {
   })
   public async search(@Query('q') query: string): Promise<ProductDto[]> {
     const products = await this.searchProductsUseCase.execute(query);
-    return products.map((product) => this.mapper.toClient(product));
+    // @fix: should be mapped;
+    return products as unknown as ProductDto[];
   }
 
   @ApiResponse({ status: 404, description: 'Product not found.' })
