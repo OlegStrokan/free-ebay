@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common'; // Import Logger
 import { UserMessageDto } from 'src/ai-chatbot/interfaces/dtos/user-message.dto';
 import {
   ChatPromptTemplate,
@@ -7,22 +7,17 @@ import {
 } from '@langchain/core/prompts';
 import { ChatOpenAI } from '@langchain/openai';
 import { HttpResponseOutputParser } from 'langchain/output_parsers';
-import { AgentExecutor, createOpenAIFunctionsAgent } from 'langchain/agents';
-
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { AI_TEMPLATES } from 'src/ai-chatbot/utils/constants/templates.constants';
-import { customMessage } from 'src/ai-chatbot/utils/responses/custom-message.response';
 import { ContextAwareMessagesDto } from 'src/ai-chatbot/interfaces/dtos/context-aware-message.dto';
-import { TavilySearch } from '@langchain/tavily';
+import { AiAgentServerException } from 'src/product/core/product/exceptions/ai-agent-server.exception';
 
-// copied from 'ai' vercel library
-// @fix remove shit for 10 lines below
 interface Message {
   role: string;
   content: string;
 }
 
-export enum vercelRoles {
+export enum VERCEL_ROLES {
   user = 'user',
   assistant = 'assistant',
 }
@@ -30,8 +25,8 @@ export enum vercelRoles {
 @Injectable()
 export class LangchainChatService {
   constructor(
-    private readonly tavilySearch: TavilySearch,
-    private readonly chatOpenAI: ChatOpenAI,
+    private readonly llmModel: ChatOpenAI,
+    private readonly logger: Logger,
   ) {}
 
   async basicChat(dto: UserMessageDto) {
@@ -42,7 +37,14 @@ export class LangchainChatService {
       });
       return this.successResponse(response);
     } catch (e: unknown) {
-      this.exceptionHandling(e);
+      this.logger.error(
+        `[basicChat] Failed for query: ${dto.query}. Error: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+        e instanceof Error ? e.stack : undefined,
+        LangchainChatService.name,
+      );
+      throw new AiAgentServerException();
     }
   }
 
@@ -63,95 +65,69 @@ export class LangchainChatService {
         chat_history: formattedPreviousMessages.join('\n'),
         input: currentMessageContent,
       });
-
       return this.successResponse(response);
     } catch (e: unknown) {
-      this.exceptionHandling(e);
+      this.logger.error(
+        `[contextAwareChat] Failed. Messages: ${JSON.stringify(
+          dto.messages,
+        )}. Error: ${e instanceof Error ? e.message : String(e)}`,
+        e instanceof Error ? e.stack : undefined,
+        LangchainChatService.name,
+      );
+      throw new AiAgentServerException();
     }
   }
 
-  async agentChat(dto: ContextAwareMessagesDto) {
+  async agentChat(dto: ContextAwareMessagesDto, customPrompt?: string) {
     try {
-      const tools = [
-        new TavilySearch({
-          ...this.tavilySearch,
-          maxResults: 1,
-        }),
-      ];
-
       const messages = dto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
         .map(this.formatBaseMessages);
 
       const currentMessageContent = messages[messages.length - 1].content;
-
       const prompt = ChatPromptTemplate.fromMessages([
-        ['system', 'you is doctor agent. you answer only on medical question'],
+        [
+          'system',
+          customPrompt ||
+            'You are a helpful assistant that provides accurate and helpful responses.',
+        ],
         new MessagesPlaceholder({ variableName: 'chat_history' }),
         ['user', '{input}'],
         new MessagesPlaceholder({ variableName: 'agent_scratchpad' }),
       ]);
 
-      const llm = new ChatOpenAI({
-        ...this.chatOpenAI,
-        temperature: 0.8,
-        model: 'gpt-4.1-nano',
-      });
-
-      const agent = await createOpenAIFunctionsAgent({
-        llm,
-        tools,
-        prompt,
-      });
-
-      const agentExecutor = new AgentExecutor({
-        agent,
-        tools,
-      });
-
-      const response = await agentExecutor.invoke({
+      const chain = prompt.pipe(this.llmModel);
+      const response = await chain.invoke({
         input: currentMessageContent,
         chat_history: formattedPreviousMessages,
+        agent_scratchpad: [],
       });
-
-      return customMessage(HttpStatus.OK, 'success', response.output);
+      return response.content;
     } catch (e: unknown) {
-      this.exceptionHandling(e);
+      this.logger.error(
+        `[agentChat] Failed. Messages: ${JSON.stringify(
+          dto.messages,
+        )}. Custom Prompt Used: ${customPrompt ? 'Yes' : 'No'}. Error: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+        e instanceof Error ? e.stack : undefined,
+        LangchainChatService.name,
+      );
+      throw new AiAgentServerException();
     }
+  }
+
+  private successResponse(response: Uint8Array): string {
+    return Object.values(response)
+      .map((code) => String.fromCharCode(code))
+      .join('');
   }
 
   private loadSingleChain(template: string) {
     const prompt = PromptTemplate.fromTemplate(template);
-
-    const model = new ChatOpenAI({
-      ...this.chatOpenAI,
-      model: 'gpt-4.1-nano',
-      temperature: 0.8,
-    });
-
     const outputParser = new HttpResponseOutputParser();
-
-    return prompt.pipe(model).pipe(outputParser);
-  }
-
-  //@fix - remove this shit. service shoudn't handle this type of logic
-  private successResponse(response: Uint8Array) {
-    customMessage(
-      HttpStatus.OK,
-      'success',
-      Object.values(response)
-        .map((code) => String.fromCharCode(code))
-        .join(''),
-    );
-  }
-
-  private exceptionHandling(e: unknown): never {
-    console.error('error', e);
-    throw new HttpException(
-      customMessage(HttpStatus.INTERNAL_SERVER_ERROR, 'server-error'),
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    return prompt.pipe(this.llmModel).pipe(outputParser);
   }
 
   private formateMessage(message: Message) {
@@ -159,7 +135,7 @@ export class LangchainChatService {
   }
 
   private formatBaseMessages(message: Message) {
-    return message.role === vercelRoles.user
+    return message.role === VERCEL_ROLES.user
       ? new HumanMessage({ content: message.content, additional_kwargs: {} })
       : new AIMessage({ content: message.content, additional_kwargs: {} });
   }

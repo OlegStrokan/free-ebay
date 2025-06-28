@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { AiChatBotController } from './interfaces/ai-chatbot.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
@@ -6,13 +6,13 @@ import { OpenAiChatbotService } from './services/open-ai/open-ai-chatbot.service
 import { HttpModule } from '@nestjs/axios';
 import { LocalAiChatbotService } from './services/local-ai/local-ai-chatbot.service';
 import { LangchainChatService } from './services/langchain-chat/langchain-chat.service';
-import { TavilySearch } from '@langchain/tavily';
 import { ChatOpenAI } from '@langchain/openai';
 
 @Module({
   controllers: [AiChatBotController],
   imports: [ConfigModule, HttpModule],
   providers: [
+    Logger,
     OpenAiChatbotService,
     LocalAiChatbotService,
     LangchainChatService,
@@ -43,14 +43,7 @@ import { ChatOpenAI } from '@langchain/openai';
         }),
       inject: [ConfigService],
     },
-    {
-      provide: TavilySearch,
-      useFactory: (configService: ConfigService) =>
-        new TavilySearch({
-          tavilyApiKey: configService.getOrThrow('TAVILY_API_KEY'),
-        }),
-      inject: [ConfigService],
-    },
   ],
+  exports: [LangchainChatService],
 })
 export class AiChatBotModule {}
