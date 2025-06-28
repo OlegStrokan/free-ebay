@@ -23,6 +23,8 @@ import { ICacheService } from 'src/shared/cache/cache.interface';
 import { CacheService } from 'src/shared/cache/cache.service';
 import { SearchProductsUseCase } from './epplication/use-cases/search-products/search-products.use-case';
 import { ISearchProductsUseCase } from './epplication/use-cases/search-products/search-products.interface';
+import { GetPriceRangeUseCase } from './epplication/use-cases/get-price-range/get-price-range.use-case';
+import { IGetPriceRangeUseCase } from './epplication/use-cases/get-price-range/get-price-range.interface';
 
 export const productProviders: Provider[] = [
   {
@@ -72,5 +74,9 @@ export const productProviders: Provider[] = [
   {
     provide: IMarkAsOutOfStockUseCase,
     useClass: MarkAsOutOfStockUseCase,
+  },
+  {
+    provide: IGetPriceRangeUseCase,
+    useClass: GetPriceRangeUseCase,
   },
 ];

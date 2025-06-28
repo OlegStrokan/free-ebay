@@ -7,6 +7,8 @@ import { CatalogModule } from 'src/catalog/catalog.module';
 import { productProviders } from './product.provider';
 import { KafkaModule } from 'src/shared/kafka/kafka.module';
 import { ElasticsearchConfigModule } from 'src/shared/elastic-search/elastic-search.module';
+import { AiChatBotModule } from 'src/ai-chatbot/ai-chatbot.module';
+import { PromptBuilderModule } from 'src/shared/prompt-builder/prompt-builder.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { ElasticsearchConfigModule } from 'src/shared/elastic-search/elastic-sea
     TypeOrmModule.forFeature([ProductDb]),
     AuthModule,
     KafkaModule,
+    AiChatBotModule,
+    PromptBuilderModule,
     forwardRef(() => CatalogModule),
   ],
   providers: [...productProviders],
