@@ -24,6 +24,8 @@ import { HttpService } from '@nestjs/axios';
 import { of } from 'rxjs';
 import { KafkaModule } from '../kafka/kafka.module';
 import { CacheModule } from '../cache/cache.module';
+import { AiChatBotModule } from 'src/ai-chatbot/ai-chatbot.module';
+import { LangchainChatService } from 'src/ai-chatbot/services/langchain-chat/langchain-chat.service';
 
 export const createTestingModule = async () => {
   return await Test.createTestingModule({
@@ -51,6 +53,8 @@ export const createTestingModule = async () => {
       CheckoutModule,
       KafkaModule,
       CacheModule,
+      KafkaModule,
+      AiChatBotModule,
     ],
     exports: [],
     providers: [
@@ -58,6 +62,15 @@ export const createTestingModule = async () => {
       ...userProviders,
       ...checkoutProviders,
       ...productProviders,
+      {
+        provide: LangchainChatService,
+        useValue: {
+          agentChat: jest
+            .fn()
+            .mockResolvedValue('Mocked AI response for price range.'),
+        },
+      },
+
       {
         provide: HttpService,
         useValue: {
