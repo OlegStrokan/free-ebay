@@ -9,10 +9,17 @@ import { IKafkaProducerService } from './kafka-producer.interface';
       {
         name: 'KAFKA_PRODUCT_PRODUCER',
         transport: Transport.KAFKA,
+
         options: {
           client: {
             clientId: 'product',
             brokers: ['localhost:9092'],
+            retry: {
+              initialRetryTime: 300,
+              maxRetryTime: 30000,
+              retries: 10,
+              factor: 0.2,
+            },
           },
           consumer: {
             groupId: 'product-consumer',
