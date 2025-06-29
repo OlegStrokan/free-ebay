@@ -23,8 +23,10 @@ import { IFindProductsUseCase } from '../epplication/use-cases/find-products/fin
 import { IMarkAsAvailableUseCase } from '../epplication/use-cases/mark-as-available/mark-as-available.interface';
 import { IMarkAsOutOfStockUseCase } from '../epplication/use-cases/mark-as-out-of-stock/mark-as-out-of-stock.interface';
 import { ISearchProductsUseCase } from '../epplication/use-cases/search-products/search-products.interface';
+import { IGetPriceRangeUseCase } from '../epplication/use-cases/get-price-range/get-price-range.interface';
 import { IProductMapper } from '../infrastructure/mappers/product/product.mapper.interface';
 import { CreateProductDto } from './dtos/create-product.dto';
+import { GetPriceRangeDto } from './dtos/get-price-range.dto';
 import { ProductDto } from './dtos/product.dto';
 
 @ApiTags('Products')
@@ -38,6 +40,7 @@ export class ProductsController {
     private readonly markAsOutOfStockUseCae: IMarkAsOutOfStockUseCase,
     private readonly markAsAvailableUseCase: IMarkAsAvailableUseCase,
     private readonly deleteProductUseCase: IDeleteProductUseCase,
+    private readonly getPriceRangeUseCase: IGetPriceRangeUseCase,
     private readonly mapper: IProductMapper,
   ) {}
 
@@ -48,6 +51,34 @@ export class ProductsController {
   @ApiResponse({ status: 400, description: 'Invalid request payload.' })
   public async create(@Body() dto: CreateProductDto): Promise<void> {
     await this.createProductUseCase.execute(dto);
+  }
+
+  @Post('get-price-range')
+  @ApiOperation({ summary: 'Get price range analysis for a product' })
+  @ApiBody({ type: GetPriceRangeDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Price range analysis successfully retrieved.',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 200 },
+        message: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['success'],
+        },
+        data: {
+          type: 'string',
+          example:
+            'Price Range: $999.99 - $1299.99\nConclusion: REASONABLE\nAnalysis: Based on current market research...',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request payload.' })
+  public async getPriceRange(@Body() dto: GetPriceRangeDto) {
+    return await this.getPriceRangeUseCase.execute(dto);
   }
 
   @UseGuards(AuthGuard)
@@ -64,14 +95,6 @@ export class ProductsController {
     return products.map((product) => this.mapper.toClient(product));
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Retrieve a product by ID' })
-  @ApiParam({ name: 'id', description: 'Product ID', type: String })
-  @ApiResponse({
-    status: 200,
-    description: 'Product successfully retrieved.',
-    type: ProductDto,
-  })
   @Get('/search')
   @ApiOperation({ summary: 'Search products by keyword' })
   @ApiResponse({
@@ -84,7 +107,14 @@ export class ProductsController {
     // @fix: should be mapped;
     return products as unknown as ProductDto[];
   }
-
+  @Get(':id')
+  @ApiOperation({ summary: 'Retrieve a product by ID' })
+  @ApiParam({ name: 'id', description: 'Product ID', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Product successfully retrieved.',
+    type: ProductDto,
+  })
   @ApiResponse({ status: 404, description: 'Product not found.' })
   public async findOne(@Param('id') id: string): Promise<ProductDto> {
     const product = await this.findProductUseCase.execute(id);
