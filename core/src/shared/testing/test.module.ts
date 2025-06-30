@@ -25,7 +25,10 @@ import { of } from 'rxjs';
 import { KafkaModule } from '../kafka/kafka.module';
 import { CacheModule } from '../cache/cache.module';
 import { AiChatBotModule } from 'src/ai-chatbot/ai-chatbot.module';
-import { LangchainChatService } from 'src/ai-chatbot/services/langchain-chat/langchain-chat.service';
+import { ChatOpenAI } from '@langchain/openai';
+import { Logger } from '@nestjs/common';
+import { ElasticsearchConfigModule } from '../elastic-search/elastic-search.module';
+import { PromptBuilderModule } from '../prompt-builder/prompt-builder.module';
 
 export const createTestingModule = async () => {
   return await Test.createTestingModule({
@@ -55,6 +58,8 @@ export const createTestingModule = async () => {
       CacheModule,
       KafkaModule,
       AiChatBotModule,
+      ElasticsearchConfigModule,
+      PromptBuilderModule,
     ],
     exports: [],
     providers: [
@@ -63,14 +68,21 @@ export const createTestingModule = async () => {
       ...checkoutProviders,
       ...productProviders,
       {
-        provide: LangchainChatService,
+        provide: ChatOpenAI,
         useValue: {
-          agentChat: jest
-            .fn()
-            .mockResolvedValue('Mocked AI response for price range.'),
+          invoke: jest.fn(),
+          pipe: jest.fn().mockReturnThis(),
         },
       },
-
+      {
+        provide: Logger,
+        useValue: {
+          error: jest.fn(),
+          log: jest.fn(),
+          warn: jest.fn(),
+          debug: jest.fn(),
+        },
+      },
       {
         provide: HttpService,
         useValue: {
