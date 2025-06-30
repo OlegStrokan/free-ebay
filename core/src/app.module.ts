@@ -12,6 +12,7 @@ import { KafkaModule } from './shared/kafka/kafka.module';
 import { UserModule } from './user/user.module';
 import { DatabaseModule } from './shared/database/database.module';
 import { ElasticsearchConfigModule } from './shared/elastic-search/elastic-search.module';
+import { PromptBuilderModule } from './shared/prompt-builder/prompt-builder.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ElasticsearchConfigModule } from './shared/elastic-search/elastic-searc
     AiChatBotModule,
     KafkaModule,
     CacheModule,
+    PromptBuilderModule,
   ],
   providers: [
     {
