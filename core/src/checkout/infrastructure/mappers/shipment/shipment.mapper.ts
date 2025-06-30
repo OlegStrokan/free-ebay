@@ -4,6 +4,7 @@ import {
 } from 'src/checkout/core/entity/shipment/shipment';
 import { ShipmentDb } from '../../entity/shipment.entity';
 import { IShipmentMapper } from './shipment.mapper.interface';
+import { OrderDb } from '../../entity/order.entity';
 
 export class ShipmentMapper implements IShipmentMapper {
   toDomain(shipmentDb: ShipmentDb): Shipment {
@@ -31,7 +32,7 @@ export class ShipmentMapper implements IShipmentMapper {
   toDb(shipment: ShipmentData): ShipmentDb {
     const shipmentDb = new ShipmentDb();
     shipmentDb.id = shipment.id;
-    // Assuming order is set elsewhere
+    shipmentDb.order = { id: shipment.orderId } as OrderDb;
     shipmentDb.shipmentStatus = shipment.shipmentStatus;
     shipmentDb.trackingNumber = shipment.trackingNumber;
     shipmentDb.address = shipment.shippingAddress;

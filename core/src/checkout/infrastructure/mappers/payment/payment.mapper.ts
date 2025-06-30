@@ -3,6 +3,7 @@ import { PaymentDb } from '../../entity/payment.entity';
 import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
 import { IPaymentMapper } from './payment.mapper.inteface';
 import { Money } from 'src/shared/types/money';
+import { OrderDb } from '../../entity/order.entity';
 
 export class PaymentMapper implements IPaymentMapper {
   constructor(private readonly moneyMapper: IMoneyMapper) {}
@@ -31,12 +32,12 @@ export class PaymentMapper implements IPaymentMapper {
   toDb(payment: PaymentData): PaymentDb {
     const paymentDb = new PaymentDb();
     paymentDb.id = payment.id;
-    // Assuming order is set elsewhere
     paymentDb.amount = this.moneyMapper.toDb(payment.amount);
     paymentDb.paymentMethod = payment.paymentMethod;
     paymentDb.paymentStatus = payment.status;
     paymentDb.createdAt = payment.createdAt;
     paymentDb.updatedAt = payment.updatedAt;
+    paymentDb.order = { id: payment.orderId } as OrderDb;
 
     return paymentDb;
   }

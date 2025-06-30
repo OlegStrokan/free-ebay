@@ -1,4 +1,3 @@
-// core/src/product/core/product/entity/product.spec.ts
 import { Product } from './product';
 import { ProductData } from './product.interface';
 import { ProductStatus } from './product-status';

@@ -9,6 +9,7 @@ import {
 import { PaymentDb } from '../../entity/payment.entity';
 import { Money } from 'src/shared/types/money';
 import { IPaymentMapper } from './payment.mapper.inteface';
+import { OrderDb } from '../../entity/order.entity';
 
 export const validatePaymentDataStructure = (
   paymentData: PaymentData | undefined,
@@ -62,7 +63,7 @@ describe('PaymentMapperTest', () => {
   it('should successfully map database payment to domain payment', async () => {
     const paymentDb = new PaymentDb();
     paymentDb.id = 'payment123';
-    paymentDb.order = { id: 'order123' } as any; // Assuming order is loaded
+    paymentDb.order = { id: 'order123' } as OrderDb; // Assuming order is loaded
     paymentDb.amount = JSON.stringify({
       amount: 100,
       currency: 'USD',

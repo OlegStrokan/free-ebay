@@ -7,7 +7,7 @@ import { CreateUserDto } from 'src/user/interface/dtos/create-user.dto';
 export class RegisterUseCase implements IRegisterUseCase {
   constructor(private readonly createUserUseCase: ICreateUserUseCase) {}
 
-  async execute(dto: CreateUserDto): Promise<string> {
+  async execute(dto: CreateUserDto): Promise<void> {
     return await this.createUserUseCase.execute(dto);
   }
 }
