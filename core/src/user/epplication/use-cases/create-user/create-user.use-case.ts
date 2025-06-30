@@ -10,7 +10,7 @@ import { Injectable } from '@nestjs/common';
 export class CreateUserUseCase implements ICreateUserUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
-  public async execute(dto: CreateUserDto): Promise<string> {
+  public async execute(dto: CreateUserDto): Promise<void> {
     const existingUser = await this.userRepository.findByEmail(dto.email);
     if (existingUser) {
       throw new UserAlreadyExistsException(dto.email);
@@ -18,7 +18,6 @@ export class CreateUserUseCase implements ICreateUserUseCase {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = User.create({ ...dto, password: hashedPassword });
-    await this.userRepository.save(user);
-    return 'OK';
+    return await this.userRepository.save(user);
   }
 }

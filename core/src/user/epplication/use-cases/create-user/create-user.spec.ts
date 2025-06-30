@@ -34,9 +34,7 @@ describe('CreateUserUseCaseTest', () => {
 
     const response = await createUserUseCase.execute(userDto);
 
-    expect(response).toBeDefined();
-    // TODO - update response type
-    expect(response).toBe('OK');
+    expect(response).toBeUndefined();
     const user = await userRepository.findByEmail(userDto.email);
 
     expect(user).toBeDefined();
