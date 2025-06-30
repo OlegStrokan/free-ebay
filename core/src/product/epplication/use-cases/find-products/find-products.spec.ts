@@ -27,14 +27,20 @@ describe('FindProductsUseCaseTest', () => {
   it('should succesfully retrieve products', async () => {
     await productMockService.createOne();
     await productMockService.createOne();
-    const retrievedProducts = await findProductsUseCase.execute();
+    const retrievedProducts = await findProductsUseCase.execute({
+      after: '0',
+      limit: 10,
+    });
 
     expect(retrievedProducts).toBeDefined();
     expect(retrievedProducts).toHaveLength(2);
   });
 
   it('should succesfully retrieve empty array of products', async () => {
-    const retrievedProducts = await findProductsUseCase.execute();
+    const retrievedProducts = await findProductsUseCase.execute({
+      after: '0',
+      limit: 10,
+    });
 
     expect(retrievedProducts).toBeDefined();
     expect(retrievedProducts).toHaveLength(0);
