@@ -20,13 +20,8 @@ export class CartRepository implements ICartRepository, IClearableRepository {
 
   async saveCart(cart: Cart): Promise<Cart> {
     const dbCart = this.mapper.toDb(cart);
-    await this.cartRepository.save(dbCart);
-    const savedCart = await this.getOneByIdIdWithRelations(cart.id);
-    // @fix
-    if (!savedCart) {
-      throw new Error('Unhandled exception');
-    }
-    return savedCart;
+    const savedDbCart = await this.cartRepository.save(dbCart);
+    return this.mapper.toDomain(savedDbCart);
   }
   async updateCart(cart: Cart): Promise<Cart> {
     const dbCart = this.mapper.toDb(cart);
