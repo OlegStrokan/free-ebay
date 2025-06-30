@@ -1,24 +1,28 @@
-import { Inject } from '@nestjs/common';
 import { Payment, PaymentData } from 'src/checkout/core/entity/payment/payment';
 import { PaymentDb } from '../../entity/payment.entity';
 import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
 import { IPaymentMapper } from './payment.mapper.inteface';
 import { Money } from 'src/shared/types/money';
-import { generateUlid } from 'src/shared/types/generate-ulid';
 
 export class PaymentMapper implements IPaymentMapper {
   constructor(private readonly moneyMapper: IMoneyMapper) {}
 
   toDomain(paymentDb: PaymentDb): Payment {
+    if (!paymentDb.order?.id) {
+      throw new Error(
+        `Payment with id ${paymentDb.id} is missing its associated order. Ensure the order relation is loaded.`,
+      );
+    }
+
     const paymentData: PaymentData = {
       id: paymentDb.id,
+      orderId: paymentDb.order.id,
       amount:
         this.moneyMapper.toDomain(paymentDb.amount) ?? Money.getDefaultMoney(),
       paymentMethod: paymentDb.paymentMethod,
       status: paymentDb.paymentStatus,
       createdAt: paymentDb.createdAt,
       updatedAt: paymentDb.updatedAt,
-      orderId: paymentDb.order.id,
     };
 
     return new Payment(paymentData);

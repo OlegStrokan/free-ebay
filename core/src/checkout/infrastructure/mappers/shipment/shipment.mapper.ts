@@ -4,14 +4,18 @@ import {
 } from 'src/checkout/core/entity/shipment/shipment';
 import { ShipmentDb } from '../../entity/shipment.entity';
 import { IShipmentMapper } from './shipment.mapper.interface';
-import { generateUlid } from 'src/shared/types/generate-ulid';
 
 export class ShipmentMapper implements IShipmentMapper {
   toDomain(shipmentDb: ShipmentDb): Shipment {
+    if (!shipmentDb.order?.id) {
+      throw new Error(
+        `Shipment with id ${shipmentDb.id} is missing its associated order. Ensure the order relation is loaded.`,
+      );
+    }
+
     const shipmentData: ShipmentData = {
       id: shipmentDb.id,
-      // TODO fix it
-      orderId: shipmentDb?.order?.id ?? generateUlid(),
+      orderId: shipmentDb.order.id,
       shipmentStatus: shipmentDb.shipmentStatus,
       shippingAddress: shipmentDb.address,
       trackingNumber: shipmentDb.trackingNumber,
