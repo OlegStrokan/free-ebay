@@ -1,10 +1,10 @@
-// eslint-disable-next-line @typescript-eslint/ban-types
 type ImmutablePrimitive =
   | undefined
   | null
   | boolean
   | string
   | number
+  // eslint-disable-next-line @typescript-eslint/ban-types
   | Function;
 
 export type Immutable<T> = T extends ImmutablePrimitive

@@ -20,6 +20,10 @@ export class CacheService implements ICacheService {
     return value;
   }
 
+  async set<T>(key: string, ttl: number, value: T): Promise<void> {
+    await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
+  }
+
   async invalidate(key: string): Promise<void> {
     await this.redis.del(key);
   }

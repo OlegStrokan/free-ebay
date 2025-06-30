@@ -83,16 +83,25 @@ export class ProductsController {
 
   @UseGuards(AuthGuard)
   @Get()
-  @ApiOperation({ summary: 'Retrieve all products' })
+  @ApiOperation({ summary: 'Retrieve all products (cursor-based)' })
   @ApiResponse({
     status: 200,
-    description: 'List of products successfully retrieved.',
+    description: 'List of products.',
     type: [ProductDto],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  public async findAll(): Promise<ProductDto[]> {
-    const products = await this.findProductsUseCase.execute();
-    return products.map((product) => this.mapper.toClient(product));
+  public async findAll(
+    @Query('after') after?: string,
+    @Query('limit') limit = 20,
+  ): Promise<{ items: ProductDto[]; nextCursor?: string }> {
+    const { items, nextCursor } = await this.findProductsUseCase.execute({
+      after,
+      limit,
+    });
+    return {
+      items: items.map((product) => this.mapper.toClient(product)),
+      nextCursor,
+    };
   }
 
   @Get('/search')
@@ -104,9 +113,9 @@ export class ProductsController {
   })
   public async search(@Query('q') query: string): Promise<ProductDto[]> {
     const products = await this.searchProductsUseCase.execute(query);
-    // @fix: should be mapped;
-    return products as unknown as ProductDto[];
+    return products.map((product) => this.mapper.toClient(product));
   }
+
   @Get(':id')
   @ApiOperation({ summary: 'Retrieve a product by ID' })
   @ApiParam({ name: 'id', description: 'Product ID', type: String })
