@@ -12,14 +12,13 @@ export class PaymentMapper implements IPaymentMapper {
   toDomain(paymentDb: PaymentDb): Payment {
     const paymentData: PaymentData = {
       id: paymentDb.id,
-      // TODO fix it
-      orderId: paymentDb?.order?.id ?? generateUlid(),
       amount:
         this.moneyMapper.toDomain(paymentDb.amount) ?? Money.getDefaultMoney(),
       paymentMethod: paymentDb.paymentMethod,
       status: paymentDb.paymentStatus,
       createdAt: paymentDb.createdAt,
       updatedAt: paymentDb.updatedAt,
+      orderId: paymentDb.order.id,
     };
 
     return new Payment(paymentData);
