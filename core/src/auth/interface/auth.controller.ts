@@ -1,5 +1,5 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger'; // Import Swagger decorators
+import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { ILoginUseCase } from '../epplication/use-cases/login/login.interface';
 import { IRegisterUseCase } from '../epplication/use-cases/register/register.interface';
 import { LoginRequestDto } from './dtos/login-request.dto';

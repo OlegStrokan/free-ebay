@@ -1,4 +1,3 @@
-// core/src/checkout/core/entity/payment/payment.spec.ts
 import { Payment, PaymentData, PaymentMethod, PaymentStatus } from './payment';
 import { Money } from 'src/shared/types/money';
 import { generateUlid } from 'src/shared/types/generate-ulid';

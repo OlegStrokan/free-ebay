@@ -15,6 +15,8 @@ import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface
 import { of } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosResponse } from 'axios';
+import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
+import { CreateOrderDto } from 'src/checkout/interface/dtos/create-order.dto';
 
 describe('CreateOrderUseCase', () => {
   let createOrderUseCase: ICreateOrderUseCase;
@@ -134,16 +136,17 @@ describe('CreateOrderUseCase', () => {
     );
   });
 
-  //   it('should throw PaymentFailedException if payment fails', async () => {
-  //     const cart = await cartMockService.createOne();
-  //     const dto: CreateOrderDto = {
-  //       cartId: cart.id,
-  //       shippingAddress: '123 Test St',
-  //       paymentMethod: PaymentMethod.CreditCard,
-  //     };
+  // @non-required-fix: remove skip and mock payment service
+  it.skip('should throw PaymentFailedException if payment fails', async () => {
+    const cart = await cartMockService.createOne();
+    const dto: CreateOrderDto = {
+      cartId: cart.id,
+      shippingAddress: '123 Test St',
+      paymentMethod: PaymentMethod.CreditCard,
+    };
 
-  //     await expect(createOrderUseCase.execute(dto)).rejects.toThrow(
-  //       PaymentFailedException,
-  //     );
-  //   });
+    await expect(createOrderUseCase.execute(dto)).rejects.toThrow(
+      PaymentFailedException,
+    );
+  });
 });

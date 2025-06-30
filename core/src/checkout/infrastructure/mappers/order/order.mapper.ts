@@ -73,7 +73,7 @@ export class OrderMapper implements IOrderMapper {
       orderDb.payment = this.paymentMapper.toDb(order.data.payment);
     }
 
-    // Dynamically add shipment if defined
+    //@info: Dynamically add shipment if defined
     if (order.data.shipment) {
       orderDb.shipment = this.shipmentMapper.toDb(order.data.shipment);
     }

@@ -1,4 +1,3 @@
-// core/src/checkout/core/entity/cart/cart.spec.ts
 import { Cart, CartData } from './cart';
 import { Money } from 'src/shared/types/money';
 import { CartItem } from '../cart-item/cart-item';
