@@ -1,4 +1,4 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { faker } from '@faker-js/faker';
 
 import { ICartItemMockService } from './cart-item-mock.interface';
@@ -38,9 +38,5 @@ export class CartItemMockService implements ICartItemMockService {
     return Array.from({ length: count }).map((_, index) =>
       this.getOne(overrides[index] as Partial<CartItemData>),
     );
-  }
-
-  async createOne(overrides: Partial<CartItemData> = {}): Promise<CartItem> {
-    throw new NotImplementedException();
   }
 }

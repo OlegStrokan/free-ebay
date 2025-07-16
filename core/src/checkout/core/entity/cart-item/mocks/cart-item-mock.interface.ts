@@ -7,6 +7,5 @@ export abstract class ICartItemMockService {
     count?: number,
     overrides?: Partial<CartItemData>[],
   ): CartItem[];
-  abstract createOne(overrides?: Partial<CartItemData>): Promise<CartItem>;
   abstract getOneToCreate(overrides?: Partial<AddToCartDto>): AddToCartDto;
 }

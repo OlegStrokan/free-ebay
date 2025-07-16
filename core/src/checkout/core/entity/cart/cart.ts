@@ -78,7 +78,6 @@ export class Cart implements Clonable<Cart> {
     if (items.length === 0) {
       return Money.getDefaultMoney();
     }
-
     const initialMoney = Money.getDefaultMoney();
 
     return items.reduce((total, item) => total.add(item.price), initialMoney);
