@@ -15,7 +15,6 @@ export class OrderRepository implements IOrderRepository, IClearableRepository {
     private readonly orderRepository: Repository<OrderDb>,
     @InjectRepository(OrderDb)
     private readonly orderItemRepository: Repository<OrderItemDb>,
-
     private readonly mapper: IOrderMapper,
   ) {}
 

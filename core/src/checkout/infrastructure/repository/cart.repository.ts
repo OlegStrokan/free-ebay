@@ -35,6 +35,7 @@ export class CartRepository implements ICartRepository, IClearableRepository {
   }
   async getCartByUserId(userId: string): Promise<Cart | null> {
     const cart = await this.cartRepository.findOneBy({ userId });
+
     return cart ? this.mapper.toDomain(cart) : null;
   }
 

@@ -6,6 +6,7 @@ import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
 import { IClearableRepository } from 'src/shared/types/clearable';
 import { ShipmentDb } from '../entity/shipment.entity';
 import { IShipmentMapper } from '../mappers/shipment/shipment.mapper.interface';
+import { OrderDb } from '../entity/order.entity';
 
 @Injectable()
 export class ShipmentRepository
@@ -14,11 +15,19 @@ export class ShipmentRepository
   constructor(
     @InjectRepository(ShipmentDb)
     private readonly shipmentRepository: Repository<ShipmentDb>,
+    @InjectRepository(OrderDb)
+    private readonly orderRepository: Repository<OrderDb>,
     private readonly mapper: IShipmentMapper,
   ) {}
 
   async save(shipment: Shipment): Promise<Shipment> {
     const dbShipment = this.mapper.toDb(shipment.data);
+    const order = await this.orderRepository.findOneBy({
+      id: shipment.data.orderId,
+    });
+    if (!order)
+      throw new Error(`Order with id ${shipment.data.orderId} not found`);
+    dbShipment.order = order;
     const createdShipment = await this.shipmentRepository.save(dbShipment);
     return this.mapper.toDomain(createdShipment);
   }

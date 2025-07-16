@@ -50,7 +50,7 @@ describe('PaymentMapperTest', () => {
       id: 'payment123',
       orderId: 'order123',
       amount: new Money(100, 'USD', 100),
-      paymentMethod: PaymentMethod.CreditCard,
+      paymentMethod: PaymentMethod.Card,
       status: PaymentStatus.Pending,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -69,7 +69,7 @@ describe('PaymentMapperTest', () => {
       currency: 'USD',
       fraction: 100,
     });
-    paymentDb.paymentMethod = PaymentMethod.CreditCard;
+    paymentDb.paymentMethod = PaymentMethod.Card;
     paymentDb.paymentStatus = PaymentStatus.Pending;
     paymentDb.createdAt = new Date();
     paymentDb.updatedAt = new Date();

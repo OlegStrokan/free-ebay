@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PaymentDb } from '../entity/payment.entity';
@@ -45,6 +45,13 @@ export class PaymentRepository
     });
 
     return payment.map((payment) => this.mapper.toDomain(payment));
+  }
+
+  async findByPaymentIntentId(
+    paymentIntentId: string,
+  ): Promise<Payment | null> {
+    const payment = await this.paymentRepository.findOneBy({ paymentIntentId });
+    return payment ? this.mapper.toDomain(payment) : null;
   }
 
   async clear(): Promise<void> {
