@@ -51,6 +51,10 @@ import { IOrderItemMockService } from './core/entity/order-item/mocks/order-item
 import { IOrderMockService } from './core/entity/order/mocks/order-mock.interface';
 import { IPaymentMockService } from './core/entity/payment/mocks/payment-mock.inteface';
 import { IShipmentMockService } from './core/entity/shipment/mocks/shipment-mock.interface';
+import { IUpdatePaymentStatusUseCase } from './epplication/use-cases/update-payment-status/update-payment-status.interface';
+import { UpdatePaymentStatusUseCase } from './epplication/use-cases/update-payment-status/update-payment-status.use-case';
+import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper.interface';
+import { MoneyMapper } from 'src/product/infrastructure/mappers/money/money.mapper';
 
 export const checkoutProviders: Provider[] = [
   {
@@ -72,6 +76,10 @@ export const checkoutProviders: Provider[] = [
   {
     provide: ICartMapper,
     useClass: CartMapper,
+  },
+  {
+    provide: IMoneyMapper,
+    useClass: MoneyMapper,
   },
   {
     provide: IOrderMapper,
@@ -156,5 +164,9 @@ export const checkoutProviders: Provider[] = [
   {
     provide: ICheckPaymentStatusUseCase,
     useClass: CheckPaymentStatusUseCase,
+  },
+  {
+    provide: IUpdatePaymentStatusUseCase,
+    useClass: UpdatePaymentStatusUseCase,
   },
 ];

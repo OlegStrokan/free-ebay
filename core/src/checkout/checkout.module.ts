@@ -1,5 +1,4 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { HttpModule } from '@nestjs/axios';
 import { ProductModule } from 'src/product/product.module';
 import { UserModule } from 'src/user/user.module';
 import { CartItemDb } from './infrastructure/entity/cart-item.entity';
@@ -11,6 +10,7 @@ import { ShipmentDb } from './infrastructure/entity/shipment.entity';
 import { CheckoutController } from './interface/checkout.controller';
 import { Module } from '@nestjs/common';
 import { checkoutProviders } from './checkout.providers';
+import { GrpcModule } from 'src/shared/grpc/grpc.module';
 
 @Module({
   imports: [
@@ -24,7 +24,7 @@ import { checkoutProviders } from './checkout.providers';
     ]),
     UserModule,
     ProductModule,
-    HttpModule,
+    GrpcModule,
   ],
   exports: [],
   providers: [...checkoutProviders],
