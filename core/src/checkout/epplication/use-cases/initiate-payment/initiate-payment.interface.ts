@@ -1,16 +1,6 @@
-import {
-  Payment,
-  PaymentMethod,
-} from 'src/checkout/core/entity/payment/payment';
+import { Payment } from 'src/checkout/core/entity/payment/payment';
 import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
-import { Money } from 'src/shared/types/money';
-
-export interface InitiatePaymentDto {
-  orderId: string;
-  paymentMethod: PaymentMethod;
-  amount: Money;
-  shippingAddress: string;
-}
+import { ProceedPaymentDto } from 'src/checkout/interface/dtos/proceed-payment.dto';
 
 export interface PaymentResult {
   shipment: Shipment;
@@ -18,5 +8,5 @@ export interface PaymentResult {
 }
 
 export abstract class IInitiatePaymentUseCase {
-  abstract execute(payment: InitiatePaymentDto): Promise<PaymentResult>;
+  abstract execute(payment: ProceedPaymentDto): Promise<PaymentResult>;
 }

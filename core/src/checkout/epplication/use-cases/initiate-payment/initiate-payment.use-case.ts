@@ -1,9 +1,8 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
 import {
   Payment,
   PaymentMethod,
+  PaymentStatus,
 } from 'src/checkout/core/entity/payment/payment';
 import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
 import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
@@ -12,43 +11,48 @@ import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repos
 import { Money } from 'src/shared/types/money';
 import {
   IInitiatePaymentUseCase,
-  InitiatePaymentDto,
   PaymentResult,
 } from './initiate-payment.interface';
+import { ProceedPaymentDto } from 'src/checkout/interface/dtos/proceed-payment.dto';
+import { PaymentGrpcService } from 'src/shared/grpc/payment-grpc.service';
 
 @Injectable()
 export class InitiatePaymentUseCase implements IInitiatePaymentUseCase {
   constructor(
     private readonly shipmentRepository: IShipmentRepository,
     private readonly paymentRepository: IPaymentRepository,
-    private readonly httpService: HttpService,
+    private readonly paymentGrpcService: PaymentGrpcService,
   ) {}
 
-  async execute(dto: InitiatePaymentDto): Promise<PaymentResult> {
+  async execute(dto: ProceedPaymentDto): Promise<PaymentResult> {
     const shipment = await this.createShipment(
       dto.orderId,
       dto.shippingAddress,
     );
 
-    const payment = await this.createPayment(
+    let confirmedPayment = await this.createPayment(
       dto.orderId,
       dto.paymentMethod,
       dto.amount,
     );
 
     if (dto.paymentMethod !== PaymentMethod.CashOnDelivery) {
-      const response = await firstValueFrom(
-        await this.processPaymentInfo(payment),
-      );
+      const response = await this.processPaymentInfo(confirmedPayment);
 
-      if (response.status !== 200) {
+      if (response.status < 200 || response.status >= 300 || !response.data) {
         throw new PaymentFailedException(dto.orderId);
       }
+
+      const paymentResponse = response.data;
+      confirmedPayment = confirmedPayment.updateStatus(
+        paymentResponse.paymentStatus as PaymentStatus,
+      );
+      await this.paymentRepository.save(confirmedPayment);
     }
 
     return {
       shipment,
-      payment,
+      payment: confirmedPayment,
     };
   }
 
@@ -72,19 +76,11 @@ export class InitiatePaymentUseCase implements IInitiatePaymentUseCase {
   }
 
   private async processPaymentInfo(payment: Payment) {
-    const paymentInfo = {
-      orderId: payment.orderId,
-      amount: {
-        amount: payment.amount.getAmount(),
-        fraction: payment.amount.getFraction(),
-        currency: payment.amount.getCurrency(),
-      },
-      paymentMethod: payment.paymentMethod,
-    };
-
-    return this.httpService.post(
-      'http://localhost:5012/api/Payment/ProcessPayment',
-      paymentInfo,
+    return await this.paymentGrpcService.processPayment(
+      payment.id,
+      payment.orderId,
+      payment.amount,
+      payment.paymentMethod,
     );
   }
 }
