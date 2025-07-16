@@ -13,6 +13,7 @@ import { UserModule } from './user/user.module';
 import { DatabaseModule } from './shared/database/database.module';
 import { ElasticsearchConfigModule } from './shared/elastic-search/elastic-search.module';
 import { PromptBuilderModule } from './shared/prompt-builder/prompt-builder.module';
+import { GrpcModule } from './shared/grpc/grpc.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PromptBuilderModule } from './shared/prompt-builder/prompt-builder.modu
     KafkaModule,
     CacheModule,
     PromptBuilderModule,
+    GrpcModule,
   ],
   providers: [
     {

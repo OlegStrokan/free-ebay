@@ -23,13 +23,13 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "NODE_ENV=dev  ts-node --require tsconfig-paths/register ./node_modules/typeorm/cli",
-    "migration:run": "NODE_ENV=dev yarn typeorm migration:run -- -d ./src/shared/database/database.datasource.ts",
-    "migration:test:run": "NODE_ENV=dev yarn typeorm migration:run -- -d ./src/shared/testing/database/database.datasource.ts",
-    "migration:test:generate": "NODE_ENV=dev yarn typeorm -- -d ./src/shared/testing/database/database.datasource.ts migration:generate ./src/shared/testing/database/migrations/$npm_config_name",
-    "migration:generate": "NODE_ENV=dev yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:generate ./src/shared/database/migrations/$npm_config_name",
-    "migration:create": "NODE_ENV=dev yarn typeorm -- migration:create ./src/shared/database/migrations/$npm_config_name",
-    "migration:revert": "NODE_ENV=dev yarn typeorm -- -d ./src/shared/database/database.datasource.ts migration:revert",
-    "migration:show": "NODE_ENV=dev yarn typeorm migration:show -- -d ./src/shared/database/database.datasource.ts"
+    "migration:run": "NODE_ENV=dev yarn typeorm migration:run -d ./src/shared/database/database.datasource.ts",
+    "migration:test:run": "NODE_ENV=dev yarn typeorm migration:run  -d ./src/shared/testing/database/database.datasource.ts",
+    "migration:test:generate": "NODE_ENV=dev yarn typeorm -d ./src/shared/testing/database/database.datasource.ts migration:generate ./src/shared/testing/database/migrations/$npm_config_name",
+    "migration:generate": "NODE_ENV=dev yarn typeorm -d ./src/shared/database/database.datasource.ts migration:generate ./src/shared/database/migrations/$1",
+    "migration:create": "NODE_ENV=dev yarn typeorm migration:create ./src/shared/database/migrations/$npm_config_name",
+    "migration:revert": "NODE_ENV=dev yarn typeorm -d ./src/shared/database/database.datasource.ts migration:revert",
+    "migration:show": "NODE_ENV=dev yarn typeorm migration:show -d ./src/shared/database/database.datasource.ts"
   },
   "dependencies": {
     "@elastic/elasticsearch": "8",
@@ -113,5 +113,6 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  }
+  },
+  "packageManager": "yarn@4.1.1+sha512.ec40d0639bb307441b945d9467139cbb88d14394baac760b52eca038b330d16542d66fef61574271534ace5a200518dabf3b53a85f1f9e4bfa37141b538a9590"
 }

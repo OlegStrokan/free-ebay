@@ -28,7 +28,7 @@ services:
   exchange:
     image: postgres:13
     env_file:
-      - .development.env
+      - .dev.env
     container_name: exchange
     ports:
       - '6433:5432'
@@ -54,7 +54,7 @@ services:
         '$${REDIS_PASSWORD}',
       ]
     env_file:
-      - .development.env
+      - .dev.env
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
@@ -72,7 +72,7 @@ services:
       - esdata:/usr/share/elasticsearch/data
     restart: unless-stopped
     env_file:
-      - .development.env
+      - .dev.env
 
   kafdrop:
     image: obsidiandynamics/kafdrop
