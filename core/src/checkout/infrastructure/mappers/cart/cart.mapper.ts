@@ -5,7 +5,11 @@ import { CartItemDb } from '../../entity/cart-item.entity';
 import { ICartMapper } from './cart.mapper.interface';
 import { Cart } from 'src/checkout/core/entity/cart/cart';
 import { CartData } from 'src/checkout/core/entity/cart/cart';
+import { CartDto } from 'src/checkout/interface/dtos/cart.dto';
+import { MoneyDto } from 'src/shared/types/money.dto';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class CartMapper implements ICartMapper {
   constructor(private readonly moneyMapper: IMoneyMapper) {}
 
@@ -54,7 +58,22 @@ export class CartMapper implements ICartMapper {
     return cartDb;
   }
 
-  toClient(cart: Cart): CartData {
-    return cart.data;
+  toClient(cart: Cart): CartDto {
+    return {
+      id: cart.id,
+      userId: cart.userId,
+      items: cart.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        cartId: item.cartId,
+        quantity: item.quantity,
+        price: this.moneyMapper.toClient(item.price) as MoneyDto,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+      totalPrice: this.moneyMapper.toClient(cart.totalPrice) as MoneyDto,
+      createdAt: cart.cart.createdAt,
+      updatedAt: cart.cart.updatedAt,
+    };
   }
 }

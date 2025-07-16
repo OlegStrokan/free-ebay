@@ -7,8 +7,11 @@ import { CartDb } from '../../entity/cart.entity';
 import { Money } from 'src/shared/types/money';
 import { CartItemDb } from '../../entity/cart-item.entity';
 import { generateUlid } from 'src/shared/types/generate-ulid';
+import { CartDto } from 'src/checkout/interface/dtos/cart.dto';
 
-const validateCartDataStructure = (cartData: CartData | undefined) => {
+const validateCartDataStructure = (
+  cartData: CartData | CartDto | undefined,
+) => {
   if (!cartData) throw new Error('Cart not found test error');
 
   expect(cartData).toEqual({
