@@ -11,7 +11,7 @@ describe('Payment', () => {
       id: generateUlid(),
       orderId: 'order1',
       amount: new Money(100, 'USD', 2),
-      paymentMethod: PaymentMethod.CreditCard,
+      paymentMethod: PaymentMethod.Card,
       status: PaymentStatus.Pending,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -50,7 +50,7 @@ describe('Payment', () => {
 
   test('should retain original payment data after method update', () => {
     const updatedPayment = payment.updatePaymentMethod(PaymentMethod.PayPal);
-    expect(payment.paymentMethod).toBe(PaymentMethod.CreditCard);
+    expect(payment.paymentMethod).toBe(PaymentMethod.Card);
     expect(updatedPayment.paymentMethod).toBe(PaymentMethod.PayPal);
   });
 });

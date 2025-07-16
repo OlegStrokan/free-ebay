@@ -159,11 +159,13 @@ export class Order implements Clonable<Order> {
   };
 
   private calculateTotalPrice(items: OrderItemData[]): Money {
+    //@fix: fraction should be always 100;
+
     if (items.length === 0) {
-      return Money.getDefaultMoney();
+      return Money.getDefaultMoney(0, 0);
     }
 
-    const initialMoney = Money.getDefaultMoney();
+    const initialMoney = Money.getDefaultMoney(0, 0);
 
     return items.reduce(
       (total, item) => total.add(item.priceAtPurchase),

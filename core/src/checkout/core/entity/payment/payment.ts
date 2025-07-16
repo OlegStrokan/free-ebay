@@ -3,7 +3,7 @@ import { generateUlid } from 'src/shared/types/generate-ulid';
 import { Money } from 'src/shared/types/money';
 
 export enum PaymentMethod {
-  CreditCard = 'CreditCard',
+  Card = 'Card',
   PayPal = 'Paypal',
   BankTransfer = 'BankTransfer',
   CashOnDelivery = 'CashOnDelivery',
