@@ -22,19 +22,13 @@ export class AddToCartUseCase implements IAddToCartUseCase {
     if (!cart) {
       throw new CartNotFoundException('id', dto.cartId);
     }
-    debugger;
 
     const product = await this.productRepository.findById(dto.productId);
-    console.log('product form use-case', product);
     if (!product) {
       throw new ProductNotFoundException('id', dto.productId);
     }
 
-    console.log('from use-case', product.price);
-
     const cartItem = CartItem.create({ ...dto, price: product.price });
-
-    console.log('from use-case 2', cartItem.price);
 
     const newCart = cart.addItem(cartItem.data);
     return await this.cartRepository.updateCart(newCart);

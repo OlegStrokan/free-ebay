@@ -142,7 +142,7 @@ describe('CreateOrderUseCase', () => {
     const dto: CreateOrderDto = {
       cartId: cart.id,
       shippingAddress: '123 Test St',
-      paymentMethod: PaymentMethod.CreditCard,
+      paymentMethod: PaymentMethod.Card,
     };
 
     await expect(createOrderUseCase.execute(dto)).rejects.toThrow(

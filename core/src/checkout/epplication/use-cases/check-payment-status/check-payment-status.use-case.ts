@@ -11,7 +11,7 @@ export class CheckPaymentStatusUseCase implements ICheckPaymentStatusUseCase {
   async execute(paymentId: string): Promise<PaymentStatus> {
     const payment = await this.repository.findById(paymentId);
     if (!payment) {
-      throw new PaymentNotFoundException(paymentId);
+      throw new PaymentNotFoundException('id', paymentId);
     }
     return payment?.data.status;
   }

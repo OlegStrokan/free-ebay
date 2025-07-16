@@ -12,14 +12,14 @@ import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
 import {
   Payment,
   PaymentMethod,
+  PaymentStatus,
 } from 'src/checkout/core/entity/payment/payment';
 import { Money } from 'src/shared/types/money';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
 import { CartItemsNotFoundException } from 'src/checkout/core/exceptions/cart/cart-items-not-found.exception';
-import { firstValueFrom } from 'rxjs';
 import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
-import { HttpService } from '@nestjs/axios';
+import { PaymentGrpcService } from 'src/shared/grpc/payment-grpc.service';
 
 @Injectable()
 export class CreateOrderUseCase implements ICreateOrderUseCase {
@@ -28,7 +28,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     private readonly orderRepository: IOrderRepository,
     private readonly shipmentRepository: IShipmentRepository,
     private readonly paymentRepository: IPaymentRepository,
-    private readonly httpService: HttpService,
+    private readonly paymentGrpcService: PaymentGrpcService,
   ) {}
 
   async execute(dto: CreateOrderDto): Promise<Order> {
@@ -45,6 +45,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
 
     const order = this.createOrderFromCart(cart);
 
+    // the problem is we saving shipment before we saving
     const shipment = await this.createShipment(order.id, dto.shippingAddress);
     const payment = await this.createPayment(
       order.id,
@@ -53,9 +54,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     );
 
     if (dto.paymentMethod !== PaymentMethod.CashOnDelivery) {
-      const response = await firstValueFrom(
-        await this.processPaymentInfo(payment),
-      );
+      const response = await this.processPaymentInfo(payment);
       if (response.status !== 200) {
         throw new PaymentFailedException(order.id);
       }
@@ -65,7 +64,10 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     order.data.payment = payment.data;
 
     const emptyCart = cart.clearCart();
-    const savedOrder = await this.orderRepository.save(order);
+    await this.shipmentRepository.save(shipment);
+    await this.paymentRepository.save(payment);
+
+    const savedOrder = await this.orderRepository.update(order);
     await this.cartRepository.updateCart(emptyCart);
 
     return savedOrder;
@@ -97,7 +99,6 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     shippingAddress: string,
   ): Promise<Shipment> {
     const shipment = Shipment.create(orderId, shippingAddress);
-    await this.shipmentRepository.save(shipment);
     return shipment;
   }
 
@@ -107,23 +108,15 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     amount: Money,
   ): Promise<Payment> {
     const payment = Payment.create({ amount, paymentMethod, orderId });
-    await this.paymentRepository.save(payment);
     return payment;
   }
 
   private async processPaymentInfo(payment: Payment) {
-    const paymentInfo = {
-      orderId: payment.orderId,
-      amount: {
-        amount: payment.amount.getAmount(),
-        fraction: payment.amount.getFraction(),
-        currency: payment.amount.getCurrency(),
-      },
-      paymentMethod: payment.paymentMethod,
-    };
-    return this.httpService.post(
-      'http://localhost:5012/api/Payment/ProcessPayment',
-      paymentInfo,
+    return await this.paymentGrpcService.processPayment(
+      payment.id,
+      payment.orderId,
+      payment.amount,
+      payment.paymentMethod,
     );
   }
 }
