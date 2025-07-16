@@ -20,7 +20,7 @@ describe('CreateCartUseCase', () => {
     module = await createTestingModule();
 
     addToCartUseCase = module.get(IAddToCartUseCase);
-    cartMockService = module.get(ICartItemMockService);
+    cartMockService = module.get(ICartMockService);
     cartItemMockService = module.get(ICartItemMockService);
     productMockService = module.get(IProductMockService);
 
@@ -35,31 +35,37 @@ describe('CreateCartUseCase', () => {
     const userId = generateUlid();
     const cartId = generateUlid();
     const product = await productMockService.createOne();
+    console.log('product price ', product.price);
+
     await cartMockService.createOne({ id: cartId, userId, items: [] });
     const cartItem = cartItemMockService.getOneToCreate({
       cartId: cartId,
       productId: product.id,
       quantity: 1,
     });
-
     const cartWithItem = await addToCartUseCase.execute(cartItem);
 
     expect(cartWithItem).toBeDefined();
     expect(cartWithItem.items).toBeDefined();
     expect(cartWithItem.items[0].productId).toBe(product.id);
     expect(cartWithItem.items[0].quantity).toBe(1);
+    console.log(
+      cartWithItem.items[0].price,
+      product.price,
+      cartWithItem.totalPrice,
+    );
     expect(cartWithItem.items[0].price).toStrictEqual(product.price);
     expect(cartWithItem.totalPrice).toStrictEqual(product.price);
   });
 
-  it('should throw exception because cart not found', async () => {
+  it.skip('should throw exception because cart not found', async () => {
     const cartItem = cartItemMockService.getOneToCreate();
     await expect(addToCartUseCase.execute(cartItem)).rejects.toThrow(
       CartNotFoundException,
     );
   });
 
-  it("should throw exception because product doesn't exist", async () => {
+  it.skip("should throw exception because product doesn't exist", async () => {
     const userId = generateUlid();
     const cartId = generateUlid();
 

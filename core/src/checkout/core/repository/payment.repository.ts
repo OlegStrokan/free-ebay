@@ -5,4 +5,7 @@ export abstract class IPaymentRepository {
   abstract findById(paymentId: string): Promise<Payment | null>;
   abstract update(payment: Payment): Promise<Payment>;
   abstract findPaymentsByOrderId(orderId: string): Promise<Payment[]>;
+  abstract findByPaymentIntentId(
+    paymentIntentId: string,
+  ): Promise<Payment | null>;
 }
