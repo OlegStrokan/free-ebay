@@ -45,6 +45,6 @@ Thumbs.db
 # Enviroment
 .env
 .production.env
-.development.env
+.devde.env
 .local.env
 .test.env
