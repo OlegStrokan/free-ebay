@@ -38,4 +38,7 @@ export class PaymentDb extends BaseEntity {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   paymentDate!: Date;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  paymentIntentId?: string;
 }

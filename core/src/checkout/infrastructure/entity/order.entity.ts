@@ -41,7 +41,6 @@ export class OrderDb extends BaseEntity {
 
   @OneToOne(() => ShipmentDb, (shipment) => shipment.order, {
     onDelete: 'CASCADE',
-    cascade: true,
   })
   @JoinColumn({ name: 'shipment_id' })
   shipment!: ShipmentDb;
