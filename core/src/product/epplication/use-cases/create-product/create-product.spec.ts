@@ -35,6 +35,7 @@ describe('CreateProductUseCaseTest', () => {
 
     expect(retrievedProduct).toBeDefined();
     expect(retrievedProduct?.data.name).toBe(productDto.name);
+    expect(retrievedProduct?.data.price).toBe(productDto.price);
   });
 
   it('should throw error if product already exists', async () => {

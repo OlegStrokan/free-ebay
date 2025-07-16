@@ -81,7 +81,7 @@ export class ProductsController {
     return await this.getPriceRangeUseCase.execute(dto);
   }
 
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   @Get()
   @ApiOperation({ summary: 'Retrieve all products (cursor-based)' })
   @ApiResponse({

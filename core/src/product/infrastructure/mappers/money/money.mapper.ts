@@ -11,7 +11,9 @@ export class MoneyMapper implements IMoneyMapper {
   }
 
   toDomain(moneyString: string | null): Money | null {
-    return moneyString ? (JSON.parse(moneyString) as Money) : null;
+    if (!moneyString) return null;
+    const obj = JSON.parse(moneyString);
+    return new Money(obj.amount, obj.currency, obj.fraction);
   }
 
   toClient(money: Money): MoneyDto {
