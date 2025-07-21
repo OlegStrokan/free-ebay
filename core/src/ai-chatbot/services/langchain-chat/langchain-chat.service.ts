@@ -49,8 +49,12 @@ export class LangchainChatService {
   }
 
   async contextAwareChat(dto: ContextAwareMessagesDto) {
+    const messages = dto.messages ?? [];
+    if (messages.length === 0) {
+      return '';
+    }
+
     try {
-      const messages = dto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
         .map(this.formateMessage);
@@ -78,9 +82,16 @@ export class LangchainChatService {
     }
   }
 
-  async agentChat(dto: ContextAwareMessagesDto, customPrompt?: string) {
+  async agentChat(
+    dto: ContextAwareMessagesDto,
+    customPrompt?: string,
+  ): Promise<string> {
+    const messages = dto.messages ?? [];
+    if (messages.length === 0) {
+      return '';
+    }
+
     try {
-      const messages = dto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
         .map(this.formatBaseMessages);
@@ -103,7 +114,7 @@ export class LangchainChatService {
         chat_history: formattedPreviousMessages,
         agent_scratchpad: [],
       });
-      return response.content;
+      return response.content as string;
     } catch (e: unknown) {
       this.logger.error(
         `[agentChat] Failed. Messages: ${JSON.stringify(
@@ -125,12 +136,16 @@ export class LangchainChatService {
   }
 
   private loadSingleChain(template: string) {
-    const prompt = PromptTemplate.fromTemplate(template);
+    const prompt = this.createPromptTemplate(template);
     const outputParser = new HttpResponseOutputParser();
     return prompt.pipe(this.llmModel).pipe(outputParser);
   }
 
-  private formateMessage(message: Message) {
+  private createPromptTemplate(template: string) {
+    return PromptTemplate.fromTemplate(template);
+  }
+
+  private formateMessage(message: Message): string {
     return `${message.role}: ${message.content}`;
   }
 
