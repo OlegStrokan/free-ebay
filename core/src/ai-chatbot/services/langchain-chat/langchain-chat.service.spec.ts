@@ -169,9 +169,9 @@ describe('LangchainChatServiceTest', () => {
       };
       mockLlmModel.invoke = jest.fn().mockResolvedValue(mockResponse);
       const result = await service.agentChat(mockContextAwareMessagesDto);
-      expect(mockLlmModel.invoke).toHaveBeenCalledWith(
-        expect.any(ChatPromptValue),
-      );
+      expect(mockLlmModel.invoke).toHaveBeenCalled();
+      const firstArg = mockLlmModel.invoke.mock.calls[0][0];
+      expect(firstArg).toBeInstanceOf(ChatPromptValue);
       expect(result).toBe('I can help you with programming questions!');
     });
 
@@ -185,9 +185,9 @@ describe('LangchainChatServiceTest', () => {
         mockContextAwareMessagesDto,
         customPrompt,
       );
-      expect(mockLlmModel.invoke).toHaveBeenCalledWith(
-        expect.any(ChatPromptValue),
-      );
+      expect(mockLlmModel.invoke).toHaveBeenCalled();
+      const firstArg = mockLlmModel.invoke.mock.calls[0][0];
+      expect(firstArg).toBeInstanceOf(ChatPromptValue);
       expect(result).toBe('I am a programming assistant and can help you!');
     });
 
@@ -206,9 +206,9 @@ describe('LangchainChatServiceTest', () => {
       };
       mockLlmModel.invoke = jest.fn().mockResolvedValue(mockResponse);
       const result = await service.agentChat(singleMessageDto);
-      expect(mockLlmModel.invoke).toHaveBeenCalledWith(
-        expect.any(ChatPromptValue),
-      );
+      expect(mockLlmModel.invoke).toHaveBeenCalled();
+      const firstArg = mockLlmModel.invoke.mock.calls[0][0];
+      expect(firstArg).toBeInstanceOf(ChatPromptValue);
       expect(result).toBe('Hi there!');
     });
 
@@ -258,8 +258,9 @@ describe('LangchainChatServiceTest', () => {
     describe('loadSingleChain', () => {
       it('should create chain with correct template', () => {
         const template = 'Test template: {input}';
+        const mockPipe = jest.fn().mockReturnThis();
         const mockPrompt = {
-          pipe: jest.fn().mockReturnThis(),
+          pipe: mockPipe,
         };
         const createPromptSpy = jest
           .spyOn(service as any, 'createPromptTemplate')
