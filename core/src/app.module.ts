@@ -14,6 +14,7 @@ import { DatabaseModule } from './shared/database/database.module';
 import { ElasticsearchConfigModule } from './shared/elastic-search/elastic-search.module';
 import { PromptBuilderModule } from './shared/prompt-builder/prompt-builder.module';
 import { GrpcModule } from './shared/grpc/grpc.module';
+import { PaymentGrpcService } from './shared/grpc/payment-grpc.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { GrpcModule } from './shared/grpc/grpc.module';
     CacheModule,
     PromptBuilderModule,
     GrpcModule,
+    PaymentGrpcService,
   ],
   providers: [
     {
