@@ -45,5 +45,5 @@ describe('UpdateCategoryUseCaseTest', () => {
 
     expect(updatedCategory).toBeDefined();
     expect(updatedCategory?.data.description).toBe(updatedCategory.description);
-  }, 1000000);
+  });
 });

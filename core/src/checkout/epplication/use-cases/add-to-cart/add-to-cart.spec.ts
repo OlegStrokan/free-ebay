@@ -8,6 +8,10 @@ import { IProductMockService } from 'src/product/core/product/entity/mocks/produ
 import { CartNotFoundException } from 'src/checkout/core/exceptions/cart/cart-not-found.exception';
 import { ProductNotFoundException } from 'src/product/core/product/exceptions/product-not-found.exception';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
+import { Money } from 'src/shared/types/money';
+
+//@non-required-fix: usually it takes 6 seconds to finish this tests
+jest.setTimeout(7000);
 
 describe('CreateCartUseCase', () => {
   let addToCartUseCase: IAddToCartUseCase;
@@ -34,10 +38,15 @@ describe('CreateCartUseCase', () => {
   it('should successfully add item to cart and recalculate total price', async () => {
     const userId = generateUlid();
     const cartId = generateUlid();
-    const product = await productMockService.createOne();
-    console.log('product price ', product.price);
+    const product = await productMockService.createOne({
+      price: Money.getDefaultMoney(100),
+    });
 
-    await cartMockService.createOne({ id: cartId, userId, items: [] });
+    await cartMockService.createOne({
+      id: cartId,
+      userId,
+      items: [],
+    });
     const cartItem = cartItemMockService.getOneToCreate({
       cartId: cartId,
       productId: product.id,
@@ -49,23 +58,18 @@ describe('CreateCartUseCase', () => {
     expect(cartWithItem.items).toBeDefined();
     expect(cartWithItem.items[0].productId).toBe(product.id);
     expect(cartWithItem.items[0].quantity).toBe(1);
-    console.log(
-      cartWithItem.items[0].price,
-      product.price,
-      cartWithItem.totalPrice,
-    );
     expect(cartWithItem.items[0].price).toStrictEqual(product.price);
     expect(cartWithItem.totalPrice).toStrictEqual(product.price);
   });
 
-  it.skip('should throw exception because cart not found', async () => {
+  it('should throw exception because cart not found', async () => {
     const cartItem = cartItemMockService.getOneToCreate();
     await expect(addToCartUseCase.execute(cartItem)).rejects.toThrow(
       CartNotFoundException,
     );
   });
 
-  it.skip("should throw exception because product doesn't exist", async () => {
+  it("should throw exception because product doesn't exist", async () => {
     const userId = generateUlid();
     const cartId = generateUlid();
 

@@ -14,6 +14,7 @@ import { IUpdateCategoryUseCase } from './epplication/use-cases/update-category/
 import { IGetAllCategoriesUseCase } from './epplication/use-cases/get-all-categories/get-all-categories.interface';
 import { IGetCategoryByIdUseCase } from './epplication/use-cases/get-category-by-id/get-category-by-id.interface';
 import { IDeleteCategoryUseCase } from './epplication/use-cases/delete-category/delete-category.interface';
+import { ICategoryMockService } from './core/category/entity/mocks/category-mock.interface';
 
 export const categoryProviders: Provider[] = [
   {
@@ -25,7 +26,7 @@ export const categoryProviders: Provider[] = [
     useClass: CategoryMapper,
   },
   {
-    provide: CategoryMockService,
+    provide: ICategoryMockService,
     useClass: CategoryMockService,
   },
   {

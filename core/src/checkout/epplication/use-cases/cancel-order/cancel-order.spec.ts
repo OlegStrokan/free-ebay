@@ -6,7 +6,6 @@ import { ICancelOrderUseCase } from './cancel-order.interface';
 import { OrderNotFoundException } from 'src/checkout/core/exceptions/order/order-not-found.exception';
 import { generateUlid } from 'src/shared/types/generate-ulid';
 import { OrderStatus } from 'src/checkout/core/entity/order/order';
-import { IOrderItemMockService } from 'src/checkout/core/entity/order-item/mocks/order-item-mock.interface';
 
 describe('CancelOrderUseCase', () => {
   let cancelOrderUseCase: ICancelOrderUseCase;
@@ -17,7 +16,7 @@ describe('CancelOrderUseCase', () => {
     module = await createTestingModule();
 
     cancelOrderUseCase = module.get(ICancelOrderUseCase);
-    orderMockService = module.get(IOrderItemMockService);
+    orderMockService = module.get(IOrderMockService);
 
     await clearRepos(module);
   });
