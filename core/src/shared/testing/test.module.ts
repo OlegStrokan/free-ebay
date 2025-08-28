@@ -1,5 +1,5 @@
 import { ConfigModule } from '@nestjs/config';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductDb } from 'src/product/infrastructure/entity/product.entity';
 import { ProductModule } from 'src/product/product.module';
@@ -29,9 +29,16 @@ import { ChatOpenAI } from '@langchain/openai';
 import { Logger } from '@nestjs/common';
 import { ElasticsearchConfigModule } from '../elastic-search/elastic-search.module';
 import { PromptBuilderModule } from '../prompt-builder/prompt-builder.module';
+import { IKafkaProducerService } from '../kafka/kafka-producer.interface';
+import { PaymentGrpcService } from '../grpc/payment-grpc.service';
+import { GrpcModule } from '../grpc/grpc.module';
 
-export const createTestingModule = async () => {
-  return await Test.createTestingModule({
+export const createTestingModule = async (
+  options: {
+    override?: (builder: TestingModuleBuilder) => TestingModuleBuilder;
+  } = {},
+) => {
+  let builder = Test.createTestingModule({
     imports: [
       ConfigModule.forRoot({
         envFilePath: `.${process.env.NODE_ENV}.env`,
@@ -56,10 +63,10 @@ export const createTestingModule = async () => {
       CheckoutModule,
       KafkaModule,
       CacheModule,
-      KafkaModule,
       AiChatBotModule,
       ElasticsearchConfigModule,
       PromptBuilderModule,
+      GrpcModule,
     ],
     exports: [],
     providers: [
@@ -67,6 +74,12 @@ export const createTestingModule = async () => {
       ...userProviders,
       ...checkoutProviders,
       ...productProviders,
+      {
+        provide: IKafkaProducerService,
+        useValue: {
+          sendMessage: jest.fn(),
+        },
+      },
       {
         provide: ChatOpenAI,
         useValue: {
@@ -125,5 +138,11 @@ export const createTestingModule = async () => {
         },
       },
     ],
-  }).compile();
+  });
+
+  if (options.override) {
+    builder = options.override(builder);
+  }
+
+  return builder.compile();
 };

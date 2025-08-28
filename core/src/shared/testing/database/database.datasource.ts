@@ -5,8 +5,7 @@ import { glob } from 'glob';
 // @non-required-fix: I will hate myself for this hack in the future but for now i am fine
 import * as dotenv from 'dotenv';
 
-const envFile =
-  process.env.NODE_ENV === 'dev' ? '.development.env' : '.prod.env';
+const envFile = process.env.NODE_ENV === 'dev' ? '.dev.env' : '.prod.env';
 dotenv.config({ path: envFile });
 
 const configService = new ConfigService();

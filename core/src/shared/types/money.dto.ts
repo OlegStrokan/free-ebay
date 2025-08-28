@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsString } from 'class-validator';
 
 export type ISO4217 = string;
 
@@ -12,6 +13,7 @@ export class MoneyDto {
     description: 'The amount of money in smallest units (e.g., cents for USD)',
     example: 10000,
   })
+  @IsNumber()
   amount!: number;
 
   @ApiProperty({
@@ -19,6 +21,7 @@ export class MoneyDto {
     example: 'CZK',
     enum: [CZK_CURRENCY, EUR_CURRENCY],
   })
+  @IsString()
   currency!: Currency;
 
   @ApiProperty({
@@ -26,5 +29,6 @@ export class MoneyDto {
       'The fractional part of the money (e.g., cents if the currency has two decimal places)',
     example: 2,
   })
+  @IsNumber()
   fraction!: number;
 }
