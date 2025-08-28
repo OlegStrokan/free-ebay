@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package payment;
+
+// Payment Service
+service PaymentService {
+  rpc ProcessPayment(ProcessPaymentRequest) returns (ProcessPaymentResponse);
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+  rpc StreamPaymentUpdates(StreamPaymentUpdatesRequest) returns (stream PaymentUpdate);
+}
+
+// Request/Response Messages
+message ProcessPaymentRequest {
+  string id = 1;
+  string order_id = 2;
+  Money amount = 3;
+  string payment_method = 4;
+}
+
+message ProcessPaymentResponse {
+  string payment_id = 1;
+  string status = 2;
+  string transaction_id = 3;
+  string client_secret = 4;
+  string error_message = 5;
+}
+
+message GetPaymentStatusRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  string payment_id = 1;
+  string status = 2;
+  string order_id = 3;
+  Money amount = 4;
+  string payment_method = 5;
+}
+
+message StreamPaymentUpdatesRequest {
+  string payment_id = 1;
+}
+
+message PaymentUpdate {
+  string payment_id = 1;
+  string status = 2;
+  string message = 3;
+  int64 timestamp = 4;
+}
+
+// Money type
+message Money {
+  int32 amount = 1;
+  string currency = 2;
+  int32 fraction = 3;
+} 

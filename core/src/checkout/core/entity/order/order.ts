@@ -165,7 +165,10 @@ export class Order implements Clonable<Order> {
       return Money.getDefaultMoney(0, 0);
     }
 
-    const initialMoney = Money.getDefaultMoney(0, 0);
+    const initialMoney = Money.getDefaultMoney(
+      0,
+      items[0].priceAtPurchase.getFraction(),
+    );
 
     return items.reduce(
       (total, item) => total.add(item.priceAtPurchase),
