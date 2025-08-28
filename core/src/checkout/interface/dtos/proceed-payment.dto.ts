@@ -1,17 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaymentMethod } from 'src/checkout/core/entity/payment/payment';
-import { Money } from 'src/shared/types/money';
+import { MoneyDto } from 'src/shared/types/money.dto';
 
 export class ProceedPaymentDto {
-  @ApiProperty({ example: 'order123', description: 'Order ID' })
+  @ApiProperty()
+  @IsString()
   orderId!: string;
 
-  @ApiProperty({ enum: PaymentMethod, description: 'Payment method' })
+  @ApiProperty({ enum: PaymentMethod })
+  @IsEnum(PaymentMethod)
   paymentMethod!: PaymentMethod;
 
-  @ApiProperty({ type: Money, description: 'Payment amount' })
-  amount!: Money;
+  @ApiProperty({ type: MoneyDto })
+  @ValidateNested()
+  @Type(() => MoneyDto)
+  amount!: MoneyDto;
 
-  @ApiProperty({ example: '123 Main St', description: 'Shipping address' })
+  @ApiProperty()
+  @IsString()
   shippingAddress!: string;
 }

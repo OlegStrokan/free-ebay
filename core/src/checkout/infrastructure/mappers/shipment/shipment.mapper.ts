@@ -5,7 +5,9 @@ import {
 import { ShipmentDb } from '../../entity/shipment.entity';
 import { IShipmentMapper } from './shipment.mapper.interface';
 import { OrderDb } from '../../entity/order.entity';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class ShipmentMapper implements IShipmentMapper {
   toDomain(shipmentDb: ShipmentDb): Shipment {
     if (!shipmentDb.order?.id) {

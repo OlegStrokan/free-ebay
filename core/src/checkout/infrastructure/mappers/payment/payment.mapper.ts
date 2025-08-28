@@ -4,7 +4,9 @@ import { IMoneyMapper } from 'src/product/infrastructure/mappers/money/money.map
 import { IPaymentMapper } from './payment.mapper.inteface';
 import { Money } from 'src/shared/types/money';
 import { OrderDb } from '../../entity/order.entity';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class PaymentMapper implements IPaymentMapper {
   constructor(private readonly moneyMapper: IMoneyMapper) {}
 

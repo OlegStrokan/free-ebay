@@ -24,9 +24,11 @@ export class PaymentRepository
   }
 
   async findById(paymentId: string): Promise<Payment | null> {
-    const payment = await this.paymentRepository.findOneBy({
-      id: paymentId,
+    const payment = await this.paymentRepository.findOne({
+      where: { id: paymentId },
+      relations: ['order'],
     });
+
     return payment ? this.mapper.toDomain(payment) : null;
   }
 

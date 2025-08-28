@@ -40,7 +40,7 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: 'Price of the product',
-    example: { currency: 'USD', amount: 49.99 },
+    example: { currency: 'USD', amount: 49, fraction: 1 },
   })
   @IsNotEmpty()
   price!: Money;

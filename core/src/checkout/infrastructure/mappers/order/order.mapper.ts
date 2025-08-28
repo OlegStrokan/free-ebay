@@ -7,7 +7,9 @@ import { IOrderMapper } from './order.mapper.interface';
 import { UserDb } from 'src/user/infrastructure/entity/user.entity';
 import { IPaymentMapper } from '../payment/payment.mapper.inteface';
 import { IShipmentMapper } from '../shipment/shipment.mapper.interface';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class OrderMapper implements IOrderMapper {
   constructor(
     private readonly moneyMapper: IMoneyMapper,
