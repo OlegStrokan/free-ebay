@@ -10,6 +10,19 @@
     <ItemGroup>
       <PackageReference Include="Confluent.Kafka" Version="2.8.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+      <PackageReference Include="Stripe.net" Version="48.2.0" />
+      <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.0" />
+      <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+      <PackageReference Include="Grpc.AspNetCore" Version="2.57.0" />
+      <PackageReference Include="Google.Protobuf" Version="3.25.1" />
+      <PackageReference Include="Grpc.Tools" Version="2.57.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Protobuf Include="Protos\payment.proto" GrpcServices="Server" />
     </ItemGroup>
 
 </Project>

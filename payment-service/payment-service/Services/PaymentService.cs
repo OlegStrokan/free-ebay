@@ -1,36 +1,44 @@
-
-
 using payment_service.Entities;
+using payment_service.Enums;
+using Stripe;
 
 namespace payment_service.Services;
 
-public class PaymentService
+public class MyPaymentService
 {
-    private readonly ILogger<PaymentService> _logger;
-    private readonly string _topic = "payment";
+    private readonly ILogger<MyPaymentService> _logger;
 
-    public PaymentService(ILogger<PaymentService> logger)
+    public MyPaymentService(ILogger<MyPaymentService> logger)
     {
         _logger = logger;
     }
 
-    public async Task<Payment> ProcessPayment(Payment payment)
+    public async Task<PaymentEntity> ProcessPayment(PaymentEntity payment)
     {
         try
         {
-            // Save Payment to the Database
-            // using (var dbContext = new PaymentDbContext())
-            // {
-            //     await dbContext.Payments.AddAsync(payment);
-            //     await dbContext.SaveChangesAsync();
-            // }
+            var options = new PaymentIntentCreateOptions
+            {
+                Amount = payment.Amount.ToStripeAmount(),  
+                Currency = payment.Amount.Currency.ToLower(),
+                PaymentMethodTypes = new List<string> { "card" } // For now, support card only
+            };
+
+            var service = new PaymentIntentService();
+            var intent = await service.CreateAsync(options);
+
+            payment.ClientSecret = intent.ClientSecret;
+            payment.PaymentStatus = PaymentStatus.Pending;
+
+            _logger.LogInformation("Created PaymentIntent with ID: {Id}", intent.Id);
 
             return payment;
         }
         catch (Exception ex)
         {
-            throw new Exception("Error processing payment", ex);
+            _logger.LogError(ex, "Error creating payment intent for Payment: {@Payment}", payment);
+            payment.PaymentStatus = PaymentStatus.Failed;
+            return payment;
         }
     }
 }
-

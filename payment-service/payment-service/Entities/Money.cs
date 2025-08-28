@@ -1,20 +1,15 @@
 namespace payment_service.Entities;
 
-public class Money
+public class MoneyEntity
 {
-    public int Amount { get; set; }
-    public string Currency { get; set; }
-    public int Fraction { get; set; }
+    public int Amount { get; set; }          
+    public string Currency { get; set; } = "usd";
+    public int Fraction { get; set; }       
 
-    public Money(int amount, string currency, int fraction)
-    {
-        Amount = amount;
-        Currency = currency;
-        Fraction = fraction;
-    }
+    public MoneyEntity() { }
 
-    public string Format()
+    public long ToStripeAmount()
     {
-        return $"{Amount} {Currency} {Fraction}";
+        return Amount * 100 + Fraction;
     }
 }
