@@ -11,12 +11,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
     const status = exception.getStatus();
+    const exceptionResponse = exception.getResponse();
 
-    const errorResponse = {
-      statusCode: status,
-      message: exception.message,
-    };
-
-    response.status(status).json(errorResponse);
+    // If the response is an object (like validation errors), use it directly
+    if (typeof exceptionResponse === 'object') {
+      response.status(status).json(exceptionResponse);
+    } else {
+      response.status(status).json({
+        statusCode: status,
+        message: exceptionResponse,
+      });
+    }
   }
 }
