@@ -33,7 +33,7 @@ describe('FindProductsUseCaseTest', () => {
     });
 
     expect(retrievedProducts).toBeDefined();
-    expect(retrievedProducts).toHaveLength(2);
+    expect(retrievedProducts.items).toHaveLength(2);
   });
 
   it('should succesfully retrieve empty array of products', async () => {
@@ -43,6 +43,6 @@ describe('FindProductsUseCaseTest', () => {
     });
 
     expect(retrievedProducts).toBeDefined();
-    expect(retrievedProducts).toHaveLength(0);
+    expect(retrievedProducts.items).toHaveLength(0);
   });
 });

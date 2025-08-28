@@ -26,9 +26,8 @@ export class ProductRepository implements IProductRepository {
 
     const cacheKey = `product:${savedProductDb.id}`;
     const ttl = 300;
-    const domainProduct = this.mapper.toDomain(savedProductDb);
-    await this.cacheService.set(cacheKey, ttl, domainProduct);
-    return domainProduct;
+    await this.cacheService.set(cacheKey, ttl, savedProductDb);
+    return this.mapper.toDomain(savedProductDb);
   }
   async findById(id: string): Promise<Product | null> {
     const cacheKey = `product:${id}`;

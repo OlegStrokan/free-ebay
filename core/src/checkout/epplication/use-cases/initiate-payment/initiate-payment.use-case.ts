@@ -9,6 +9,7 @@ import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/pay
 import { IPaymentRepository } from 'src/checkout/core/repository/payment.repository';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
 import { Money } from 'src/shared/types/money';
+import { MoneyDto } from 'src/shared/types/money.dto';
 import {
   IInitiatePaymentUseCase,
   PaymentResult,
@@ -30,10 +31,13 @@ export class InitiatePaymentUseCase implements IInitiatePaymentUseCase {
       dto.shippingAddress,
     );
 
+    // Map MoneyDto to Money
+    const money = this.mapMoneyDtoToMoney(dto.amount);
+
     let confirmedPayment = await this.createPayment(
       dto.orderId,
       dto.paymentMethod,
-      dto.amount,
+      money,
     );
 
     if (dto.paymentMethod !== PaymentMethod.CashOnDelivery) {
@@ -82,5 +86,10 @@ export class InitiatePaymentUseCase implements IInitiatePaymentUseCase {
       payment.amount,
       payment.paymentMethod,
     );
+  }
+
+  // Mapper from MoneyDto to Money
+  private mapMoneyDtoToMoney(dto: MoneyDto): Money {
+    return new Money(dto.amount, dto.currency, dto.fraction);
   }
 }

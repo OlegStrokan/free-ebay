@@ -12,11 +12,8 @@ import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 import { Money } from 'src/shared/types/money';
 import { ICartItemMockService } from 'src/checkout/core/entity/cart-item/mocks/cart-item-mock.interface';
 import { IUserMockService } from 'src/user/core/entity/mocks/user-mock.interface';
-import { of } from 'rxjs';
-import { HttpService } from '@nestjs/axios';
-import { AxiosResponse } from 'axios';
+import { PaymentGrpcService } from 'src/shared/grpc/payment-grpc.service';
 import { PaymentFailedException } from 'src/checkout/core/exceptions/payment/payment-failed.exception';
-import { CreateOrderDto } from 'src/checkout/interface/dtos/create-order.dto';
 
 describe('CreateOrderUseCase', () => {
   let createOrderUseCase: ICreateOrderUseCase;
@@ -25,7 +22,7 @@ describe('CreateOrderUseCase', () => {
   let userMockService: IUserMockService;
   let cartItemMockService: ICartItemMockService;
   let cartRepository: ICartRepository;
-  let httpClient: HttpService;
+  let paymentGrpcService: PaymentGrpcService;
   let module: TestingModule;
 
   beforeAll(async () => {
@@ -37,7 +34,7 @@ describe('CreateOrderUseCase', () => {
     cartItemMockService = module.get(ICartItemMockService);
     cartMockService = module.get(ICartMockService);
     cartRepository = module.get(ICartRepository);
-    httpClient = module.get(HttpService);
+    paymentGrpcService = module.get(PaymentGrpcService);
 
     await clearRepos(module);
   });
@@ -71,19 +68,19 @@ describe('CreateOrderUseCase', () => {
 
     await userMockService.createOne({ id: userId });
 
-    const mockResponse: AxiosResponse = {
-      data: { status: 'success', transactionId: generateUlid() },
+    // Mock the gRPC payment service response
+    const mockResponse = {
       status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {
-        url: 'http://localhost:5012/api/Payment/ProcessPayment',
-      } as any,
+      data: {
+        paymentStatus: 'success',
+        transactionId: generateUlid(),
+        clientSecret: '',
+        error: undefined,
+      },
     };
-
-    const sendSpy = jest
-      .spyOn(httpClient, 'post')
-      .mockImplementation(() => of(mockResponse));
+    const grpcSpy = jest
+      .spyOn(paymentGrpcService, 'processPayment')
+      .mockResolvedValue(mockResponse);
 
     const order = await createOrderUseCase.execute(dto);
 
@@ -93,16 +90,14 @@ describe('CreateOrderUseCase', () => {
     expect(clearedCart?.totalPrice).toEqual(Money.getDefaultMoney(0));
     expect(order).toBeDefined();
     expect(order.items.length).toBeGreaterThan(0);
-    expect(sendSpy).toHaveBeenCalledWith(
-      'http://localhost:5012/api/Payment/ProcessPayment',
-      expect.objectContaining({
-        orderId: expect.any(String),
-        amount: expect.any(Object),
-        paymentMethod: PaymentMethod.ApplePay,
-      }),
+    expect(grpcSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(Money),
+      PaymentMethod.ApplePay,
     );
 
-    sendSpy.mockRestore();
+    grpcSpy.mockRestore();
     expect(order.data.shipment).toBeDefined();
     expect(order.data.payment).toBeDefined();
   });
@@ -136,14 +131,29 @@ describe('CreateOrderUseCase', () => {
     );
   });
 
-  // @non-required-fix: remove skip and mock payment service
-  it.skip('should throw PaymentFailedException if payment fails', async () => {
-    const cart = await cartMockService.createOne();
-    const dto: CreateOrderDto = {
+  it('should throw PaymentFailedException if payment fails', async () => {
+    const cartId = generateUlid();
+    const cartItemId = generateUlid();
+    const userId = generateUlid();
+    const price = Money.getDefaultMoney(100);
+    const cartItem = cartItemMockService.getOne({
+      cartId,
+      id: cartItemId,
+      quantity: 1,
+      price,
+    });
+    const cart = await cartMockService.createOne({
+      id: cartId,
+      userId,
+      items: [cartItem.data],
+    });
+    const dto = orderMockService.getOneToCreate({
       cartId: cart.id,
       shippingAddress: '123 Test St',
       paymentMethod: PaymentMethod.Card,
-    };
+    });
+
+    await userMockService.createOne({ id: userId });
 
     await expect(createOrderUseCase.execute(dto)).rejects.toThrow(
       PaymentFailedException,

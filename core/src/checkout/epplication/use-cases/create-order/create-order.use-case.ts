@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ICreateOrderUseCase } from './create-order.interface';
 import { ICartRepository } from 'src/checkout/core/repository/cart.repository';
 
@@ -12,7 +12,6 @@ import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
 import {
   Payment,
   PaymentMethod,
-  PaymentStatus,
 } from 'src/checkout/core/entity/payment/payment';
 import { Money } from 'src/shared/types/money';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
@@ -44,6 +43,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     }
 
     const order = this.createOrderFromCart(cart);
+    await this.orderRepository.save(order);
 
     // the problem is we saving shipment before we saving
     const shipment = await this.createShipment(order.id, dto.shippingAddress);

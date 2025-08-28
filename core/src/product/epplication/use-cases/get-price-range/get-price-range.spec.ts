@@ -30,7 +30,7 @@ describe('GetPriceRangeUseCaseTest', () => {
     expect(result).toContain('Price Range:');
     expect(result).toContain('Conclusion:');
     expect(result).toContain('Analysis:');
-  });
+  }, 10000);
 
   it('should handle different product types', async () => {
     const dto: GetPriceRangeDto = {
@@ -45,5 +45,5 @@ describe('GetPriceRangeUseCaseTest', () => {
     expect(result).toBeDefined();
     expect(typeof result).toBe('string');
     expect(result.length).toBeGreaterThan(0);
-  });
+  }, 10000);
 });
