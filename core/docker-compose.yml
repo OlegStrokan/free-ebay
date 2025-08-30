@@ -33,7 +33,18 @@ services:
     ports:
       - '6433:5432'
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - ./pgdata_dev:/var/lib/postgresql/data
+    restart: always
+
+  exchange_test:
+    image: postgres:13
+    env_file:
+      - .test.env
+    container_name: exchange_test
+    ports:
+      - '7433:5432'
+    volumes:
+      - ./pgdata_test:/var/lib/postgresql/data
     restart: always
 
   # Redis
