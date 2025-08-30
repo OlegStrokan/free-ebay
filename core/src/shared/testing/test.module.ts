@@ -15,7 +15,6 @@ import { ShipmentDb } from 'src/checkout/infrastructure/entity/shipment.entity';
 import { OrderItemDb } from 'src/checkout/infrastructure/entity/order-item.entity';
 import { PaymentDb } from 'src/checkout/infrastructure/entity/payment.entity';
 import { OrderDb } from 'src/checkout/infrastructure/entity/order.entity';
-import { DatabaseModule } from './database/database.module';
 import { authProviders } from 'src/auth/auth.providers';
 import { userProviders } from 'src/user/user.provider';
 import { checkoutProviders } from 'src/checkout/checkout.providers';
@@ -32,6 +31,7 @@ import { PromptBuilderModule } from '../prompt-builder/prompt-builder.module';
 import { IKafkaProducerService } from '../kafka/kafka-producer.interface';
 import { PaymentGrpcService } from '../grpc/payment-grpc.service';
 import { GrpcModule } from '../grpc/grpc.module';
+import { DatabaseModule } from '../database/database.module';
 
 export const createTestingModule = async (
   options: {

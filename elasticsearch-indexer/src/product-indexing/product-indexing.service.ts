@@ -1,11 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
-import {
-  EventPattern,
-  Payload,
-  Ctx,
-  KafkaContext,
-} from '@nestjs/microservices';
+import { KafkaContext } from '@nestjs/microservices';
 
 interface ProductKafkaEventPayload {
   eventType: 'productCreated' | 'productUpdated' | 'productDeleted';

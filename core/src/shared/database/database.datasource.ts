@@ -5,9 +5,8 @@ import { glob } from 'glob';
 // @non-required-fix: I will hate myself for this hack in the future but for now i am fine
 import * as dotenv from 'dotenv';
 
-const envFile = process.env.NODE_ENV === 'dev' ? '.dev.env' : '.prod.env';
-dotenv.config({ path: envFile });
-
+dotenv.config({ path: `.${process.env.NODE_ENV}.env` });
+console.log(`.${process.env.NODE_ENV}.env test ets`);
 const configService = new ConfigService();
 
 export const AppDataSource = new DataSource({
@@ -19,11 +18,8 @@ export const AppDataSource = new DataSource({
   database: configService.get<string>('POSTGRES_DB'),
   entities: glob.sync(join(__dirname, '..', '..', '**', '*.entity.{ts,js}')),
   migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
-  ssl:
-    configService.get<string>('NODE_ENV') === 'dev'
-      ? false
-      : { rejectUnauthorized: false },
+  ssl: false,
   migrationsTableName: 'migrations',
   synchronize: false,
-  logging: configService.get<string>('NODE_ENV') === 'prod',
+  logging: configService.get<string>('NODE_ENV') === 'dev',
 });
