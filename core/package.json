@@ -17,7 +17,7 @@
     "start:prod": "NODE_ENV=dev node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "//": "update .test.env and use for testing script",
-    "test": "NODE_ENV=dev jest --runInBand",
+    "test": "NODE_ENV=test jest --runInBand",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -113,6 +113,9 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testTimeout": 10000,
+    "forceExit": true,
+    "detectOpenHandles": true
   }
 }
