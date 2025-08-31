@@ -14,6 +14,52 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_USER: stroka01
+      POSTGRES_PASSWORD: admin
+      POSTGRES_PORT: 7433
+      POSTGRES_DB: exchange_test
+      # Add other environment variables here
+      ELASTICSEARCH_HOST: localhost
+      ELASTICSEARCH_PORT: 9200
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: test-secret-key
+      OPEN_AI_API_KEY: test
+      OPEN_AI_PROJECT_ID: test
+      OPEN_AI_ORGANIZATION_ID: test
+      OLLAMA_API_URL: http://localhost:3000
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: stroka01
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: exchange_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 7433:5432
+
+      redis:
+        image: redis:7-alpine
+        env:
+          REDIS_PASSWORD: admin
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,6 +68,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Setup Yarn Cache
+        uses: actions/setup-node@v4
+        with:
           cache: "yarn"
           cache-dependency-path: "core/yarn.lock"
 
@@ -29,10 +82,23 @@ jobs:
         working-directory: ./core
         run: yarn install --frozen-lockfile
 
+      - name: Run database migrations
+        working-directory: ./core
+        run: |
+          echo "Running database migrations..."
+          yarn migration:test:run
+          echo "Migrations completed successfully!"
+
       - name: Run tests
         working-directory: ./core
-        run: yarn test
+        run: |
+          echo "Running tests..."
+          yarn test
+          echo "Tests completed successfully!"
 
       - name: Build project
         working-directory: ./core
-        run: yarn build
+        run: |
+          echo "Building project..."
+          yarn build
+          echo "Build completed successfully!"
