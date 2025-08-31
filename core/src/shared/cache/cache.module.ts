@@ -11,9 +11,9 @@ import { CacheService } from './cache.service';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         options: {
-          host: 'localhost',
-          port: 6379,
-          password: '${REDIS_PASSWORD}',
+          host: configService.getOrThrow<string>('REDIS_HOST'),
+          port: configService.getOrThrow<number>('REDIS_PORT'),
+          password: configService.getOrThrow<string>('REDIS_PASSWORD'),
         },
         type: 'single',
       }),
