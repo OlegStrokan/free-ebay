@@ -12,6 +12,7 @@ import { Shipment } from 'src/checkout/core/entity/shipment/shipment';
 import {
   Payment,
   PaymentMethod,
+  PaymentStatus,
 } from 'src/checkout/core/entity/payment/payment';
 import { Money } from 'src/shared/types/money';
 import { IShipmentRepository } from 'src/checkout/core/repository/shipment.repository';
@@ -45,7 +46,7 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
     const order = this.createOrderFromCart(cart);
     await this.orderRepository.save(order);
 
-    // the problem is we saving shipment before we saving
+    // Create shipment and payment entities
     const shipment = await this.createShipment(order.id, dto.shippingAddress);
     const payment = await this.createPayment(
       order.id,
@@ -53,21 +54,31 @@ export class CreateOrderUseCase implements ICreateOrderUseCase {
       order.totalPrice,
     );
 
+    // Save shipment first before any external calls
+    await this.shipmentRepository.save(shipment);
+
+    // Process payment via gRPC if not cash on delivery
     if (dto.paymentMethod !== PaymentMethod.CashOnDelivery) {
       const response = await this.processPaymentInfo(payment);
       if (response.status !== 200) {
         throw new PaymentFailedException(order.id);
       }
+
+      // Update payment with gRPC response data
+      const paymentResponse = response.data;
+      payment.updateStatus(paymentResponse.paymentStatus as PaymentStatus);
     }
 
+    // Link shipment and payment to order
     order.data.shipment = shipment.data;
     order.data.payment = payment.data;
 
-    const emptyCart = cart.clearCart();
-    await this.shipmentRepository.save(shipment);
+    // Save payment and update order
     await this.paymentRepository.save(payment);
-
     const savedOrder = await this.orderRepository.update(order);
+
+    // Clear cart
+    const emptyCart = cart.clearCart();
     await this.cartRepository.updateCart(emptyCart);
 
     return savedOrder;
