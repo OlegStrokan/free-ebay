@@ -34,7 +34,6 @@ import { PaymentGrpcService } from './shared/grpc/payment-grpc.service';
     CacheModule,
     PromptBuilderModule,
     GrpcModule,
-    PaymentGrpcService,
   ],
   providers: [
     {

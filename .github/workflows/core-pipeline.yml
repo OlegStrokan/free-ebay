@@ -21,7 +21,6 @@ jobs:
       POSTGRES_PASSWORD: admin
       POSTGRES_PORT: 7433
       POSTGRES_DB: exchange_test
-      # Add other environment variables here
       ELASTICSEARCH_HOST: localhost
       ELASTICSEARCH_PORT: 9200
       REDIS_HOST: localhost
