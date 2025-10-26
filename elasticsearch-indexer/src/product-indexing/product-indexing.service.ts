@@ -15,15 +15,16 @@ interface ProductKafkaEventPayload {
 
 @Injectable()
 export class ProductIndexingService implements OnModuleInit {
-  private readonly logger = new Logger(ProductIndexingService.name);
   private readonly PRODUCTS_INDEX_NAME = 'products';
 
-  constructor(private readonly elasticsearchService: ElasticsearchService) {}
+  constructor(
+    private readonly elasticsearchService: ElasticsearchService,
+    private readonly logger: Logger,
+  ) {}
 
   async onModuleInit() {
-    this.logger.log('Initializing ProductIndexingService...');
     await this.ensureProductIndexExists();
-    this.logger.log('ProductIndexingService initialized successfully');
+    this.logger.debug('ProductIndexingService initialized successfully');
   }
 
   private async ensureProductIndexExists(): Promise<void> {
@@ -33,49 +34,20 @@ export class ProductIndexingService implements OnModuleInit {
       });
 
       if (!indexExists) {
-        this.logger.log(
-          `Elasticsearch index '${this.PRODUCTS_INDEX_NAME}' does not exist. Creating...`,
-        );
         await this.elasticsearchService.indices.create({
           index: this.PRODUCTS_INDEX_NAME,
         });
-        this.logger.log(
-          `Elasticsearch index '${this.PRODUCTS_INDEX_NAME}' created successfully.`,
-        );
-      } else {
-        this.logger.log(
-          `Elasticsearch index '${this.PRODUCTS_INDEX_NAME}' already exists.`,
-        );
       }
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Failed to ensure Elasticsearch index exists: ${error.message}`,
-          error.stack,
-        );
-      } else {
-        this.logger.error(
-          `Failed to ensure Elasticsearch index exists: ${String(error)}`,
-        );
-      }
-      throw error; // Re-throw to prevent service from starting with broken ES connection
+      this.logger.error(
+        `Failed to ensure Elasticsearch index exists: ${String(error)}`,
+      );
+      throw error; // Re-throw to prevent service from starting with broken ES connectio
     }
   }
 
-  public async handleProductEvent(
-    message: ProductKafkaEventPayload,
-    context: KafkaContext,
-  ) {
-    const originalMessage = context.getMessage();
-    const partition = context.getPartition();
-    const offset = originalMessage.offset;
-
-    this.logger.log(
-      `Received product event from partition ${partition}, offset ${offset}: ${JSON.stringify(
-        message,
-      )}`,
-    );
-
+  // todo-later: refactor this switch case
+  public async handleProductEvent(message: ProductKafkaEventPayload) {
     const { eventType, productId, ...productData } = message;
 
     try {
@@ -94,7 +66,6 @@ export class ProductIndexingService implements OnModuleInit {
               updatedAt: productData.updatedAt,
             },
           });
-          this.logger.log(`Product ${productId} indexed successfully.`);
           break;
 
         case 'productUpdated':
@@ -109,7 +80,6 @@ export class ProductIndexingService implements OnModuleInit {
               updatedAt: productData.updatedAt,
             },
           });
-          this.logger.log(`Product ${productId} updated successfully.`);
           break;
 
         case 'productDeleted':
@@ -117,27 +87,18 @@ export class ProductIndexingService implements OnModuleInit {
             index: this.PRODUCTS_INDEX_NAME,
             id: productId,
           });
-          this.logger.log(
-            `Product ${productId} deleted successfully from Elasticsearch.`,
-          );
+
           break;
 
         default:
           this.logger.warn(`Unknown event type received: ${eventType}`);
       }
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Failed to process event for product ${productId} (${eventType}): ${error.message}`,
-          error.stack,
-        );
-      } else {
-        this.logger.error(
-          `Failed to process event for product ${productId} (${eventType}): ${String(
-            error,
-          )}`,
-        );
-      }
+      this.logger.error(
+        `Failed to process event for product ${productId} (${eventType}): ${String(
+          error,
+        )}`,
+      );
       throw error; // Re-throw to let Kafka handle retry logic
     }
   }

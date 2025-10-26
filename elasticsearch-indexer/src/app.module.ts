@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ProductIndexingModule } from './product-indexing/product-indexing.module';
 import { ElasticsearchConfigModule } from './tools/elastic-search/elastic-search.module';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
