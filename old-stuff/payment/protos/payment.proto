@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package payment;
+
+
+// --- ENUMS ---
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNKNOWN = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_REQUIRES_ACTION = 2;
+  PAYMENT_STATUS_SUCCEEDED = 3;
+  PAYMENT_STATUS_FAILED = 4;
+  PAYMENT_STATUS_CANCELED = 5;
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNKNOWN = 0;
+  PAYMENT_METHOD_CARD = 1;
+  PAYMENT_METHOD_APPLE_PAY = 2;
+  PAYMENT_METHOD_GOOGLE_PAY = 3;
+  PAYMENT_METHOD_BANK_TRANSFER = 4;
+}
+
+// --- TYPES ---
+
+message Money {
+  int64 amount = 1;        // amount in the smallest unit (e.g., cents)
+  string currency = 2;     // ISO 4217 currency code (e.g. "USD")
+}
+
+message PaymentUpdate {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+  string message = 3;
+  int64 timestamp = 4;
+}
+
+// --- REQUESTS & RESPONSES ---
+
+message ProcessPaymentRequest {
+  string payment_id = 1;
+  string order_id = 2;
+  Money amount = 3;
+  PaymentMethod payment_method = 4;
+}
+
+message ProcessPaymentResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+  string transaction_id = 3; // Stripe charge or payment_intent ID
+  string client_secret = 4;  // Stripe PaymentIntent client_secret (for client confirmation)
+  string error_message = 5;
+}
+
+message GetPaymentStatusRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+  string order_id = 3;
+  Money amount = 4;
+  PaymentMethod payment_method = 5;
+}
+
+message StreamPaymentUpdatesRequest {
+  string payment_id = 1;
+}
+
+// --- SERVICE ---
+
+service PaymentService {
+  rpc ProcessPayment (ProcessPaymentRequest) returns (ProcessPaymentResponse);
+  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+  rpc StreamPaymentUpdates (StreamPaymentUpdatesRequest) returns (stream PaymentUpdate);
+}
