@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protos.User";
+
+
+message UserProto {
+  string id = 1;
+  string full_name = 2;
+  string email = 3;
+  string phone = 4;
+  // i don't give a fuck about RBAC, and about AIPAC too
+  // string role = 5;
+  // repeated DeliveryInfoProto delivery_info = 6;
+  UserStatusProto status = 7;
+  int64 createdAt = 8;
+  int64 updatedAt = 9;
+}
+
+message DeliveryInfoProto {
+  string id = 1;
+  string street = 2;
+  string city = 3;
+  string postal_code = 4;
+  string country_destination = 5;
+}
+
+enum UserStatusProto {
+  ACTIVE = 0;
+  BLOCKED = 1;
+}
