@@ -1,0 +1,41 @@
+namespace Domain.Gateways;
+
+
+/// <summary>
+///  it's a not fucking AI
+/// this is a fucking interface for foocking user microservice, ol rait?
+/// this abstracts external user service, treating it like an own whore
+/// as old guy said: the application layer depends on interfaces, not on wife's opinion 
+/// </summary>
+public interface IUserGateway
+{
+    Task<string> CreateUserAsync(string email, string hashedPassword, string fullName, string phone);
+    Task<UserGatewayDto?> GetUserByEmailAsync(string email);
+    Task<UserGatewayDto?> GetUserByIdAsync(string userId);
+    Task<bool> VerifyUserEmailAsync(string userId);
+    Task<bool> VerifyUserPasswordAsync(string userId, string newPasswordHash);
+}
+
+
+
+
+/// <summary>
+/// dto for user data from external services
+/// domain-level, not tied to any specific protol
+/// </summary>
+public class UserGatewayDto
+{
+    public required string Id { get; set; }
+    public required string Email { get; set; }
+    public string PasswordHash { get; set; }
+    public required string FullName { get; set; }
+    public required string Phone { get; set; }
+    // public string IsEmailVerified { get; set; };
+    public UserStatus Status { get; set; }
+}
+
+public enum UserStatus
+{
+    Active,
+    Blocked
+}
