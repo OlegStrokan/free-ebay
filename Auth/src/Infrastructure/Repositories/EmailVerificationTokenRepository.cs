@@ -7,12 +7,12 @@ namespace Infrastructure.Repositories;
 
 public class EmailVerificationTokenRepository(AppDbContext dbContext): IEmailVerificationTokenRepository
 {
-    public async Task<EmailVerificationToken?> GetByTokenAsync(string token)
+    public async Task<EmailVerificationTokenEntity?> GetByTokenAsync(string token)
     {
         return await dbContext.EmailVerificationTokens.FirstOrDefaultAsync(evt => evt.Token == token);
     }
 
-    public async Task<EmailVerificationToken?> GetByUserIdAsync(string userId)
+    public async Task<EmailVerificationTokenEntity?> GetByUserIdAsync(string userId)
     {
         return await dbContext.EmailVerificationTokens.Where(evt =>
             evt.UserId == userId &&
@@ -20,18 +20,18 @@ public class EmailVerificationTokenRepository(AppDbContext dbContext): IEmailVer
             evt.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
     }
 
-    public async Task<EmailVerificationToken> CreateAsync(EmailVerificationToken verificationToken)
+    public async Task<EmailVerificationTokenEntity> CreateAsync(EmailVerificationTokenEntity verificationTokenEntity)
     {
-        dbContext.Add(verificationToken);
+        dbContext.Add(verificationTokenEntity);
         await dbContext.SaveChangesAsync();
-        return verificationToken;
+        return verificationTokenEntity;
     }
 
-    public async Task<EmailVerificationToken> UpdateAsync(EmailVerificationToken verificationToken)
+    public async Task<EmailVerificationTokenEntity> UpdateAsync(EmailVerificationTokenEntity verificationTokenEntity)
     {
-        dbContext.Update(verificationToken);
+        dbContext.Update(verificationTokenEntity);
         await dbContext.SaveChangesAsync();
-        return verificationToken;
+        return verificationTokenEntity;
     }
 
     public async Task MarkAsUsedAsync(string token)

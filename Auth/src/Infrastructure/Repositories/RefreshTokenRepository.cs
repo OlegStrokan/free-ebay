@@ -8,37 +8,37 @@ namespace Infrastructure.Repositories;
 public class RefreshTokenRepository(AppDbContext dbContext) : IRefreshTokenRepository
 
 {
-    public async Task<RefreshToken?> GetByTokenAsync(string refreshToken)
+    public async Task<RefreshTokenEntity?> GetByTokenAsync(string refreshToken)
     {
         return await dbContext.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
     }
 
-    public async Task<RefreshToken?> GetByIdAsync(string id)
+    public async Task<RefreshTokenEntity?> GetByIdAsync(string id)
     {
         return await dbContext.RefreshTokens.FindAsync(id);
     }
 
-    public Task<List<RefreshToken>> GetActiveTokensByUserIdAsync(string userId)
+    public Task<List<RefreshTokenEntity>> GetActiveTokensByUserIdAsync(string userId)
     {
         return dbContext.RefreshTokens.Where(rt =>
                 rt.UserId == userId && rt.IsRevoked && rt.ExpiresAt > DateTime.UtcNow)
             .OrderByDescending(rt => rt.CreatedAt)
-            .ToListAsync<RefreshToken>();
+            .ToListAsync<RefreshTokenEntity>();
         
     }
 
-    public async Task<RefreshToken> CreateAsync(RefreshToken refreshToken)
+    public async Task<RefreshTokenEntity> CreateAsync(RefreshTokenEntity refreshTokenEntity)
     {
-        dbContext.Add(refreshToken);
+        dbContext.Add(refreshTokenEntity);
         await dbContext.SaveChangesAsync();
-        return refreshToken;
+        return refreshTokenEntity;
     }
 
-    public async Task<RefreshToken> UpdateAsync(RefreshToken refreshToken)
+    public async Task<RefreshTokenEntity> UpdateAsync(RefreshTokenEntity refreshTokenEntity)
     {
-        dbContext.Update(refreshToken);
+        dbContext.Update(refreshTokenEntity);
         await dbContext.SaveChangesAsync();
-        return refreshToken;
+        return refreshTokenEntity;
     }
 
     public async Task RevokeTokenAsync(string token, string? revokedById = null, string? replacedByToken = null)

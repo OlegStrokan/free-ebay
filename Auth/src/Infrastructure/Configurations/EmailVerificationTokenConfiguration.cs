@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Configurations;
 
-public class EmailVerificationTokenConfiguration : IEntityTypeConfiguration<EmailVerificationToken>
+public class EmailVerificationTokenConfiguration : IEntityTypeConfiguration<EmailVerificationTokenEntity>
 {
-    public void Configure(EntityTypeBuilder<EmailVerificationToken> builder)
+    public void Configure(EntityTypeBuilder<EmailVerificationTokenEntity> builder)
     {
         builder.ToTable("EmailVerificationTokens");
         

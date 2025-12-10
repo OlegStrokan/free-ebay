@@ -1,6 +1,6 @@
 namespace Domain.Entities;
 
-public class PasswordResetToken
+public class PasswordResetTokenEntity
 {
     public required string Id { get; init; }
     public required string UserId { get; set; }                

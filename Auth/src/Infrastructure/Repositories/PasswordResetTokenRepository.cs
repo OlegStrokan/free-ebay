@@ -7,12 +7,12 @@ namespace Infrastructure.Repositories;
 
 public class PasswordResetTokenRepository(AppDbContext dbContext) : IPasswordResetTokenRepository
 {
-    public async Task<PasswordResetToken?> GetByTokenAsync(string token)
+    public async Task<PasswordResetTokenEntity?> GetByTokenAsync(string token)
     {
         return await dbContext.PasswordResetTokens.FirstOrDefaultAsync(prt => prt.Token == token);
     }
 
-    public async Task<List<PasswordResetToken>> GetByUserIdAsync(string userId)
+    public async Task<List<PasswordResetTokenEntity>> GetByUserIdAsync(string userId)
     {
         return await dbContext.PasswordResetTokens.Where(prt =>
                 prt.UserId == userId &&
@@ -22,18 +22,18 @@ public class PasswordResetTokenRepository(AppDbContext dbContext) : IPasswordRes
             .ToListAsync();
     }
 
-    public async Task<PasswordResetToken> CreateAsync(PasswordResetToken resetToken)
+    public async Task<PasswordResetTokenEntity> CreateAsync(PasswordResetTokenEntity resetTokenEntity)
     {
-        dbContext.Add(resetToken);
+        dbContext.Add(resetTokenEntity);
         await dbContext.SaveChangesAsync();
-        return resetToken;
+        return resetTokenEntity;
     }
 
-    public async Task<PasswordResetToken> UpdateAsync(PasswordResetToken resetToken)
+    public async Task<PasswordResetTokenEntity> UpdateAsync(PasswordResetTokenEntity resetTokenEntity)
     {
-        dbContext.Update(resetToken);
+        dbContext.Update(resetTokenEntity);
         await dbContext.SaveChangesAsync();
-        return resetToken;
+        return resetTokenEntity;
     }
 
     public async Task MarkAsUsedAsync(string token)

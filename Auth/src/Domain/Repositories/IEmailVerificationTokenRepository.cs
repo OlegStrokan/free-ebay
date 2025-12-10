@@ -4,10 +4,10 @@ namespace Domain.Repositories;
 
 public interface IEmailVerificationTokenRepository
 {
-    Task<EmailVerificationToken?> GetByTokenAsync(string token);
-    Task<EmailVerificationToken?> GetByUserIdAsync(string userId);
-    Task<EmailVerificationToken> CreateAsync(EmailVerificationToken verificationToken);
-    Task<EmailVerificationToken> UpdateAsync(EmailVerificationToken verificationToken);
+    Task<EmailVerificationTokenEntity?> GetByTokenAsync(string token);
+    Task<EmailVerificationTokenEntity?> GetByUserIdAsync(string userId);
+    Task<EmailVerificationTokenEntity> CreateAsync(EmailVerificationTokenEntity verificationTokenEntity);
+    Task<EmailVerificationTokenEntity> UpdateAsync(EmailVerificationTokenEntity verificationTokenEntity);
     Task MarkAsUsedAsync(string token);
     Task DeletedExpiredTokensAsync();
     Task DeleteByUserIdAsync(string userId); 

@@ -1,6 +1,6 @@
 namespace Domain.Entities;
 
-public class EmailVerificationToken
+public class EmailVerificationTokenEntity
 {
 
     public required string Id { get; init; }
