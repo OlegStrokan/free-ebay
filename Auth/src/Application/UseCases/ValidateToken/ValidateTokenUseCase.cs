@@ -1,0 +1,18 @@
+using Application.Common.Interfaces;
+
+namespace Application.UseCases.ValidateToken;
+
+public class ValidateTokenUseCase(IJwtTokenValidator jwtTokenValidator)
+{
+    public Task<ValidateTokenResponse> ExecuteAsync(ValidateTokenCommand command)
+    {
+        var validationResult = jwtTokenValidator.ValidateToken(command.AccessToken);
+
+        if (!validationResult.isValid)
+        {
+            return Task.FromResult(new ValidateTokenResponse(false, null));
+        }
+
+        return Task.FromResult(new ValidateTokenResponse(true, validationResult.UserId));
+    }
+}
