@@ -29,7 +29,7 @@ public class LoginUseCase
 
         // @todo: uncomment when user service will support it
         // if (!user.isEmailVerified)
-        // {
+        // 
         //     throw new UnauthorizedAccessException("Invalid email or password");
         // }
 

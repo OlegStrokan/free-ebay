@@ -138,7 +138,7 @@ public class UserGateway
         }
     }
 
-    public async Task<bool> VerifyUserPasswordAsync(string userId, string newPasswordHash)
+    public async Task<bool> UpdateUserPasswordAsync(string userId, string newPasswordHash)
     {
         try
         {

@@ -13,7 +13,7 @@ public interface IUserGateway
     Task<UserGatewayDto?> GetUserByEmailAsync(string email);
     Task<UserGatewayDto?> GetUserByIdAsync(string userId);
     Task<bool> VerifyUserEmailAsync(string userId);
-    Task<bool> VerifyUserPasswordAsync(string userId, string newPasswordHash);
+    Task<bool> UpdateUserPasswordAsync(string userId, string newPasswordHash);
 }
 
 
