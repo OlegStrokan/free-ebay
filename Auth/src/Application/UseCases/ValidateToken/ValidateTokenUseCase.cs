@@ -8,7 +8,7 @@ public class ValidateTokenUseCase(IJwtTokenValidator jwtTokenValidator)
     {
         var validationResult = jwtTokenValidator.ValidateToken(command.AccessToken);
 
-        if (!validationResult.isValid)
+        if (!validationResult.IsValid)
         {
             return Task.FromResult(new ValidateTokenResponse(false, null));
         }
