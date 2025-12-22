@@ -31,7 +31,7 @@ public class RefreshTokenUseCase
 
         if (refreshToken.ExpiresAt < DateTime.UtcNow)
         {
-            throw new UnauthorizedAccessException("User not found");
+            throw new UnauthorizedAccessException("Refresh token has been expired");
         }
 
         var user = await userGateway.GetUserByIdAsync(refreshToken.UserId);
