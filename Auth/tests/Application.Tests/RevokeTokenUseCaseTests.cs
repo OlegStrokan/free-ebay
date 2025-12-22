@@ -55,6 +55,11 @@ public class RevokeTokenUseCaseTests
         
         Assert.Equal("Refresh token not found", result.Message);
         Assert.False(result.Success);
+        
+        await refreshTokenRepository.DidNotReceive().RevokeTokenAsync(Arg.Any<string>(), Arg.Any<string>());
+        
+  
+     
     }
     
      
@@ -83,6 +88,8 @@ public class RevokeTokenUseCaseTests
         
         Assert.Equal("Refresh token already revoked", result.Message);
         Assert.False(result.Success);
+
+        await refreshTokenRepository.DidNotReceive().RevokeTokenAsync(Arg.Any<string>(), Arg.Any<string>());
     }
     
     
