@@ -77,7 +77,7 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
         {
             return new TokenValidationResult
             {
-                isValid = false,
+                IsValid = false,
                 Message = "Token is null or empty"
             };
         }
@@ -111,7 +111,7 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
 
             return new TokenValidationResult
             {
-                isValid = true,
+                IsValid = true,
                 UserId = userId,
                 Email = email,
             };
@@ -120,7 +120,7 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
         {
             return new TokenValidationResult
             {
-                isValid = false,
+                IsValid = false,
                 Message = "Token has expired"
             };
         }
@@ -129,7 +129,7 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
         {
             return new TokenValidationResult
             {
-                isValid = false,
+                IsValid = false,
                 Message = "Invalid token signature"
             };
         }
@@ -138,7 +138,7 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
         {
             return new TokenValidationResult
             {
-                isValid = false,
+                IsValid = false,
                 Message = $"Token validation failed: {ex.Message}"
             };
         }
