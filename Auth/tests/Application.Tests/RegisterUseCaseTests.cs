@@ -15,16 +15,16 @@ public class RegisterUseCaseTests
         var userGateway = Substitute.For<IUserGateway>();
         var idGenerator = Substitute.For<IIdGenerator>();
         var emailVerificationTokenRepository = Substitute.For<IEmailVerificationTokenRepository>();
-        var generatedId = "ULID_GENERATED_USER";
+        var generatedUserId = "ULID_GENERATED_USER";
         var generatedTokenId = "ULID_GENERATED_TOKEN";
 
-        idGenerator.GenerateId().Returns(generatedId);
+        idGenerator.GenerateId().Returns(generatedTokenId);
          userGateway.CreateUserAsync(
             Arg.Any<string>(), 
             Arg.Any<string>(),
             Arg.Any<string>(),
             Arg.Any<string>()
-            ).Returns(generatedId);
+            ).Returns(generatedUserId);
 
             var command = new RegisterCommand(
                 "test@example.com",
@@ -36,24 +36,24 @@ public class RegisterUseCaseTests
 
             var result = await useCase.ExecuteAsync(command);
             
-            Assert.Equal(generatedId, result.UserId);
+            Assert.Equal(generatedUserId, result.UserId);
             Assert.Equal(command.Email, result.Email);
             Assert.Equal(command.Fullname, result.Fullname);
             Assert.NotNull(result.VerificationToken);
             //@todo shitty test, use constant or whatever
-            Assert.Equal("User registered successfully. Please verify email", result.Message);
+            Assert.Equal("User registered successfully. Please verify your email", result.Message);
             
             
             
-            await userGateway.Received(1).CreateUserAsync(command.Email, command.Fullname, command.Password, command.Phone);
+            await userGateway.Received(1).CreateUserAsync(command.Email , command.Password, command.Fullname, command.Phone);
 
-            await emailVerificationTokenRepository.Received(1).Received(1).CreateAsync(
+            await emailVerificationTokenRepository.Received(1).CreateAsync(
                 Arg.Is<EmailVerificationTokenEntity>(t =>
                     t.Id == generatedTokenId &&
-                        t.UserId == generatedId &&
-                        !string.IsNullOrEmpty(t.Token) &&
-                        t.ExpiresAt > DateTime.UtcNow &&
-                        t.IsUsed == false
+                    t.UserId == generatedUserId &&
+                    !string.IsNullOrEmpty(t.Token) &&
+                    t.ExpiresAt > DateTime.UtcNow &&
+                    t.IsUsed == false
                 ));
     }
 }
