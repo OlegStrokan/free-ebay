@@ -1,4 +1,3 @@
-using Application.UseCases.RefreshToken;
 using Domain.Repositories;
 
 namespace Application.UseCases.RevokeToken;
@@ -11,16 +10,16 @@ public class RevokeTokenUseCase(IRefreshTokenRepository refreshTokenRepository)
 
         if (refreshToken == null)
         {
-            return new RevokeTokenResponse(false, "Token not found");
+            return new RevokeTokenResponse(false, "Refresh token not found");
         }
 
         if (refreshToken.IsRevoked)
         {
-            return new RevokeTokenResponse(false, "Token already revoked");
+            return new RevokeTokenResponse(false, "Refresh token already revoked");
         }
 
         await refreshTokenRepository.RevokeTokenAsync(command.RefreshToken, command.RevokedById);
 
-        return new RevokeTokenResponse(true, "Token revoked");
+        return new RevokeTokenResponse(true, "Refresh token revoked");
     }
 }
