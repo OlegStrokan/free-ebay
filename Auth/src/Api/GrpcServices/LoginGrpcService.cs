@@ -6,8 +6,8 @@ using LoginResponse = Protos.Auth.LoginResponse;
 
 namespace Api.GrpcServices;
 
-public class LoginService(
-    ILogger<LoginService> logger,
+public class LoginGrpcService(
+    ILogger<LoginGrpcService> logger,
     LoginUseCase loginUseCase
 ) : AuthService.AuthServiceBase
 {

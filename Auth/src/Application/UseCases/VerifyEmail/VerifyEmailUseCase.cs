@@ -6,7 +6,7 @@ namespace Application.UseCases.VerifyEmail;
 public class VerifyEmailUseCase (
     IEmailVerificationTokenRepository verificationTokenRepository,
     IUserGateway userGateway
-    )
+    ) : IVerifyEmailUseCase
 {
     public async Task<VerifyEmailResponse> ExecuteAsync(VerifyEmailCommand command)
     {

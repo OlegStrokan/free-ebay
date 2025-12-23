@@ -8,7 +8,7 @@ using NSubstitute;
 
 namespace Application.Tests;
 
-public class RefreshTokenUseCaseTests
+public class RefreshTokenUseCaseUseCaseTests
 {
     [Fact]
     public async Task ShouldRefreshTokenSuccessfullyAndRevokeOldToken()

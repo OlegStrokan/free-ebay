@@ -13,7 +13,7 @@ public class LoginUseCase
         IUserGateway userGateway,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jtwTokenGenerator
-)
+) : ILoginUseCase
 {
     
     private readonly DateTime _refreshTokenExpiresInDays = DateTime.Today.AddDays(30);

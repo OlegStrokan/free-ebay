@@ -10,7 +10,7 @@ public class RefreshTokenUseCase
 (IRefreshTokenRepository refreshTokenRepository,
     IIdGenerator idGenerator,
     IUserGateway userGateway,
-    IJwtTokenGenerator jwtTokenGenerator)
+    IJwtTokenGenerator jwtTokenGenerator) : IRefreshTokenUseCase
 {
 
     private readonly int _accessTokenExpiresInSeconds = 3600;

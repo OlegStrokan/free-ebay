@@ -5,9 +5,9 @@ using RefreshTokenResponse = Protos.Auth.RefreshTokenResponse;
 
 namespace Api.GrpcServices;
 
-public class RefreshTokenService(
-    ILogger<RefreshTokenService> logger,
-    RefreshTokenUseCase refreshTokenUseCase
+public class RefreshTokenGrpcService(
+    ILogger<RefreshTokenGrpcService> logger,
+    RefreshTokenUseCase refreshTokenUseCaseUseCase
 ) : AuthService.AuthServiceBase
 {
     public override async Task<RefreshTokenResponse> RefreshToken(RefreshTokenRequest request, ServerCallContext context)
@@ -18,7 +18,7 @@ public class RefreshTokenService(
 
             var command = new RefreshTokenCommand(request.RefreshToken);
 
-            var response = await refreshTokenUseCase.ExecuteAsync(command);
+            var response = await refreshTokenUseCaseUseCase.ExecuteAsync(command);
 
             return new RefreshTokenResponse
             {

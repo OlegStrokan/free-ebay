@@ -10,7 +10,7 @@ public class ResetPasswordUseCase(
     IPasswordResetTokenRepository passwordResetTokenRepository,
     IRefreshTokenRepository refreshTokenRepository,
     IUserGateway userGateway,
-    IPasswordHasher passwordHasher)
+    IPasswordHasher passwordHasher) : IResetPasswordUseCase
 {
     public async Task<ResetPasswordResponse> ExecuteAsync(ResetPasswordCommand command)
     {

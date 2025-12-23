@@ -8,7 +8,7 @@ namespace Application.UseCases.RequestPasswordReset;
 public class RequestPasswordResetUseCase(
     IPasswordResetTokenRepository passwordResetTokenRepository,
     IIdGenerator idGenerator,
-    IUserGateway userGateway)
+    IUserGateway userGateway) : IRequestPasswordResetUseCase
 {
     public async Task<RequestPasswordResetResponse> ExecuteAsync(RequestPasswordResetCommand command)
     {

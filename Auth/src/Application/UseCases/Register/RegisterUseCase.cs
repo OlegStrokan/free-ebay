@@ -9,7 +9,7 @@ public class RegisterUseCase(
     IEmailVerificationTokenRepository verificationTokenRepository, 
     IIdGenerator idGenerator,
     IUserGateway userGateway
-    )
+    ) : IRegisterUseCase
 {
 
     public async Task<RegisterResponse> ExecuteAsync(RegisterCommand command)

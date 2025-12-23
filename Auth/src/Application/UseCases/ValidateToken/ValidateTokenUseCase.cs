@@ -2,7 +2,7 @@ using Application.Common.Interfaces;
 
 namespace Application.UseCases.ValidateToken;
 
-public class ValidateTokenUseCase(IJwtTokenValidator jwtTokenValidator)
+public class ValidateTokenUseCase(IJwtTokenValidator jwtTokenValidator) : IValidateTokenUseCase
 {
     public Task<ValidateTokenResponse> ExecuteAsync(ValidateTokenCommand command)
     {
