@@ -8,7 +8,7 @@ namespace Api.GrpcServices;
 
 public class LoginGrpcService(
     ILogger<LoginGrpcService> logger,
-    LoginUseCase loginUseCase
+    ILoginUseCase loginUseCase
 ) : AuthService.AuthServiceBase
 {
     public override async Task<LoginResponse> Login(LoginRequest request, ServerCallContext context)
