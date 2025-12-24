@@ -17,7 +17,9 @@ public class EmailVerificationTokenRepository(AppDbContext dbContext): IEmailVer
         return await dbContext.EmailVerificationTokens.Where(evt =>
             evt.UserId == userId &&
             !evt.IsUsed &&
-            evt.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
+            evt.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(evt => evt.CreatedAt)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<EmailVerificationTokenEntity> CreateAsync(EmailVerificationTokenEntity verificationTokenEntity)
@@ -52,21 +54,27 @@ public class EmailVerificationTokenRepository(AppDbContext dbContext): IEmailVer
 
     public async Task DeletedExpiredTokensAsync()
     {
-        // var expiredTokens = await dbContext.EmailVerificationTokens.Where(evt =>
-        //     evt.ExpiresAt < DateTime.UtcNow
-        //     || evt.IsUsed
-        // ).ToListAsync();
-        //
-        // await dbContext.SaveChangesAsync();
+        var expiredTokens = await dbContext.EmailVerificationTokens.Where(evt =>
+            evt.ExpiresAt < DateTime.UtcNow
+            || evt.IsUsed
+        ).ToListAsync();
         
-        // despacio again?
+        dbContext.RemoveRange(expiredTokens);
+        await dbContext.SaveChangesAsync();
         
-        await dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"DELETE FROM EmailVerificationToken WHERE ExpiresAt < {DateTime.UtcNow} Or IsUsed = {true}");
+        
+        // code below should be used on production, but for testing it's wont work because we use InMemory database
+        // await dbContext.Database.ExecuteSqlInterpolatedAsync(
+        //     $"DELETE FROM EmailVerificationToken WHERE ExpiresAt < {DateTime.UtcNow} Or IsUsed = {true}");
     }
 
     public async Task DeleteByUserIdAsync(string userId)
     {
-        var tokens = await dbContext.EmailVerificationTokens.Where(evt => evt.UserId == userId).ToListAsync();
+        var tokens = await dbContext.EmailVerificationTokens
+            .Where(evt => evt.UserId == userId)
+            .ToListAsync();
+        
+        dbContext.RemoveRange(tokens);
+        await dbContext.SaveChangesAsync();
     }
 }
