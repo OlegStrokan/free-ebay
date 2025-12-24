@@ -5,9 +5,9 @@ using RegisterResponse = Protos.Auth.RegisterResponse;
 
 namespace Api.GrpcServices;
 
-public class RegisterService(
-    ILogger<RegisterService> logger,
-    RegisterUseCase registerUseCase
+public class RegisterGrpcService(
+    ILogger<RegisterGrpcService> logger,
+    IRegisterUseCase registerUseCase
 ) : AuthService.AuthServiceBase
 {
     public override async Task<RegisterResponse> Register(RegisterRequest request, ServerCallContext context)
@@ -33,7 +33,7 @@ public class RegisterService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during registration");
-            throw new RpcException(new Status(StatusCode.Internal, "Internal Error"));
+            throw new RpcException(new Status(StatusCode.Internal, "Registration failed"));
         }
     }
 }
