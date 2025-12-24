@@ -366,9 +366,4 @@ public class EmailVerificationTokenRepositoryTests
         Assert.Null(deletedToken1);
         Assert.Null(deletedToken2);
     }
-
-    public void Dispose()
-    {
-        throw new NotImplementedException();
-    }
 }
