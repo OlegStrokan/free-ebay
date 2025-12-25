@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Repositories;
 
 public class RefreshTokenRepository(AppDbContext dbContext) : IRefreshTokenRepository
-
 {
     public async Task<RefreshTokenEntity?> GetByTokenAsync(string refreshToken)
     {
-        return await dbContext.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+        return await dbContext.RefreshTokens
+            .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
     }
 
     public async Task<RefreshTokenEntity?> GetByIdAsync(string id)
@@ -20,11 +20,10 @@ public class RefreshTokenRepository(AppDbContext dbContext) : IRefreshTokenRepos
 
     public Task<List<RefreshTokenEntity>> GetActiveTokensByUserIdAsync(string userId)
     {
-        return dbContext.RefreshTokens.Where(rt =>
-                rt.UserId == userId && rt.IsRevoked && rt.ExpiresAt > DateTime.UtcNow)
+       return dbContext.RefreshTokens
+            .Where(rt => rt.UserId == userId && !rt.IsRevoked &&  rt.ExpiresAt > DateTime.UtcNow)
             .OrderByDescending(rt => rt.CreatedAt)
-            .ToListAsync<RefreshTokenEntity>();
-        
+            .ToListAsync();
     }
 
     public async Task<RefreshTokenEntity> CreateAsync(RefreshTokenEntity refreshTokenEntity)
@@ -74,14 +73,16 @@ public class RefreshTokenRepository(AppDbContext dbContext) : IRefreshTokenRepos
 
     public async Task DeletedExpiredTokensAsync()
     {
-        // var expiredTokens = await dbContext.RefreshTokens
-        //     .Where(rt => rt.ExpiresAt < DateTime.UtcNow)
-        //     .ToListAsync();
-        //
-        // dbContext.RemoveRange(expiredTokens);
-        // await dbContext.SaveChangesAsync();
+        //  Use fucking FE Core instead of raw SQL for InMemory database compatibility
+        var expiredTokens = await dbContext.RefreshTokens
+            .Where(rt => rt.ExpiresAt < DateTime.UtcNow)
+            .ToListAsync();
 
-        // NOTE: Are we going to make this shit works faster, ha?
-        await dbContext.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM RefreshTokens WHERE ExpiresAt < {DateTime.UtcNow} ");
+        dbContext.RemoveRange(expiredTokens);
+        await dbContext.SaveChangesAsync();
+
+        // Note: If you need raw SQL for production performance with real SQL Server:
+        // await dbContext.Database.ExecuteSqlInterpolatedAsync(
+        //     $"DELETE FROM RefreshTokens WHERE ExpiresAt < {DateTime.UtcNow}");
     }
 }
