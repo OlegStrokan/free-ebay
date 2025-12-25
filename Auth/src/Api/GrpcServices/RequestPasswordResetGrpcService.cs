@@ -5,9 +5,9 @@ using RequestPasswordResetResponse = Protos.Auth.RequestPasswordResetResponse;
 
 namespace Api.GrpcServices;
 
-public class RequestPasswordResetService(
-    ILogger<RegisterService> logger,
-    RequestPasswordResetUseCase requestPasswordResetUseCase
+public class RequestPasswordResetGrpcService(
+    ILogger<RequestPasswordResetGrpcService> logger,
+    IRequestPasswordResetUseCase requestPasswordResetUseCase
 ) : AuthService.AuthServiceBase
 {
     public override async Task<RequestPasswordResetResponse> RequestPasswordReset(RequestPasswordResetRequest request, ServerCallContext context)
