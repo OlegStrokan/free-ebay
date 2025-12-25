@@ -53,21 +53,25 @@ public class PasswordResetTokenRepository(AppDbContext dbContext) : IPasswordRes
 
     public async Task DeleteExpiredTokensAsync()
     {
-        // var expiredTokens = await dbContext.PasswordResetTokens.Where(prt =>
-        //         prt.ExpiresAt < DateTime.UtcNow || prt.IsUsed)
-        //         .ToListAsync();
-        //
-        // dbContext.PasswordResetTokens.RemoveRange(expiredTokens);
-        // await dbContext.SaveChangesAsync();
+        var expiredTokens = await dbContext.PasswordResetTokens.Where(prt =>
+                prt.ExpiresAt < DateTime.UtcNow || prt.IsUsed)
+                .ToListAsync();
         
-        // despacio? 
+        dbContext.PasswordResetTokens.RemoveRange(expiredTokens);
+        await dbContext.SaveChangesAsync();
         
-        await dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"DELETE FROM PasswordResetTokens WHERE ExpiresAt < {DateTime.UtcNow} Or IsUsed = {true}");
+        // code below should be used on production, but for testing it's wont work because we use InMemory database
+       // await dbContext.Database.ExecuteSqlInterpolatedAsync(
+       //   $"DELETE FROM PasswordResetTokens WHERE ExpiresAt < {DateTime.UtcNow} Or IsUsed = {true}");
     }
 
     public async Task DeleteByUserIdAsync(string userId)
     {
-        var tokens = await dbContext.PasswordResetTokens.Where(prt => prt.UserId == userId).ToListAsync();
+        var tokens = await dbContext.PasswordResetTokens
+            .Where(prt => prt.UserId == userId)
+            .ToListAsync();
+        
+        dbContext.RemoveRange(tokens);
+        await dbContext.SaveChangesAsync();
     }
 }

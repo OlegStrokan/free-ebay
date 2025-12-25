@@ -73,7 +73,7 @@ public class EmailVerificationTokenRepositoryTests
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_Valid()
+    public async Task GetByTokenAsync_NotFound()
     {
         var dbContext = GetDbContext("GetByTokenAsync_NotExists_Db");
         var repository = new EmailVerificationTokenRepository(dbContext);
@@ -86,7 +86,7 @@ public class EmailVerificationTokenRepositoryTests
     [Fact]
     public async Task GetByUserIdAsync_LastValidToken()
     {
-        var dbContext = GetDbContext("GetByUserIdAsync");
+        var dbContext = GetDbContext("GetByUserIdAsync_Db");
         var repository = new EmailVerificationTokenRepository(dbContext);
 
         var userId = "userId";
@@ -184,7 +184,7 @@ public class EmailVerificationTokenRepositoryTests
         
         Assert.Null(result);
     }
-
+    
     [Fact]
     public async Task UpdateAsync_ShouldUpdateToken()
     {
@@ -256,7 +256,7 @@ public class EmailVerificationTokenRepositoryTests
     }
 
     [Fact]
-    public async Task DeleteExpiredTokenAsync_ShouldDelete()
+    public async Task DeleteExpiredTokenAsync_ShouldDeleteExpiredToken()
     {
         var dbContext = GetDbContext("DeleteExpiredTokenAsync_Db");
 
@@ -336,7 +336,8 @@ public class EmailVerificationTokenRepositoryTests
             Token = "token_def",
             ExpiresAt = DateTime.UtcNow.AddHours(24),
             CreatedAt = DateTime.UtcNow,
-            IsUsed = true
+            IsUsed = true,
+            UsedAt = DateTime.UtcNow
         };
 
         var otherUserToken = new EmailVerificationTokenEntity
