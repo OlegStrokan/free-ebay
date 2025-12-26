@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protos.User";
+
+
+import "user.proto";
+
+message GetUserByidRequest {
+  string id = 1;
+}
+
+message GetUserByIdResponse {
+  UserProto data = 1;
+}
+
+// @think: maybe add getAllUsers
+//@doit: block user (change userStatus)
+//@doit: update password (change only password)
+
+message CreateUserRequest {
+  string full_name = 1;
+  string password = 2;
+  string email = 3;
+  string phone = 4;
+  // optional DeliveryInfoProto delivery_info = 5;
+}
+
+message CreateUserResponse {
+  optional UserProto data = 1;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  string full_name = 2;
+  string email = 3;
+  string phone = 4;
+  //  optional DeliveryInfoProto delivery_info = 4;
+}
+
+message UpdateUserResponse {
+  UserProto data = 1;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+message DeleteUserResponse {}
+
+service UserServiceProto {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc GetUserById(GetUserByidRequest)returns (GetUserByIdResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}
