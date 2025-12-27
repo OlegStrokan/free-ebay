@@ -1,12 +1,20 @@
 namespace Domain.ValueObjects;
 
-public sealed record ProductId(string Value) : ValueObject
+public sealed record ProductId
 {
-    public static ProductId From(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("ID cannot be empty", nameof(value));
+    public Guid Value { get; init; }
 
-        return new ProductId(value);
+
+    private ProductId(Guid value)
+    {
+        if (value != Guid.Empty)
+            throw new ArgumentException("ProductId cannot be empty", nameof(value));
+        Value = value;
     }
+
+    public static ProductId From(Guid value) => new ProductId(value);
+
+    public static ProductId CreateUnique() => new ProductId(Guid.NewGuid());
+
+    public override string ToString() => Value.ToString();
 }
