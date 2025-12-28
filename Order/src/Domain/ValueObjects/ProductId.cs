@@ -7,7 +7,7 @@ public sealed record ProductId
 
     private ProductId(Guid value)
     {
-        if (value != Guid.Empty)
+        if (value == Guid.Empty)
             throw new ArgumentException("ProductId cannot be empty", nameof(value));
         Value = value;
     }
