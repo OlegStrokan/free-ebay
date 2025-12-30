@@ -1,6 +1,6 @@
 namespace Domain.ValueObjects;
 
-public sealed record Money : ValueObject
+public sealed record Money
 {
     public decimal Amount { get; init; }
     public string Currency { get; init; }

@@ -5,21 +5,19 @@ namespace Domain.ValueObjects;
 
 public sealed record OrderItemId
 {
-    public Guid Value { get; init; }
+    public long Value { get; init; }
 
-    private OrderItemId(Guid value)
+    private OrderItemId(long value)
     {
 
-        if (value == Guid.Empty)
-            throw new ArgumentException("OrderItemId cannot be empty", nameof(value));
+        if (value < 0)
+            throw new ArgumentException("OrderItemId must be greater then 0", nameof(value));
         
         Value = value;
     }
 
-    public static OrderItemId From(Guid value) => new OrderItemId(value);
-
-    public static OrderItemId CreateUnique() => new OrderItemId(Guid.NewGuid());
-
+    public static OrderItemId From(long value) => new OrderItemId(value);
+    
     public override string ToString() => Value.ToString();
 
 }
