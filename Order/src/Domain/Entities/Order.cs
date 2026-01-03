@@ -1,17 +1,24 @@
 using Domain.Common;
+using Domain.Events;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Entities;
 
-public sealed class Order : Entity<OrderId>
+public sealed class Order : AggregateRoot<OrderId>
 {
     public CustomerId CustomerId { get; private set; }
     public TrackingId TrackingId { get; private set; }
-    public List<OrderItem> Items { get; private set; } 
-    public Address Address { get; private set; }
+
+    private readonly List<OrderItem> _items = new();
+
+    public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
+    public Address DeliveryAddress { get; private set; }
     public Money TotalPrice { get; private set; }
     public OrderStatus Status { get; private set; }
+    
+    public DateTime CreatedAt { get; private set; }
+    public DateTime? UpdatedAt { get; private set; }
     
     // shipment
     // payment
@@ -31,8 +38,8 @@ public sealed class Order : Entity<OrderId>
         CustomerId = customerId;
         TrackingId = trackingId ?? TrackingId.CreateUnique();
         TotalPrice = totalPrice;
-        Items = items;
-        Address = address;
+        _items = items;
+        DeliveryAddress = address;
         Status = status ?? OrderStatus.Pending;
     }
 
@@ -70,7 +77,68 @@ public sealed class Order : Entity<OrderId>
         
         InitializeOrderItems();
         
-        // add domain event
+        AddDomainEvent(new OrderCreatedEvent(
+            Id,
+            CustomerId,
+            TotalPrice,
+            DeliveryAddress,
+            Items.ToList(),
+            CreatedAt));
+    }
+
+    public void Pay()
+    {
+        if (Status != OrderStatus.Pending && Status != OrderStatus.AwaitingPayment)
+            throw new OrderDomainException(
+                $"Order is not in correct state for pay operation. Current status: {Status}");
+
+        Status = OrderStatus.Paid;
+        UpdatedAt = DateTime.UtcNow;
+        
+        AddDomainEvent(new OrderPaidEvent(Id, CustomerId, TotalPrice, DateTime.UtcNow));
+    }
+
+    public void Approve()
+    {
+        if (Status != OrderStatus.Paid)
+            throw new OrderDomainException(
+                $"Order is not in correct state for approve operation. Current state: {Status}");
+
+        Status = OrderStatus.Approved;
+        UpdatedAt = DateTime.UtcNow;
+        
+        AddDomainEvent(new OrderApprovedEvent(Id, CustomerId, DateTime.UtcNow));
+    }
+
+    public void Complete()
+    {
+        if (Status != OrderStatus.Approved)
+            throw new OrderDomainException(
+                $"Order is not in correct state for complete operation. Current state: {Status}");
+
+        Status = OrderStatus.Completed;
+        UpdatedAt = DateTime.UtcNow;
+        
+        AddDomainEvent(new OrderCompletedEvent(Id, CustomerId, DateTime.UtcNow));
+    }
+
+    public void InitiateCancel()
+    {
+        if (Status != OrderStatus.Paid && Status != OrderStatus.Approved)
+            throw new OrderDomainException(
+                $"Order is not in correct state for cancel initiation. Current state: {Status}");
+
+        Status = OrderStatus.Cancelling;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Cancel()
+    {
+        if (Status != OrderStatus.Cancelled && Status != OrderStatus.Pending)
+            throw new OrderDomainException($"Order is not correct state for cancel operation. Current state: {Status}");
+
+        Status = OrderStatus.Cancelled;
+        UpdatedAt = DateTime.UtcNow;
     }
     
     
@@ -114,10 +182,10 @@ public sealed class Order : Entity<OrderId>
                 return item.GetSubTotal();
             })
             .Aggregate(Money.Default(TotalPrice.Currency), (acc, price) => acc.Add(price));
-        
+
         if (calculatedTotal != TotalPrice)
             throw new OrderDomainException(
-                $"Total price {TotalPrice} is not equal to the sum of order items prices {calculatedTotal}")
+                $"Total price {TotalPrice} is not equal to the sum of order items prices {calculatedTotal}");
     }
 
     private void InitializeOrderItems()
@@ -132,7 +200,7 @@ public sealed class Order : Entity<OrderId>
     private static void ValidateItemPrice(OrderItem item)
     {
         if (!item.IsPriceValid())
-            throw new OrderDomainException($"Order item price is not valid for product {item.ProductId}")
+            throw new OrderDomainException($"Order item price is not valid for product {item.ProductId}");
     }
 
     private static Money CalculateTotalPrice(List<OrderItem> items)
