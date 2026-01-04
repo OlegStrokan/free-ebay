@@ -7,212 +7,223 @@ namespace Domain.Entities;
 
 public sealed class Order : AggregateRoot<OrderId>
 {
-    public CustomerId CustomerId { get; private set; }
-    public TrackingId TrackingId { get; private set; }
+    private CustomerId _customerId;
+    private Address _deliveryAddress;
+    private Money _totalPrice;
+    private OrderStatus _status;
+    private TrackingId _trackingId;
+    private List<OrderItem> _items = new();
+    private DateTime _createdAt;
+    private DateTime? _updatedAt;
 
-    private readonly List<OrderItem> _items = new();
-
+    public CustomerId CustomerId => _customerId;
+    public OrderStatus Status => _status;
+    public Money TotalPrice => _totalPrice;
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
-    public Address DeliveryAddress { get; private set; }
-    public Money TotalPrice { get; private set; }
-    public OrderStatus Status { get; private set; }
-    
-    public DateTime CreatedAt { get; private set; }
-    public DateTime? UpdatedAt { get; private set; }
-    
-    // shipment
-    // payment
 
-    private Order() : base() {}
 
-    private Order(
-        OrderId orderId,
-        CustomerId customerId,
-        Money totalPrice,
-        Address address,
-        List<OrderItem> items,
-        TrackingId? trackingId = null,
-        OrderStatus? status = null
-        ) : base(orderId)
+    public int Version { get; private set; }
+
+    private readonly List<IDomainEvent> _uncommitedEvents = new();
+
+    public IReadOnlyList<IDomainEvent> UncommitedEvents => _uncommitedEvents.AsReadOnly();
+
+
+    private Order()
     {
-        CustomerId = customerId;
-        TrackingId = trackingId ?? TrackingId.CreateUnique();
-        TotalPrice = totalPrice;
-        _items = items;
-        DeliveryAddress = address;
-        Status = status ?? OrderStatus.Pending;
     }
 
-    public Order Create(
+    public static Order Create(
         CustomerId customerId,
-        Address address,
+        Address deliveryAddress,
         List<OrderItem> items)
     {
-     
-        ValidateItems(items);
+        if (items == null || items.Count == 0)
+            throw new OrderDomainException("Order must have a least one item");
+
+        var order = new Order();
         var totalPrice = CalculateTotalPrice(items);
-        
-        
-        var order = new Order(
+
+        var evt = new OrderCreatedEvent(
             OrderId.CreateUnique(),
             customerId,
             totalPrice,
-            address,
-            items
-        );
-        
-        order.ValidateOrder();
-        order.InitializeOrder();
+            deliveryAddress,
+            items,
+            DateTime.UtcNow);
 
+        order.RaiseEvent(evt);
         return order;
-    }
-
-    public void InitializeOrder()
-    {
-        ValidateInitialOrder();
-
-        Id = OrderId.CreateUnique();
-        TrackingId = TrackingId.CreateUnique();
-        Status = OrderStatus.Pending;
-        
-        InitializeOrderItems();
-        
-        AddDomainEvent(new OrderCreatedEvent(
-            Id,
-            CustomerId,
-            TotalPrice,
-            DeliveryAddress,
-            Items.ToList(),
-            CreatedAt));
     }
 
     public void Pay()
     {
-        if (Status != OrderStatus.Pending && Status != OrderStatus.AwaitingPayment)
-            throw new OrderDomainException(
-                $"Order is not in correct state for pay operation. Current status: {Status}");
+        if (_status != OrderStatus.Pending && _status != OrderStatus.AwaitingPayment)
+            throw new OrderDomainException($"Cannot pay order in {_status} status");
 
-        Status = OrderStatus.Paid;
-        UpdatedAt = DateTime.UtcNow;
-        
-        AddDomainEvent(new OrderPaidEvent(Id, CustomerId, TotalPrice, DateTime.UtcNow));
+        var evt = new OrderPaidEvent(
+            Id,
+            _customerId,
+            _totalPrice,
+            DateTime.UtcNow
+        );
+
+        RaiseEvent(evt);
     }
 
     public void Approve()
     {
-        if (Status != OrderStatus.Paid)
-            throw new OrderDomainException(
-                $"Order is not in correct state for approve operation. Current state: {Status}");
+        if (_status != OrderStatus.Paid)
+            throw new OrderDomainException($"Cannot approve order in {_status} status");
 
-        Status = OrderStatus.Approved;
-        UpdatedAt = DateTime.UtcNow;
-        
-        AddDomainEvent(new OrderApprovedEvent(Id, CustomerId, DateTime.UtcNow));
+
+        var evt = new OrderApprovedEvent(
+            Id,
+            _customerId,
+            DateTime.UtcNow
+        );
+
+        RaiseEvent(evt);
     }
 
     public void Complete()
     {
-        if (Status != OrderStatus.Approved)
-            throw new OrderDomainException(
-                $"Order is not in correct state for complete operation. Current state: {Status}");
+        if (_status != OrderStatus.Approved)
+            throw new OrderDomainException($"Cannot complete order in {_status} status");
 
-        Status = OrderStatus.Completed;
-        UpdatedAt = DateTime.UtcNow;
-        
-        AddDomainEvent(new OrderCompletedEvent(Id, CustomerId, DateTime.UtcNow));
-    }
+        var evt = new OrderCompletedEvent(
+            Id,
+            _customerId,
+            DateTime.UtcNow
+        );
 
-    public void InitiateCancel()
-    {
-        if (Status != OrderStatus.Paid && Status != OrderStatus.Approved)
-            throw new OrderDomainException(
-                $"Order is not in correct state for cancel initiation. Current state: {Status}");
-
-        Status = OrderStatus.Cancelling;
-        UpdatedAt = DateTime.UtcNow;
+        RaiseEvent(evt);
     }
 
     public void Cancel()
     {
-        if (Status != OrderStatus.Cancelled && Status != OrderStatus.Pending)
-            throw new OrderDomainException($"Order is not correct state for cancel operation. Current state: {Status}");
+        if (_status != OrderStatus.Cancelling && _status != OrderStatus.Pending)
+            throw new OrderDomainException($"Cannot cancel order in {_status} status");
 
-        Status = OrderStatus.Cancelled;
-        UpdatedAt = DateTime.UtcNow;
-    }
-    
-    
-
-    public void ValidateOrder()
-    {
-        ValidateInitialOrder();
-        ValidateTotalPrice();
-        ValidateItemsPrice();
-    }
-    
-
-    private static void ValidateItems(List<OrderItem> items)
-    {
-        if (items.Count == 0)
-            throw new OrderDomainException("Order must have at least one item.");
+        var evt = new OrderCancelledEvent(
+            Id,
+            _customerId,
+            DateTime.UtcNow
+            );
         
-        var baseCurrency = items[0].PriceAtPurchase.Currency;
-        if (items.Any(x => x.PriceAtPurchase.Currency != baseCurrency))
-            throw new OrderDomainException("All items must share the same currency.");
+        RaiseEvent(evt);
     }
 
-    private void ValidateInitialOrder()
-    {
-        if (Status != OrderStatus.Pending && Id != null)
-            throw new OrderDomainException("Order is not in correct state to be initializated");
-    }
 
-    private void ValidateTotalPrice()
-    {
-        if (!TotalPrice.IsGreaterThenZero())
-            throw new OrderDomainException("Total price must be greater then zero");
-    }
 
-    private void ValidateItemsPrice()
-    {
-        var calculatedTotal = Items
-            .Select(item =>
-            {
-                ValidateItemPrice(item);
-                return item.GetSubTotal();
-            })
-            .Aggregate(Money.Default(TotalPrice.Currency), (acc, price) => acc.Add(price));
+// event application
 
-        if (calculatedTotal != TotalPrice)
-            throw new OrderDomainException(
-                $"Total price {TotalPrice} is not equal to the sum of order items prices {calculatedTotal}");
-    }
 
-    private void InitializeOrderItems()
+    private void Apply(OrderCreatedEvent evt)
     {
+        Id = evt.OrderId;
+        _customerId = evt.CustomerId;
+        _totalPrice = evt.TotalPrice;
+        _deliveryAddress = evt.DeliveryAddress;
+        _items = evt.Items.ToList();
+        _trackingId = TrackingId.CreateUnique();
+        _status = OrderStatus.Pending;
+        _createdAt = evt.CreatedAt;
+
         long itemId = 1;
-        foreach (var item in Items)
+        foreach (var item in _items)
         {
             item.InitializeOrderItem(Id, OrderItemId.From(itemId++));
         }
     }
-
-    private static void ValidateItemPrice(OrderItem item)
+    
+    private void Apply(OrderPaidEvent evt)
     {
-        if (!item.IsPriceValid())
-            throw new OrderDomainException($"Order item price is not valid for product {item.ProductId}");
+        _status = OrderStatus.Paid;
+        _updatedAt = evt.PaidAt;
     }
+
+
+    private void Apply(OrderCompletedEvent evt)
+    {
+        _status = OrderStatus.Completed;
+        _updatedAt = evt.CompletedAt;
+    }
+
+    private void Apply(OrderApprovedEvent evt)
+    {
+        _status = OrderStatus.Completed;
+        _updatedAt = evt.ApprovedAt;
+    }
+
+    private void Apply(OrderCancelledEvent evt)
+    {
+        _status = OrderStatus.Completed;
+        _updatedAt = evt.CancelledAt;
+    }
+    
+    // event sourcing infrastructure
+
+    private void RaiseEvent(IDomainEvent evt)
+    {
+        ApplyEvent(evt, true);
+        _uncommitedEvents.Add(evt);
+        Version++;
+    }
+
+    private void ApplyEvent(IDomainEvent evt, bool isNew)
+    {
+        switch (evt)
+        {
+            case OrderCreatedEvent e:
+                Apply(e);
+                break;
+            case OrderPaidEvent e:
+                Apply(e);
+                break;
+            case OrderApprovedEvent e:
+                Apply(e);
+                break;
+            case OrderCompletedEvent e:
+                Apply(e);
+                break;
+            case OrderCancelledEvent e:
+                Apply(e);
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown event type {evt.GetType().Name}");
+        }
+
+        if (isNew)
+            Version++;
+
+
+    }
+
+    // reconstruction
+    public static Order FromEvents(IEnumerable<IDomainEvent> history)
+    {
+        var order = new Order();
+
+        foreach (var evt in history)
+        {
+            order.ApplyEvent(evt, false);
+        }
+
+        return order;
+    }
+
+    public void MarkEventsAsCommited()
+    {
+        _uncommitedEvents.Clear();
+    }
+
 
     private static Money CalculateTotalPrice(List<OrderItem> items)
     {
-        if (items.Count == 0)
-            return Money.Default();
-
         var currency = items[0].PriceAtPurchase.Currency;
-
         return items
             .Select(item => item.GetSubTotal())
             .Aggregate(Money.Default(currency), (acc, price) => acc.Add(price));
-
     }
 }
