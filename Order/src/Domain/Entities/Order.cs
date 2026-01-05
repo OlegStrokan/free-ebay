@@ -152,13 +152,13 @@ public sealed class Order : AggregateRoot<OrderId>
 
     private void Apply(OrderApprovedEvent evt)
     {
-        _status = OrderStatus.Completed;
+        _status = OrderStatus.Approved;
         _updatedAt = evt.ApprovedAt;
     }
 
     private void Apply(OrderCancelledEvent evt)
     {
-        _status = OrderStatus.Completed;
+        _status = OrderStatus.Cancelled;
         _updatedAt = evt.CancelledAt;
     }
     
@@ -166,12 +166,12 @@ public sealed class Order : AggregateRoot<OrderId>
 
     private void RaiseEvent(IDomainEvent evt)
     {
-        ApplyEvent(evt, true);
+        ApplyEvent(evt);
         _uncommitedEvents.Add(evt);
-        Version++;
+       
     }
 
-    private void ApplyEvent(IDomainEvent evt, bool isNew)
+    private void ApplyEvent(IDomainEvent evt)
     {
         switch (evt)
         {
@@ -193,9 +193,9 @@ public sealed class Order : AggregateRoot<OrderId>
             default:
                 throw new InvalidOperationException($"Unknown event type {evt.GetType().Name}");
         }
+        
+        Version++;
 
-        if (isNew)
-            Version++;
 
 
     }
@@ -207,7 +207,7 @@ public sealed class Order : AggregateRoot<OrderId>
 
         foreach (var evt in history)
         {
-            order.ApplyEvent(evt, false);
+            order.ApplyEvent(evt);
         }
 
         return order;
