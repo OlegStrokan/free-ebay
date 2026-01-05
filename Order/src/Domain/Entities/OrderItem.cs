@@ -41,6 +41,15 @@ public sealed class OrderItem : Entity<OrderItemId>
         );
     }
 
+    internal void InitializeOrderItem(OrderId orderId, OrderItemId orderItemId)
+    {
+        if (OrderId != null)
+            throw new OrderDomainException("OrderItem is already initialized");
+
+        Id = orderItemId;
+        OrderId = orderId;
+    }
+
     public void UpdateQuantity(int newQuantity)
     {
         ValidateQuantity(newQuantity);
@@ -51,6 +60,16 @@ public sealed class OrderItem : Entity<OrderItemId>
     {
         ValidatePrice(newPrice);
         PriceAtPurchase = newPrice;
+    }
+
+    public Money GetSubTotal()
+    {
+        return PriceAtPurchase.Multiply(Quantity);
+    }
+
+    public bool IsPriceValid()
+    {
+        return PriceAtPurchase.IsGreaterThenZero();
     }
         
     private static void ValidatePrice(Money price)
