@@ -6,7 +6,7 @@ public sealed record OrderId
 
     private OrderId(Guid value)
     {
-        if (value != Guid.Empty)
+        if (value == Guid.Empty)
             throw new ArgumentException("OrderId cannot be empty", nameof(value));
         Value = value;
     }
