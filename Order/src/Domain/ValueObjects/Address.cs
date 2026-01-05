@@ -4,13 +4,12 @@ public sealed record Address
 {
     public string Street { get; init; }
     public string City { get; init; }
-    public string State { get; init; }
     public string Country { get; init; }
     public string PostalCode { get; init; }
     
     // explicit constructor for validation rules
 
-    private Address(string street, string city, string state, string country, string postalCode)
+    private Address(string street, string city, string country, string postalCode)
     {
 
         if (string.IsNullOrWhiteSpace(street))
@@ -18,9 +17,7 @@ public sealed record Address
 
         if (string.IsNullOrWhiteSpace(city))
             throw new ArgumentException("City cannot be empty", nameof(city));
-
-        if (string.IsNullOrWhiteSpace(state))
-            throw new ArgumentException("State cannot be emtpy", nameof(state));
+        
         if (string.IsNullOrWhiteSpace(country))
             throw new ArgumentException("Country cannot be empty", nameof(country));
         
@@ -29,14 +26,13 @@ public sealed record Address
             
         Street = street;
         City = city;
-        State = state;
         Country = country;
         PostalCode = postalCode;
     }
 
-    public static Address Create(string street, string city, string state, string country, string postalCode)
-        => new Address(street, city, state, country, postalCode);
+    public static Address Create(string street, string city, string country, string postalCode)
+        => new Address(street, city, country, postalCode);
 
-    public override string ToString() => $"{Street} {City} {State} {Country}";
+    public override string ToString() => $"{Street} {City} {Country}";
     
 }
