@@ -1,10 +1,13 @@
 namespace Application.Sagas.Steps;
 
-public interface ISagaStep<TData>
+public interface ISagaStep<TData, TContext>
+    where TData : SagaData
+    where TContext : SagaContext
 {
     string StepName { get; }
-    bool CanCompensate { get; }
-    Task<StepResult> ExecuteAsync(TData data, SagaContext context, CancellationToken cancellationToken);
+    int Order { get;  } // explicit order
+    Task<StepResult> ExecuteAsync(TData data, TContext context, CancellationToken cancellationToken);
+    Task CompensateAsync(TData data, TContext context, CancellationToken cancellationToken);
 }
 
 
