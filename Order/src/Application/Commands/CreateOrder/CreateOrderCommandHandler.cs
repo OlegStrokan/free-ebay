@@ -1,7 +1,11 @@
+using System.Text.Json;
 using Application.Common;
+using Application.DTOs;
 using Application.Interfaces;
 using Application.Sagas;
+using Domain.Common;
 using Domain.Entities;
+using Domain.Events;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using MediatR;
@@ -12,6 +16,8 @@ namespace Application.Commands.CreateOrder;
 public class CreateOrderCommandHandler
     (
         IOrderRepository orderRepository,
+        IOutboxRepository outboxRepository,
+        IUnitOfWork unitOfWork,
         ILogger<CreateOrderCommandHandler> logger
         ) : IRequestHandler<CreateOrderCommand, Result<Guid>>
 {
@@ -41,28 +47,78 @@ public class CreateOrderCommandHandler
                 customerId.Value
             );
 
-            await orderRepository.SaveAsync(order, cancellationToken);
 
-            logger.LogInformation(
-                "Saved {EventCount} event for order {OrderId}",
-                order.UncommitedEvents.Count,
-                order.Id.Value
-            );
-            
-            order.MarkEventsAsCommited();
-            
-            logger.LogInformation(
-                "Order {OrderId} created successfully. Saga will be triggered by event.",
-                order.Id.Value
-            );
+            await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
 
-            return Result<Guid>.Success(order.Id.Value);
+            try
+            {
+                await orderRepository.SaveAsync(order, cancellationToken);
+
+                foreach (var domainEvent in order.UncommitedEvents)
+                {
+                    await outboxRepository.AddAsync(
+                        domainEvent.EventId,
+                        domainEvent.GetType().Name,
+                        SerializeEvent(domainEvent),
+                        domainEvent.OccurredOn,
+                        cancellationToken);
+                }
+
+                logger.LogInformation(
+                    "Saved {EventCount} event to outbox for order {OrderId}",
+                    order.UncommitedEvents.Count,
+                    order.Id.Value
+                );
+
+                await transaction.CommitAsync(cancellationToken);
+
+                order.MarkEventsAsCommited();
+
+                logger.LogInformation(
+                    "Transaction committed for order {OrderId}",
+                    order.Id.Value
+                );
+
+                return Result<Guid>.Success(order.Id.Value);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failure to create order");
             return Result<Guid>.Failure($"Failed to create order: {ex.Message}");
         }
+    }
+
+    private string SerializeEvent(IDomainEvent domainEvent)
+    {
+        return domainEvent switch
+        {
+            OrderCreatedEvent e => JsonSerializer.Serialize(new OrderCreatedEventDto
+            {
+                OrderId = e.OrderId.Value,
+                CustomerId = e.CustomerId.Value,
+                TotalAmount = e.TotalPrice.Amount,
+                Currency = e.TotalPrice.Currency,
+                DeliveryAddress = new AddressDto(
+                    e.DeliveryAddress.Street,
+                    e.DeliveryAddress.City,
+                    e.DeliveryAddress.Country,
+                    e.DeliveryAddress.PostalCode
+                ),
+                Items = e.Items.Select(i => new OrderItemDto(
+                    i.ProductId.Value,
+                    i.Quantity,
+                    i.PriceAtPurchase.Amount,
+                    i.PriceAtPurchase.Currency)).ToList(),
+                CreatedAt = e.CreatedAt
+            }),
+            _ => JsonSerializer.Serialize(domainEvent)
+        };
     }
 }
 // trigger gprc method
