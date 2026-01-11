@@ -67,10 +67,14 @@ public class SagaBaseTests
     {
         var sagaId = Guid.NewGuid();
 
+        var step3 = Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
+        
         _step1.StepName.Returns("Step1");
         _step2.Order.Returns(1);
         _step2.StepName.Returns("Step2");
         _step2.Order.Returns(2);
+        step3.StepName.Returns("Step3");
+        step3.Order.Returns(3);
 
         var sagaState = new SagaState
         {
@@ -81,7 +85,9 @@ public class SagaBaseTests
             Steps = new List<SagaStepLog>
             {
                 new() { StepName = "Step1", Status = StepStatus.Completed },
-                new() { StepName = "Step2", Status = StepStatus.Completed }
+                new() { StepName = "Step2", Status = StepStatus.Completed },
+                new() { StepName = "Step3", Status = StepStatus.Failed }
+                
             }
         };
 
@@ -98,6 +104,8 @@ public class SagaBaseTests
              _step1.CompensateAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(),
                 Arg.Any<CancellationToken>());
         });
+        
+        
     }
         
 }
