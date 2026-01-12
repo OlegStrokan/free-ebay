@@ -62,7 +62,6 @@ public class CreateOrderCommandHandlerTests
         await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
 
         await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
-
     }
 
     private CreateOrderCommand CreateValidCommand() => 
