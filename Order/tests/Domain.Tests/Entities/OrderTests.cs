@@ -123,22 +123,32 @@ public class OrderTests
     public void Cancel_WhenPending_ShouldTransitionToCancelled()
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
+
+        var cancelReason = "Racism";
         
-        order.Cancel();
+        order.Cancel(new List<string> { cancelReason });
         
         Assert.Equal(OrderStatus.Cancelled, order.Status);
         Assert.IsType<OrderCancelledEvent>(order.UncommitedEvents.Last());
+        var message = Assert.Single(order.FailedMessage);
+        Assert.Equal(cancelReason, message);
     }
     
     [Fact]
     public void Cancel_WhenAlreadyCancelled_ShouldThrowException()
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        order.Cancel(new List<string> { "First Reason" }); 
 
-        order.Cancel();
+         Assert.Throws<OrderDomainException>(() => 
+            order.Cancel(new List<string> { "Second Reason" }));
 
-        var ex = Assert.Throws<OrderDomainException>(() => order.Cancel());
-        Assert.Contains("Cannot cancel order in Cancelled status", ex.Message);
+        var message = Assert.Single(order.FailedMessage);
+        Assert.Equal("First Reason", message); 
+    
+        Assert.DoesNotContain("Second Reason", order.FailedMessage);
+
+        
     }
 
     [Fact]

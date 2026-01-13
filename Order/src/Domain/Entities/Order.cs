@@ -15,12 +15,13 @@ public sealed class Order : AggregateRoot<OrderId>
     private List<OrderItem> _items = new();
     private DateTime _createdAt;
     private DateTime? _updatedAt;
-    public List<string> _failedMessages = new List<string>();
+    private List<string> _failedMessages = new List<string>();
 
     public CustomerId CustomerId => _customerId;
     public OrderStatus Status => _status;
     public Money TotalPrice => _totalPrice;
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
+    public IReadOnlyList<string> FailedMessage => _failedMessages.AsReadOnly();
 
 
 
