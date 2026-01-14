@@ -5,7 +5,11 @@ namespace Application.Interfaces;
 
 public interface IOutboxRepository
 {
+    Task AddAsync(
+        Guid messageId, string type, string content, DateTime occurredOn, CancellationToken ct
+        );
     Task<IEnumerable<OutboxMessage>> GetUnprocessedMessagesAsync(int batchSize, CancellationToken ct);
     Task MarkAsProcessedAsync(Guid messageId, CancellationToken ct);
+    
     Task DeleteProcessedMessagesAsync(DateTime olderThen, CancellationToken ct);
 }
