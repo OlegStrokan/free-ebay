@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Application.DTOs;
 using Application.Sagas;
+using Application.Sagas.Handlers;
 using Application.Sagas.OrderSaga;
 using Application.Sagas.Persistence;
 using Confluent.Kafka;
 using Domain.Events;
 using Infrastructure.Messaging;
+
 
 namespace Infrastructure.BackgroundServices;
 
@@ -17,22 +19,27 @@ public class SagaOrchestrationService : BackgroundService
 
     public SagaOrchestrationService(
         IServiceProvider serviceProvider,
-        ILogger<SagaOrchestrationService> logger)
+        ILogger<SagaOrchestrationService> logger,
+        IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
 
+        var kafkaBootstrapServers = configuration["Kafka.BootstrapServers"] ?? "localhost:9092";
+        // @think why default is order.events?
+        var kafkaTopic = configuration["Kafka:SagaTopic"] ?? "order.events";
+
         var config = new ConsumerConfig
         {
             GroupId = "saga-orchestration-group",
-            BootstrapServers = "localhost:9092",
+            BootstrapServers = kafkaBootstrapServers,
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false,
             IsolationLevel = IsolationLevel.ReadCommitted
         };
 
         _kafkaConsumer = new ConsumerBuilder<string, string>(config).Build();
-        _kafkaConsumer.Subscribe("order.events");
+        _kafkaConsumer.Subscribe(kafkaTopic);
     }
         
         
@@ -60,17 +67,14 @@ public class SagaOrchestrationService : BackgroundService
 
                var eventWrapper = JsonSerializer.Deserialize<EventWrapper>(messageValue);
 
-               if (eventWrapper.EventType == "OrderCreateEvent")
+               if (eventWrapper == null)
                {
-                   var orderCreatedEvent = JsonSerializer.Deserialize<OrderCreatedEventDto>(
-                       eventWrapper.Payload
-                   );
-
-                   if (orderCreatedEvent != null)
-                   {
-                       await HandleOrderCreatedEventAsync(orderCreatedEvent, stoppingToken);
-                   }
+                   _logger.LogWarning(("Failed to deserialize event wrapper"));
+                   _kafkaConsumer.Commit(consumeResult);
+                   continue;
                }
+
+               await ProcessEventAsync(eventWrapper, stoppingToken);
 
                _kafkaConsumer.Commit(consumeResult);
 
@@ -86,76 +90,39 @@ public class SagaOrchestrationService : BackgroundService
                _logger.LogError(ex, "Error processing message");
                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
            }
+           finally
+           {
 
-           _kafkaConsumer.Close();
-           _logger.LogInformation("SagaOrchestrationService stopped");
+               _kafkaConsumer.Close();
+               _logger.LogInformation("SagaOrchestrationService stopped");
+           }
        }
     }
 
-    private async Task HandleOrderCreatedEventAsync(
-        OrderCreatedEventDto eventDto,
+    private async Task ProcessEventAsync(
+        EventWrapper eventWrapper,
         CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var orderSaga = scope.ServiceProvider.GetRequiredService<IOrderSaga>();
-        var sagaRepository = scope.ServiceProvider.GetRequiredService<ISagaRepository>();
-        
-        _logger.LogInformation("Starting saga for order {OrderId}", eventDto.OrderId);
-        
-        // check if saga already exists (idempotency)
-        var existingSaga = await sagaRepository.GetByOrderIdAsync(eventDto.OrderId, cancellationToken);
 
-        if (existingSaga != null)
+        var handlers = scope.ServiceProvider.GetServices<ISagaEventHandler>();
+
+        var handler = handlers.FirstOrDefault(h => h.EventType == eventWrapper.EventType);
+
+        if (handler == null)
         {
             _logger.LogWarning(
-                "Saga already exists for order {OrderId}. Skipping duplicate execution.",
-                eventDto.OrderId);
-
+                "No saga handler for event type {EventType}. Skipping.",
+                eventWrapper.EventType);
             return;
         }
         
-        // build saga data
-        var sagaData = new OrderSagaData
-        {
-            OrderId = eventDto.OrderId,
-            CustomerId = eventDto.CustomerId,
-            Items = eventDto.Items,
-            TotalAmount = eventDto.TotalAmount,
-            PaymentMethod = eventDto.PaymentMethod ?? "stripe",
-            DeliveryAddress = eventDto.DeliveryAddress
-        };
+        _logger.LogInformation(
+            "Processing {EventType} with {HandlerType}",
+            eventWrapper.EventType,
+            handler.GetType().Name);
 
-        try
-        {
-            var result = await orderSaga.ExecuteAsync(sagaData, cancellationToken);
-
-            if (result.IsSuccess)
-            {
-                _logger.LogInformation(
-                    "Saga completed successfully for order {OrderId}",
-                    eventDto.OrderId
-                );
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "Saga failed for order {OrderId}: {Error}",
-                    eventDto.OrderId,
-                    result.ErrorMessage
-                );
-            }
-        }
-
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Saga execution threw exception for order {OrderId} ",
-                eventDto.OrderId
-            );
-
-            throw;
-        }
+        await handler.HandleAsync(eventWrapper.Payload, cancellationToken);
     }
 
     public override void Dispose()

@@ -27,8 +27,10 @@ public class SagaBaseTests
 
         protected override string SagaType => "TestSaga";
     }
-    public class TestSagaData : SagaData {}
-    public class TestSagaContext : SagaContext {}
+
+    private class TestSagaData : SagaData {}
+
+    private class TestSagaContext : SagaContext {}
 
     [Fact]
     public async Task ExecuteAsync_ShouldRunAllSteps_AndComplete_WhenAllStepsSucceed()
