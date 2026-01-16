@@ -1,10 +1,9 @@
 using Application.DTOs;
 
-namespace Application.Sagas;
+namespace Application.Sagas.OrderSaga;
 
-public sealed class OrderSagaData
+public sealed class OrderSagaData : SagaData
 {
-    public Guid OrderId { get; set; }
     public Guid CustomerId { get; set; }
     public List<OrderItemDto> Items { get; set; } = new();
     public decimal TotalAmount { get; set; }
