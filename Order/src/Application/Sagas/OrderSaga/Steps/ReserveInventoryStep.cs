@@ -76,6 +76,10 @@ public sealed class ReserveInventoryStep(
             logger.LogInformation("Releasing inventory reservation {ReservationId} for order {OrderId}",
                 context.ReservationId,
                 data.CorrelationId);
+
+            await inventoryGateway.ReleaseReservationAsync(context.ReservationId, cancellationToken);
+            
+            logger.LogInformation("Successfully released reservation {ReservationId}", context.ReservationId);
         }
         catch (Exception ex)
         {
