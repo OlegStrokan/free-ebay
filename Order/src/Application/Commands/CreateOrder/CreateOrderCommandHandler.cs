@@ -51,7 +51,7 @@ public class CreateOrderCommandHandler
 
             try
             {
-                await orderRepository.SaveAsync(order, cancellationToken);
+                await orderRepository.AddAsync(order, cancellationToken);
 
                 foreach (var domainEvent in order.UncommitedEvents)
                 {
@@ -69,6 +69,7 @@ public class CreateOrderCommandHandler
                     order.Id.Value
                 );
 
+                await unitOfWork.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
                 order.MarkEventsAsCommited();

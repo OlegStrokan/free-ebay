@@ -34,7 +34,7 @@ public class CreateOrderCommandHandlerTests
         
         Assert.True(result.IsSuccess);
 
-        await _orderRepository.Received(1).SaveAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>());
+        await _orderRepository.Received(1).AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>());
         
         await _outboxRepository.Received(1).AddAsync(
             Arg.Any<Guid>(),
@@ -42,6 +42,8 @@ public class CreateOrderCommandHandlerTests
             Arg.Any<string>(),
             Arg.Any<DateTime>(),
             Arg.Any<CancellationToken>());
+
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
 
         await _transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
@@ -52,7 +54,7 @@ public class CreateOrderCommandHandlerTests
         var handler = new CreateOrderCommandHandler(_orderRepository, _outboxRepository, _unitOfWork, _logger);
         var command = CreateValidCommand();
 
-        _orderRepository.SaveAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>())
+        _orderRepository.AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("Database crash"));
 
         var result = await handler.Handle(command, CancellationToken.None);
