@@ -1,0 +1,105 @@
+sequenceDiagram
+    participant Client
+    participant gRPC as gRPC Service
+    participant Handler as CreateOrderHandler
+    participant DB as Database
+    participant Outbox as OutboxProcessor<br/>(Background)
+    participant Kafka
+    participant SagaConsumer as SagaOrchestrator<br/>(Kafka Consumer)
+    participant Saga as OrderSaga
+    participant Steps as Saga Steps
+    participant External as External Services<br/>(Payment, Inventory, etc)
+
+    Note over Client,External: PHASE 1: Order Creation (Transactional Outbox)
+    
+    Client->>gRPC: CreateOrder Request
+    gRPC->>Handler: CreateOrderCommand
+    
+    rect rgb(200, 220, 250)
+        Note over Handler,DB: TRANSACTION 1 (Atomic)
+        Handler->>Handler: Begin Transaction
+        Handler->>DB: Save Order Entity
+        Handler->>DB: Save OrderCreatedEvent → Outbox Table
+        Handler->>Handler: Commit Transaction
+        Note over Handler,DB: ✅ Both saved atomically or both rollback
+    end
+    
+    Handler-->>gRPC: Success (OrderId)
+    gRPC-->>Client: 200 OK
+
+    Note over Outbox,Kafka: PHASE 2: Async Event Publishing
+    
+    loop Every 2 seconds
+        Outbox->>DB: Query Unprocessed Outbox Messages
+        DB-->>Outbox: [OrderCreatedEvent]
+        Outbox->>Kafka: Publish OrderCreatedEvent
+        Kafka-->>Outbox: ACK
+        Outbox->>DB: Mark as Processed
+    end
+
+    Note over SagaConsumer,External: PHASE 3: Saga Orchestration
+
+    SagaConsumer->>Kafka: Poll for events
+    Kafka-->>SagaConsumer: OrderCreatedEvent
+    SagaConsumer->>Saga: Execute OrderSaga
+    
+    Note over Saga,External: STEP 1: Reserve Inventory
+    Saga->>Steps: ReserveInventoryStep.ExecuteAsync()
+    rect rgb(255, 240, 200)
+        Note over Steps,External: No DB transaction needed<br/>(external service only)
+        Steps->>External: POST /inventory/reserve
+        External-->>Steps: reservationId: "INV-123"
+    end
+    Steps-->>Saga: Success {ReservationId}
+    Saga->>DB: Save SagaStepLog (Step 1 Complete)
+
+    Note over Saga,External: STEP 2: Process Payment
+    Saga->>Steps: ProcessPaymentStep.ExecuteAsync()
+    rect rgb(255, 240, 200)
+        Note over Steps,External: No DB transaction needed<br/>(external service only)
+        Steps->>External: POST /payments/charge
+        External-->>Steps: paymentId: "PAY-456"
+    end
+    Steps-->>Saga: Success {PaymentId}
+    Saga->>DB: Save SagaStepLog (Step 2 Complete)
+
+    Note over Saga,DB: STEP 3: Update Order Status (WITH OUTBOX!)
+    Saga->>Steps: UpdateOrderStatusStep.ExecuteAsync()
+    
+    rect rgb(200, 250, 200)
+        Note over Steps,DB: TRANSACTION 2 (Atomic)
+        Steps->>Steps: Begin Transaction
+        Steps->>DB: Update Order.Status = Paid
+        Steps->>DB: Save OrderPaidEvent → Outbox Table
+        Steps->>Steps: Commit Transaction
+        Note over Steps,DB: ✅ Order update + Event saved atomically
+    end
+    
+    Steps-->>Saga: Success
+    Saga->>DB: Save SagaStepLog (Step 3 Complete)
+
+    Note over Saga,External: STEP 4: Create Shipment
+    Saga->>Steps: CreateShipmentStep.ExecuteAsync()
+    Steps->>External: POST /shipping/create
+    External-->>Steps: shipmentId: "SHIP-789"
+    Steps-->>Saga: Success {ShipmentId}
+    Saga->>DB: Save SagaStepLog (Step 4 Complete)
+
+    Note over Saga,External: STEP 5: Send Email
+    Saga->>Steps: SendConfirmationEmailStep.ExecuteAsync()
+    Steps->>External: POST /email/send
+    External-->>Steps: emailId: "EMAIL-999"
+    Steps-->>Saga: Success (non-critical)
+    Saga->>DB: Save SagaStepLog (Step 5 Complete)
+
+    Saga->>DB: Update SagaState.Status = Completed
+    SagaConsumer->>Kafka: Commit Offset
+
+    Note over Outbox,Kafka: PHASE 4: Downstream Event Publishing
+
+    loop Every 2 seconds
+        Outbox->>DB: Query Unprocessed Outbox
+        DB-->>Outbox: [OrderPaidEvent]
+        Outbox->>Kafka: Publish OrderPaidEvent
+        Note over Outbox,Kafka: Other services can now react<br/>(Analytics, Notifications, etc)
+    end

@@ -1,0 +1,65 @@
+sequenceDiagram
+    participant Saga as OrderSaga
+    participant Steps as Saga Steps
+    participant DB as Database
+    participant Inventory as Inventory Service
+    participant Payment as Payment Service
+    participant Shipping as Shipping Service
+
+    Note over Saga,Shipping: Happy Path Execution
+
+    Saga->>Steps: Step 1: ReserveInventory
+    Steps->>Inventory: Reserve Items
+    Inventory-->>Steps: ✅ ReservationId: "INV-123"
+    Steps->>DB: Save SagaStepLog (Step 1: Success)
+
+    Saga->>Steps: Step 2: ProcessPayment
+    Steps->>Payment: Charge Customer
+    Payment-->>Steps: ✅ PaymentId: "PAY-456"
+    Steps->>DB: Save SagaStepLog (Step 2: Success)
+
+    Saga->>Steps: Step 3: UpdateOrderStatus
+    rect rgb(200, 250, 200)
+        Note over Steps,DB: Transaction: Order + Outbox
+        Steps->>DB: Update Order.Status = Paid
+        Steps->>DB: Save OrderPaidEvent to Outbox
+        Steps->>DB: Commit
+    end
+    Steps->>DB: Save SagaStepLog (Step 3: Success)
+
+    Saga->>Steps: Step 4: CreateShipment
+    Steps->>Shipping: Create Shipment
+    Shipping-->>Steps: ❌ ERROR: Invalid Address
+    
+    rect rgb(255, 200, 200)
+        Note over Saga,Shipping: FAILURE DETECTED - START COMPENSATION
+        
+        Steps->>DB: Save SagaStepLog (Step 4: Failed)
+        Saga->>DB: Update SagaState.Status = Compensating
+
+        Note over Saga,Shipping: Compensate in REVERSE order
+
+        Saga->>Steps: Step 3: CompensateAsync()
+        rect rgb(250, 220, 200)
+            Note over Steps,DB: Transaction: Cancel Order + Outbox
+            Steps->>DB: Update Order.Status = Cancelled
+            Steps->>DB: Save OrderCancelledEvent to Outbox
+            Steps->>DB: Commit
+        end
+        Steps-->>Saga: ✅ Compensated
+
+        Saga->>Steps: Step 2: CompensateAsync()
+        Steps->>Payment: Refund Payment "PAY-456"
+        Payment-->>Steps: ✅ Refund Successful
+        Steps-->>Saga: ✅ Compensated
+
+        Saga->>Steps: Step 1: CompensateAsync()
+        Steps->>Inventory: Release Reservation "INV-123"
+        Inventory-->>Steps: ✅ Released
+        Steps-->>Saga: ✅ Compensated
+
+        Saga->>DB: Update SagaState.Status = Failed
+        Saga->>DB: Save Final SagaStepLog
+    end
+
+    Note over Saga,DB: System Consistency Restored ✅<br/>Order: Cancelled<br/>Payment: Refunded<br/>Inventory: Released<br/>Events: Published via Outbox
