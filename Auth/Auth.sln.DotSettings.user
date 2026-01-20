@@ -1,0 +1,19 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AEntityTypeBuilder_00601_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FDecompilerCache_003Fdecompiler_003F7251332172874514a20c63ec4b4c71aa26ae20_003F04_003Fe551beb9_003FEntityTypeBuilder_00601_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AIEntityTypeConfiguration_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FSourcesCache_003F868844f68a5d8246b18953a21c5955e2dbdf23e25646411e16b1c18abf417b_003FIEntityTypeConfiguration_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003ANotImplementedException_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FSourcesCache_003Fdf03dc0c1b985a7451ab69751bd9c72693874f9ba5fbe53b317925b5de21b9_003FNotImplementedException_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AString_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FSourcesCache_003Fb90d6b47d6330753e855af18818b97d4207f32c6ee4b793faffc029f069f4_003FString_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003ATestInvoker_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FSourcesCache_003Fc3ec25c53b94f51fa21da479c513e551efee2b5ae49a79934686d2bb714d46_003FTestInvoker_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=ffdcd752_002Da9ed_002D4c53_002D97c1_002Db42623b2dc39/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from Solution" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;Not&gt;
+    &lt;TestAncestor&gt;
+      &lt;TestId&gt;xUnit::DFE90030-C6A5-43AD-8CD6-3CF9BD880E5E::net8.0::Infrastructure.Tests.UserGatewayTests&lt;/TestId&gt;
+    &lt;/TestAncestor&gt;
+  &lt;/Not&gt;
+&lt;/SessionState&gt;</s:String>
+	
+	
+	
+	
+	
+	</wpf:ResourceDictionary>

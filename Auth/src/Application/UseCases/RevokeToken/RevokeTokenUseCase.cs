@@ -2,7 +2,7 @@ using Domain.Repositories;
 
 namespace Application.UseCases.RevokeToken;
 
-public class RevokeTokenUseCase(IRefreshTokenRepository refreshTokenRepository)
+public class RevokeTokenUseCase(IRefreshTokenRepository refreshTokenRepository) : IRevokeTokenUseCase
 {
     public async Task<RevokeTokenResponse> ExecuteAsync(RevokeTokenCommand command)
     {

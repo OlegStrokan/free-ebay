@@ -7,8 +7,8 @@ public interface IJwtTokenValidator
 
 public class TokenValidationResult
 {
-    public  bool IsValid { get; set; }
-    public string UserId { get; set; }
-    public string Email { get; set; }
-    public string Message { get; set; }
+    public  required bool IsValid { get; init; }
+    public string? UserId { get; init; }
+    public string? Email { get; set; }
+    public string? Message { get; set; }
 }
