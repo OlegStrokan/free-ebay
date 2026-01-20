@@ -1,0 +1,23 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AAppContext_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FDecompilerCache_003Fdecompiler_003Fde560a0da9244af98afcce3d570112bbd83800_003Fcb_003F85b04b30_003FAppContext_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003ADbContext_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FSourcesCache_003F3bd4df5aff92cabbc4d630be64227073db1b8539b3a1e47786b4b189d7cdb7_003FDbContext_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AFactAttribute_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FSourcesCache_003Fbd8123923be4696da2ece667ec8846b6eadb110f5dd84e5438fdc0a3195526_003FFactAttribute_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AILGenerator_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FDecompilerCache_003Fdecompiler_003F0bb16b6f09d3481c905f37148314856a5108_003Fbb_003F05a751b3_003FILGenerator_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003ATask_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FSourcesCache_003F35f3a54f5acb408a3e219b2de039f1a39557b7e4515f11238cba07b60c0ce_003FTask_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AUlid_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2025_002E3_003Fresharper_002Dhost_003FDecompilerCache_003Fdecompiler_003F7f7698c7f44b425984f5680f2ced829d5400_003F37_003Ffcdee2a7_003FUlid_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/Environment/AssemblyExplorer/XmlDocument/@EntryValue">&lt;AssemblyExplorer&gt;
+  &lt;Assembly Path="/Users/stroka01/.nuget/packages/microsoft.netcore.app.ref/8.0.22/ref/net8.0/Microsoft.VisualBasic.dll" /&gt;
+&lt;/AssemblyExplorer&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=fead39e6_002Daaa9_002D47a1_002D8370_002D188f9580bf6e/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="GetUserByIdUseCaseTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;xUnit::E13FA683-272A-4237-ADE8-86F66BF7ADBE::net8.0::Application.Tests.GetUserByIdUseCaseTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::E13FA683-272A-4237-ADE8-86F66BF7ADBE::net8.0::Application.Tests.UpdateUserUseCaseTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::E13FA683-272A-4237-ADE8-86F66BF7ADBE::net8.0::Application.Tests.DeleteUserUseCaseTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::300220E8-2A41-412C-9FC3-11AB5A907D68::net8.0::Api.Tests.CreateUser&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::300220E8-2A41-412C-9FC3-11AB5A907D68::net8.0::Api.Tests.UpdateUserGrpcTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::300220E8-2A41-412C-9FC3-11AB5A907D68::net8.0::Api.Tests.GetUserByIdGrpcTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::300220E8-2A41-412C-9FC3-11AB5A907D68::net8.0::Api.Tests.DeleteUserGrpcTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::300220E8-2A41-412C-9FC3-11AB5A907D68::net8.0::Api.Tests.UserMapperTests&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String>
+	</wpf:ResourceDictionary>

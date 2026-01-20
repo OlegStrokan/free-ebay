@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protos.Role";
+
+
+message RoleProto {
+    string id = 1;
+    string name = 2;
+}
