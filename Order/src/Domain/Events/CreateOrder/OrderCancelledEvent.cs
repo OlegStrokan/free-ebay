@@ -1,7 +1,7 @@
 using Domain.Common;
 using Domain.ValueObjects;
 
-namespace Domain.Events;
+namespace Domain.Events.CreateOrder;
 
 public sealed record OrderCancelledEvent(
     OrderId OrderId,

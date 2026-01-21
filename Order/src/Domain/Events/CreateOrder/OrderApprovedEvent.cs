@@ -1,16 +1,12 @@
 using Domain.Common;
-using Domain.Entities;
 using Domain.ValueObjects;
 
-namespace Domain.Events;
+namespace Domain.Events.CreateOrder;
 
-public sealed record OrderCreatedEvent(
+public sealed record OrderApprovedEvent(
     OrderId OrderId,
     CustomerId CustomerId,
-    Money TotalPrice,
-    Address DeliveryAddress,
-    List<OrderItem> Items,
-    DateTime CreatedAt) : IDomainEvent
+    DateTime ApprovedAt) : IDomainEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
