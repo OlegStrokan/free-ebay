@@ -1,3 +1,4 @@
+using Application.Common.Attributes;
 using Application.DTOs;
 
 namespace Application.Gateways;
@@ -5,6 +6,7 @@ namespace Application.Gateways;
 // @todo: create document with xiaoping express public api
 public interface IShippingGateway
 {
+    [Retry(maxRetries: 5, delayMilliseconds: 1000, exponentialBackoff: true)]
     Task<string> CreateShipmentAsync(
         Guid orderId,
         AddressDto deliveryAddress,
@@ -12,6 +14,7 @@ public interface IShippingGateway
         CancellationToken cancellationToken
         );
 
+    [Retry(maxRetries:3, delayMilliseconds: 500)]
     Task CancelShipmentAsync(
         string shipmentId,
         string reason,
