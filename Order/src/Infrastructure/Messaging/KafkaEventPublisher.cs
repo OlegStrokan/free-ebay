@@ -3,7 +3,7 @@ using Application.DTOs;
 using Application.Interfaces;
 using Confluent.Kafka;
 using Domain.Common;
-using Domain.Events;
+using Domain.Events.CreateOrder;
 
 namespace Infrastructure.Messaging;
 
@@ -28,6 +28,13 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
 
         _producer = new ProducerBuilder<string, string>(config).Build();
     }
+
+    public KafkaEventPublisher(IProducer<string, string> producer, ILogger<KafkaEventPublisher> logger)
+    {
+        _producer = producer;
+        _logger = logger;
+    }
+    
 
     public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken)
         where TEvent : IDomainEvent

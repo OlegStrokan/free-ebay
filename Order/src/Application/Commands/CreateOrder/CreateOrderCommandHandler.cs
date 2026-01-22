@@ -5,6 +5,7 @@ using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
 using Domain.Events;
+using Domain.Events.CreateOrder;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using MediatR;

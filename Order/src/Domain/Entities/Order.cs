@@ -1,5 +1,7 @@
+using System.Diagnostics.Tracing;
 using Domain.Common;
-using Domain.Events;
+using Domain.Events.CreateOrder;
+using Domain.Events.OrderReturn;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
@@ -17,13 +19,19 @@ public sealed class Order : AggregateRoot<OrderId>
     private DateTime? _updatedAt;
     private List<string> _failedMessages = new List<string>();
 
+    private DateTime? _returnRequestedAt;
+    private DateTime? _returnReceivedAt;
+    private string? _returnReason;
+    private List<OrderItem> _returnedItems = new();
+
     public CustomerId CustomerId => _customerId;
     public OrderStatus Status => _status;
     public Money TotalPrice => _totalPrice;
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
     public IReadOnlyList<string> FailedMessage => _failedMessages.AsReadOnly();
-
-
+    public IReadOnlyList<OrderItem> ReturnedItems => _returnedItems.AsReadOnly();
+    public DateTime? ReturnRequestedAt => _returnRequestedAt;
+    public string? ReturnReason => _returnReason;
 
     public int Version { get; private set; }
 
@@ -32,9 +40,7 @@ public sealed class Order : AggregateRoot<OrderId>
     public IReadOnlyList<IDomainEvent> UncommitedEvents => _uncommitedEvents.AsReadOnly();
 
 
-    private Order()
-    {
-    }
+    private Order() { }
 
     public static Order Create(
         CustomerId customerId,
@@ -123,6 +129,76 @@ public sealed class Order : AggregateRoot<OrderId>
         RaiseEvent(evt);
     }
 
+    public void RequestReturn(string reason, List<OrderItem> itemsToReturn)
+    {
+        if (_status != OrderStatus.Completed)
+            throw new OrderDomainException(
+                $"Cannot request return for order in {_status} status. Order must be Completed.");
+
+        if (itemsToReturn.Count == 0)
+            throw new OrderDomainException("Must specify at least one item to return");
+
+        // validate all items belong to this order
+        foreach (var item in itemsToReturn.Where(item => _items.All(i => i.ProductId != item.ProductId)))
+        {
+            throw new OrderDomainException($"Product {item.ProductId.Value} is not part of this order");
+        }
+
+        var refundAmount = CalculateTotalPrice(itemsToReturn);
+
+        var evt = new OrderReturnRequestedEvent(
+            Id,
+            _customerId,
+            reason,
+            itemsToReturn,
+            refundAmount,
+            DateTime.UtcNow);
+        
+        RaiseEvent(evt);
+    }
+
+    public void ConfirmReturnReceived()
+    {
+        if (_status != OrderStatus.ReturnReceived)
+            throw new OrderDomainException($"Cannot confirm return for order in {_status} status");
+
+        var evt = new OrderReturnReceivedEvent(
+            Id,
+            _customerId,
+            DateTime.UtcNow);
+
+        RaiseEvent(evt);
+    }
+
+    public void ProcessRefund(string refundId, Money refundAmount)
+    {
+        if (_status != OrderStatus.ReturnRequested)
+            throw new OrderDomainException($"Cannot process refund for order in {_status} status");
+
+        var evt = new OrderRefundedEvent(
+            Id,
+            _customerId,
+            refundId,
+            refundAmount,
+            DateTime.UtcNow
+        );
+        
+        RaiseEvent(evt);
+    }
+
+    public void CompleteReturn()
+    {
+        if (_status != OrderStatus.Refunded)
+            throw new OrderDomainException($"Cannot complete return for order in {_status} status");
+
+        var evt = new OrderReturnCompletedEvent(
+            Id,
+            _customerId,
+            DateTime.UtcNow
+        );
+        
+        RaiseEvent(evt);
+    }
 
 
 // event application
@@ -170,6 +246,34 @@ public sealed class Order : AggregateRoot<OrderId>
         _status = OrderStatus.Cancelled;
         _updatedAt = evt.CancelledAt;
     }
+
+    private void Apply(OrderReturnRequestedEvent evt)
+    {
+        _status = OrderStatus.ReturnRequested;
+        _returnRequestedAt = evt.RequestedAt;
+        _returnReason = evt.Reason;
+        _returnedItems = evt.ItemToReturn.ToList();
+        _updatedAt = evt.RequestedAt;
+    }
+
+    private void Apply(OrderReturnReceivedEvent evt)
+    {
+        _status = OrderStatus.ReturnReceived;
+        _returnReceivedAt = evt.ReceivedAt;
+        _updatedAt = evt.ReceivedAt;
+    }
+
+    private void Apply(OrderRefundedEvent evt)
+    {
+        _status = OrderStatus.Refunded;
+        _updatedAt = evt.RefundedAt;
+    }
+
+    private void Apply(OrderReturnCompletedEvent evt)
+    {
+        _status = OrderStatus.Returned;
+        _updatedAt = evt.CompetedAt;
+    }
     
     // event sourcing infrastructure
 
@@ -177,9 +281,8 @@ public sealed class Order : AggregateRoot<OrderId>
     {
         ApplyEvent(evt);
         _uncommitedEvents.Add(evt);
-       
     }
-
+    
     private void ApplyEvent(IDomainEvent evt)
     {
         switch (evt)
@@ -199,14 +302,24 @@ public sealed class Order : AggregateRoot<OrderId>
             case OrderCancelledEvent e:
                 Apply(e);
                 break;
+            case OrderReturnRequestedEvent e:
+                Apply(e);
+                break;
+            case OrderReturnReceivedEvent e:
+                Apply(e);
+                break;
+            case OrderRefundedEvent e:
+                Apply(e);
+                break;
+            case OrderReturnCompletedEvent e:
+                Apply(e);
+                break;
+
             default:
                 throw new InvalidOperationException($"Unknown event type {evt.GetType().Name}");
         }
         
         Version++;
-
-
-
     }
 
     // reconstruction
