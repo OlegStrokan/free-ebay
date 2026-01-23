@@ -20,4 +20,19 @@ public interface IShippingGateway
         string reason,
         CancellationToken cancellationToken
     );
+
+    Task<string> CreateReturnShipmentAsync(
+        Guid orderId,
+        Guid customerId,
+        List<OrderItemDto> items,
+        CancellationToken cancellationToken);
+
+    Task CancelReturnShipmentAsync(
+        string returnShipmentId,
+        string reason,
+        CancellationToken cancellationToken);
+
+    Task<ReturnShipmentStatusDto> GetReturnShipmentStatusAsync(
+        string returnShipmentId,
+        CancellationToken cancellationToken);
 }

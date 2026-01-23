@@ -88,6 +88,26 @@ public class ReserveInventoryStepTests
             Arg.Any<CancellationToken>());
     }
     
+    [Fact]
+    public async Task CompensateAsync_ShouldCatchException_WhenGatewayFails()
+    {
+        var data = CreateSampleData();
+        var context = new OrderSagaContext { ReservationId = "PAYMENT_123" };
+            
+        _inventoryGateway.ReserveAsync(Arg.Any<Guid>(),
+                Arg.Any<List<OrderItemDto>>(), Arg.Any<CancellationToken>())
+            .Throws(new Exception("Payment service is down"));
+
+        var exception = await Record.ExceptionAsync(() =>
+            _step.CompensateAsync(data, context, CancellationToken.None));
+        
+        Assert.Null(exception);
+
+        await _inventoryGateway.Received(1).ReleaseReservationAsync(
+            Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    
     
     private OrderSagaData CreateSampleData()
     {

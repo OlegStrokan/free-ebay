@@ -159,7 +159,7 @@ public sealed class Order : AggregateRoot<OrderId>
 
     public void ConfirmReturnReceived()
     {
-        if (_status != OrderStatus.ReturnReceived)
+        if (_status != OrderStatus.ReturnRequested)
             throw new OrderDomainException($"Cannot confirm return for order in {_status} status");
 
         var evt = new OrderReturnReceivedEvent(
@@ -172,7 +172,7 @@ public sealed class Order : AggregateRoot<OrderId>
 
     public void ProcessRefund(string refundId, Money refundAmount)
     {
-        if (_status != OrderStatus.ReturnRequested)
+        if (_status != OrderStatus.ReturnReceived)
             throw new OrderDomainException($"Cannot process refund for order in {_status} status");
 
         var evt = new OrderRefundedEvent(
