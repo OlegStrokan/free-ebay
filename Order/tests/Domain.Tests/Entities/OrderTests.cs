@@ -1,6 +1,8 @@
 using Domain.Common;
 using Domain.Entities;
 using Domain.Events;
+using Domain.Events.CreateOrder;
+using Domain.Events.OrderReturn;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
@@ -17,6 +19,16 @@ public class OrderTests
     private List<OrderItem> CreateDefaultItems()
     {
         return new List<OrderItem>() { OrderItem.Create(_productId, 2, _price) };
+    }
+
+    private Order CreateCompleteOrder()
+    {
+        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        order.Pay();
+        order.Approve();
+        order.Complete();
+        order.MarkEventsAsCommited(); // clear history
+        return order;
     }
     
     [Fact]
@@ -150,7 +162,112 @@ public class OrderTests
 
         
     }
+    
+    // return /refund tests
 
+    [Fact]
+    public void RequestReturn_WhenCompleted_ShouldTransitionToReturnRequested()
+    {
+        var order = CreateCompleteOrder();
+        var reason = "Damaged Item";
+        var itemsToReturn = CreateDefaultItems();
+        
+        order.RequestReturn(reason, itemsToReturn);
+        
+        Assert.Equal(OrderStatus.ReturnRequested, order.Status);
+        Assert.Equal(reason, order.ReturnReason);
+        Assert.Equal(itemsToReturn.Count, order.ReturnedItems.Count);
+
+        var evt = Assert.Single(order.UncommitedEvents) as OrderReturnRequestedEvent;
+        Assert.NotNull(evt);
+        Assert.Equal(Money.Create(200, "USD"), evt.RefundAmount);
+    }
+
+    [Fact]
+    public void RequestReturn_WhenNotCompleted_ShouldThrowException()
+    {
+        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        order.Pay();
+
+        var ex = Assert.Throws<OrderDomainException>(() =>
+            order.RequestReturn("Reason", CreateDefaultItems()));
+
+        Assert.Contains("must be Completed", ex.Message);
+    }
+
+    [Fact]
+    public void RequestReturn_WhenItemsEmpty_ShouldThrowException()
+    {
+        var order = CreateCompleteOrder();
+
+        var ex = Assert.Throws<OrderDomainException>(() =>
+            order.RequestReturn("Reason", new List<OrderItem>()));
+
+        Assert.Contains("Must specify at least one item", ex.Message);
+    }
+
+    [Fact]
+    public void RequestReturn_WhenItemsDoNotBelongToOrder_ShouldThrowException()
+    {
+        var order = CreateCompleteOrder();
+
+        var foreignItem = OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD"));
+
+        var ex = Assert.Throws<OrderDomainException>(() =>
+            order.RequestReturn("Reason", new List<OrderItem> { foreignItem }));
+
+        Assert.Contains("is not part of this order", ex.Message);
+    }
+
+    [Fact]
+    public void ProcessRefund_ShouldSuccedd_OnlyWhenStatusIsReturnReceived()
+    {
+        var order = CreateCompleteOrder();
+        order.RequestReturn("Reason", CreateDefaultItems());
+        order.ConfirmReturnReceived();
+        order.MarkEventsAsCommited();
+
+        var refundAmount = Money.Create(200, "USD");
+        order.ProcessRefund("REf-123", refundAmount);
+        
+        Assert.Equal(OrderStatus.Refunded, order.Status);
+        var evt = Assert.IsType<OrderRefundedEvent>(order.UncommitedEvents.Last());
+        Assert.Equal(refundAmount, evt.RefundAmount);
+    }
+
+    [Fact]
+    public void ProcessRefund_ShouldThrowException_WhenItemsNotYetReceived()
+    {
+        var order = CreateCompleteOrder();
+        order.RequestReturn("Reason", CreateDefaultItems());
+        
+        // skip confirmReturnReceived()
+
+        var ex = Assert.Throws<OrderDomainException>(() =>
+            order.ProcessRefund("REF-FAIL", Money.Create(200, "USD")));
+
+        Assert.Contains("Cannot process refund for order", ex.Message);
+    }
+    
+    [Fact]
+    public void CompleteReturnReceived_ShouldTransitionToReturnReceived()
+    {
+        var order = CreateCompleteOrder();
+        order.RequestReturn("Reason", CreateDefaultItems());
+        order.ConfirmReturnReceived();
+        order.ProcessRefund("REF-123", Money.Create(200, "USD"));
+        order.MarkEventsAsCommited();
+
+        order.CompleteReturn();
+
+        Assert.Equal(OrderStatus.Returned, order.Status);
+        Assert.IsType<OrderReturnCompletedEvent>(order.UncommitedEvents.Last());
+    }
+
+
+
+    // infra tests
+    
     [Fact]
     public void FromEvents_ShouldRebuildStateExactlyFromHistory()
     {
