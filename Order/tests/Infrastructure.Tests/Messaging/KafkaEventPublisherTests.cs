@@ -3,6 +3,7 @@ using Application.DTOs;
 using Confluent.Kafka;
 using Domain.Entities;
 using Domain.Events;
+using Domain.Events.CreateOrder;
 using Domain.ValueObjects;
 using Infrastructure.Messaging;
 using Microsoft.Extensions.Logging;

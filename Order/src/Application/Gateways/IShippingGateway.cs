@@ -21,6 +21,13 @@ public interface IShippingGateway
         CancellationToken cancellationToken
     );
 
+    Task RegisterWebhookAsync(
+        string shipmentId,
+        string callbackUrl,
+        string[] events,
+        CancellationToken cancellationToken
+        );
+    
     Task<string> CreateReturnShipmentAsync(
         Guid orderId,
         Guid customerId,

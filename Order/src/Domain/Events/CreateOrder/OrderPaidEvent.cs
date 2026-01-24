@@ -6,6 +6,7 @@ namespace Domain.Events.CreateOrder;
 public sealed record OrderPaidEvent(
     OrderId OrderId,
     CustomerId CustomerId,
+    PaymentId PaymentId,
     Money Amount,
     DateTime PaidAt) : IDomainEvent
 {

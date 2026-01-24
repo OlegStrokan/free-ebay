@@ -15,7 +15,7 @@ public interface IPaymentGateway
         );
     
     [Retry(maxRetries:3, delayMilliseconds: 500)]
-    Task RefundAsync(
+    Task<string> RefundAsync(
         string paymentId, 
         decimal amount,
         string reason,

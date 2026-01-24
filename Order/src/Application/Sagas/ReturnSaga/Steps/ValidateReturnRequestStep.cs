@@ -32,13 +32,11 @@ public sealed class ValidateReturnRequestStep(
                 data.CorrelationId);
 
             var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId));
+                OrderId.From(data.CorrelationId), cancellationToken);
 
             if (order == null)
                 return StepResult.Failure($"Order {data.CorrelationId} not found");
-
-            var returnWindow = TimeSpan.FromDays(30);
-
+            
             var itemsToReturn = data.ReturnedItems.Select(dto =>
                 OrderItem.Create(
                     ProductId.From(dto.ProductId),

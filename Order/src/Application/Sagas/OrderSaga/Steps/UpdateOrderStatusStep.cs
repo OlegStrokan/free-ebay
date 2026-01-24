@@ -38,7 +38,11 @@ public class UpdateOrderStatusStep(
                 return StepResult.Failure($"Order {data.CorrelationId} not found");
             }
 
-            order.Pay();
+            if (string.IsNullOrEmpty(context.PaymentId))
+                return StepResult.Failure("Payment ID not found in saga context");
+
+            var paymentId = PaymentId.From(new Guid(context.PaymentId));
+            order.Pay(paymentId);
 
             await orderRepository.AddAsync(order, cancellationToken);
             

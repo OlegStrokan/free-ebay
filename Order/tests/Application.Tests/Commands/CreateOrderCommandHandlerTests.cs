@@ -3,6 +3,7 @@ using Application.DTOs;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Events;
+using Domain.Events.CreateOrder;
 using Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
