@@ -111,7 +111,7 @@ public sealed class Order : AggregateRoot<OrderId>
 
     public void Cancel(List<string> failedMessages)
     {
-        if (_status != OrderStatus.Cancelling && _status != OrderStatus.Pending)
+        if (_status != OrderStatus.Pending)
             throw new OrderDomainException($"Cannot cancel order in {_status} status");
 
         var evt = new OrderCancelledEvent(
@@ -120,7 +120,6 @@ public sealed class Order : AggregateRoot<OrderId>
             DateTime.UtcNow
             );
 
-        // @todo: check if works, + write tests
         foreach (var message in failedMessages)
         {
             _failedMessages.Add(message);

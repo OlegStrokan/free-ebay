@@ -145,6 +145,34 @@ public class OrderTests
         var message = Assert.Single(order.FailedMessage);
         Assert.Equal(cancelReason, message);
     }
+
+    [Fact]
+    public void Cancel_WithMultiplyMessages_ShouldStoreAllMessages()
+    {
+        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var reason = new List<string> { "Inventory shortage", "Payment gateway timeout" };
+        
+        order.Cancel(reason);
+        
+        Assert.Equal(2, order.FailedMessage.Count);
+        Assert.Contains("Inventory shortage", order.FailedMessage);
+        Assert.Contains("Payment gateway timeout", order.FailedMessage);
+    }
+    
+
+    [Fact]
+    public void Cancel_ShouldNotModifyFailedMessages_WhenTransitionFails()
+    {
+        var order = CreateCompleteOrder();
+
+        var initialMessageCount = order.FailedMessage.Count;
+
+        Assert.Throws<OrderDomainException>(() =>
+            order.Cancel(new List<string> { "Illegal Cancellation" }));
+        
+        // verify the list was not touched because the exception was thrown before the foreach loop
+        Assert.Equal(initialMessageCount, order.FailedMessage.Count);
+    }
     
     [Fact]
     public void Cancel_WhenAlreadyCancelled_ShouldThrowException()
