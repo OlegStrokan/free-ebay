@@ -140,16 +140,24 @@ public sealed class Order : AggregateRoot<OrderId>
         RaiseEvent(evt);
     }
 
-    public void AssignTracking(string trackingNumber)
+    public void AssignTracking(TrackingId trackingId)
     {
         if (_status != OrderStatus.Paid && _status != OrderStatus.Approved)
             throw new OrderDomainException("Cannot assign tracking before payment");
 
-        if (string.IsNullOrWhiteSpace(trackingNumber))
-            throw new OrderDomainException("Tracking number is required");
+        if (trackingId == null)
+            throw new OrderDomainException("Tracking ID is required");
 
-        _trackingId = TrackingId.From(new Guid(trackingNumber));
+        var evt = new OrderTrackingAssignedEvent(
+            Id,
+            trackingId,
+            DateTime.UtcNow
+        );
+        
+        _trackingId = trackingId;
         _updatedAt = DateTime.UtcNow;
+        
+        RaiseEvent(evt);
     }
 
     public void RequestReturn(string reason, List<OrderItem> itemsToReturn)
@@ -234,9 +242,6 @@ public sealed class Order : AggregateRoot<OrderId>
         
         RaiseEvent(evt);
     }
-    
-    // public void AssignTrackingId() {}
-
 
     // event application
 
@@ -284,6 +289,12 @@ public sealed class Order : AggregateRoot<OrderId>
     {
         _status = OrderStatus.Cancelled;
         _updatedAt = evt.CancelledAt;
+    }
+
+    private void Apply(OrderTrackingAssignedEvent evt)
+    {
+        _trackingId = evt.TrackingId;
+        _updatedAt = evt.AssignedAt;
     }
 
     private void Apply(OrderReturnRequestedEvent evt)
@@ -341,6 +352,9 @@ public sealed class Order : AggregateRoot<OrderId>
             case OrderCancelledEvent e:
                 Apply(e);
                 break;
+            case OrderTrackingAssignedEvent e:
+                Apply(e);
+                break;
             case OrderReturnRequestedEvent e:
                 Apply(e);
                 break;
@@ -394,8 +408,10 @@ public sealed class Order : AggregateRoot<OrderId>
         return TimeSpan.FromDays(14);
         
         // second iteration: business logic - check product type, country regulation
+        // https://gdpr-info.eu/art-3-gdpr/
         
-        // third iteration: customer tier - isPremium, isSubscribed => largerWindow
+        // third iteration: customer tier - isPremium, isSubscribed => largerWindow, free shipping
+        // black list 
     }
     
 

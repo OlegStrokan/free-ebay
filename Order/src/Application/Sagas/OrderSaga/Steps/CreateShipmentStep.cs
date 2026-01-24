@@ -12,8 +12,10 @@ public sealed class CreateShipmentStep(
 {
     public string StepName => "CreateShipment";
     public int Order => 4;
+    
     public async Task<StepResult> ExecuteAsync(OrderSagaData data, OrderSagaContext context, CancellationToken cancellationToken)
     {
+        await using 
         try
         {
             _logger.LogInformation(
@@ -25,8 +27,12 @@ public sealed class CreateShipmentStep(
                 deliveryAddress: data.DeliveryAddress,
                 items: data.Items,
                 cancellationToken);
-
+            
+            
             context.ShipmentId = shipmentId;
+            
+            // todo get tracking number
+            // order.AssignTracking(trackingNumber);
 
             _logger.LogInformation(
                 "Successfully created shipment {ShipmentId} for order {OrderId}",

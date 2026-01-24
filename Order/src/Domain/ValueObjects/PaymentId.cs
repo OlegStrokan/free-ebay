@@ -1,19 +1,18 @@
 namespace Domain.ValueObjects;
 
+
 public sealed record PaymentId
 {
-    public Guid Value { get; init; }
+    public string Value { get; init; }
 
-    private PaymentId(Guid value)
+
+    private PaymentId(string value)
     {
-        if (value == Guid.Empty)
-            throw new ArgumentException("PaymentId cannot be empty", nameof(value));
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("TrackingId cannot be empty", nameof(value));
         Value = value;
     }
 
-    public static PaymentId From(Guid value) => new PaymentId(value);
-    
-    public static PaymentId CreateUnique() => new PaymentId(Guid.NewGuid());
-    
-    public override string ToString() => Value.ToString();
+    public static PaymentId From(string value) => new PaymentId(value);
+    public static implicit operator string(PaymentId p) => p.Value;
 }

@@ -12,6 +12,7 @@ public class OrderTests
 {
 
     private readonly CustomerId _customerId = CustomerId.CreateUnique();
+    private readonly PaymentId _paymentId = PaymentId.From("PaymentId");
     private readonly Address _address = Address.Create("Zizkov 18", "Prague", "Czech Republic", "18000");
     private readonly ProductId _productId = ProductId.CreateUnique();
     private readonly Money _price = Money.Create(100, "USD");
@@ -24,7 +25,7 @@ public class OrderTests
     private Order CreateCompleteOrder()
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
-        order.Pay();
+        order.Pay(_paymentId);
         order.Approve();
         order.Complete();
         order.MarkEventsAsCommited(); // clear history
@@ -59,7 +60,7 @@ public class OrderTests
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
         order.MarkEventsAsCommited();
 
-        order.Pay();
+        order.Pay(_paymentId);
         
         Assert.Equal(OrderStatus.Paid, order.Status);
         Assert.IsType<OrderPaidEvent>(order.UncommitedEvents.Last());
@@ -71,9 +72,9 @@ public class OrderTests
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
 
-        order.Pay();
+        order.Pay(_paymentId);
 
-        var ex = Assert.Throws<OrderDomainException>(() => order.Pay());
+        var ex = Assert.Throws<OrderDomainException>(() => order.Pay(_paymentId));
         Assert.Contains("Cannot pay order in Paid status", ex.Message);
     }
 
@@ -82,7 +83,7 @@ public class OrderTests
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
         
-        order.Pay();
+        order.Pay(_paymentId);
         order.MarkEventsAsCommited();
         
         order.Approve();
@@ -96,7 +97,7 @@ public class OrderTests
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
 
-        order.Pay();
+        order.Pay(_paymentId);
         order.Approve();
 
         var ex = Assert.Throws<OrderDomainException>(() => order.Approve());
@@ -108,7 +109,7 @@ public class OrderTests
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
         
-        order.Pay();
+        order.Pay(_paymentId);
         order.Approve();
         
         order.Complete();
@@ -122,7 +123,7 @@ public class OrderTests
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
 
-        order.Pay();
+        order.Pay(_paymentId);
         order.Approve();
         
         order.Complete();
@@ -215,7 +216,7 @@ public class OrderTests
     public void RequestReturn_WhenNotCompleted_ShouldThrowException()
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
-        order.Pay();
+        order.Pay(_paymentId);
 
         var ex = Assert.Throws<OrderDomainException>(() =>
             order.RequestReturn("Reason", CreateDefaultItems()));
@@ -307,7 +308,7 @@ public class OrderTests
         var history = new List<IDomainEvent>
         {
             new OrderCreatedEvent(orderId, _customerId, totalPrice, _address, items, now),
-            new OrderPaidEvent(orderId, _customerId, totalPrice, now.AddMinutes(5)),
+            new OrderPaidEvent(orderId, _customerId, _paymentId, totalPrice, now.AddMinutes(5)),
             new OrderApprovedEvent(orderId, _customerId, now.AddMinutes(30))
         };
 
@@ -334,7 +335,7 @@ public class OrderTests
     public void Version_ShouldIncrementEveryTimeAnEventIsRaised()
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
-        order.Pay();
+        order.Pay(_paymentId);
         order.Approve();
         
         Assert.Equal(3, order.Version);
