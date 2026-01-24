@@ -16,7 +16,7 @@ public sealed record OrderItemId
         Value = value;
     }
 
-    public static OrderItemId From(long value) => new OrderItemId(value);
+    public static OrderItemId From(long value) => new(value);
     
     public override string ToString() => Value.ToString();
 

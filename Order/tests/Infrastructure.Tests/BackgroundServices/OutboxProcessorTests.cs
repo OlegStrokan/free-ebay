@@ -1,6 +1,7 @@
 using Application.Interfaces;
 using Application.Models;
 using Domain.Events;
+using Domain.Events.CreateOrder;
 using Infrastructure.BackgroundServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

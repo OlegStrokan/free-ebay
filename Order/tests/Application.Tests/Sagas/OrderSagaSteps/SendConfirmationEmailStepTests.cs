@@ -31,7 +31,7 @@ public class SendConfirmationEmailStepTests
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.True((bool?)result.Data?["EmailSend"]);
+        Assert.True((bool?)result.Data?["EmailSent"]);
 
         await _emailGateway.Received(1).SendOrderConfirmationAsync(
             data.CustomerId,

@@ -3,7 +3,7 @@ using Domain.ValueObjects;
 
 namespace Domain.Events.OrderReturn;
 
-public record OrderRefundedEvent(
+public record OrderReturnRefundedEvent(
     OrderId OrderId,
     CustomerId CustomerId,
     string RefundId,

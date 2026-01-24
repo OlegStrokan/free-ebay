@@ -11,7 +11,7 @@ public class OrderItemIdTests
         
         var validId = OrderItemId.From(exampleId);
         
-        Assert.NotEqual(exampleId, validId.Value);
+        Assert.Equal(exampleId, validId.Value);
     }
     
 

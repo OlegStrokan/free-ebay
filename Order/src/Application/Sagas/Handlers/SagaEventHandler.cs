@@ -28,7 +28,16 @@ public abstract class SagaEventHandler<TEvent, TData, TContext> : ISagaEventHand
 
     public async Task HandleAsync(string eventPayload, CancellationToken cancellationToken)
     {
-        var eventDto = JsonSerializer.Deserialize<TEvent>(eventPayload);
+        TEvent? eventDto;
+        try
+        {
+            eventDto = JsonSerializer.Deserialize<TEvent>(eventPayload);
+        }
+        catch (JsonException)
+        {
+            _logger.LogWarning("Failed to deserialize {EventType}. Invalid JSON format.", EventType);
+            return;
+        }
         if (eventDto == null)
         {
             _logger.LogWarning("Failed to deserialize {EventType}", EventType);

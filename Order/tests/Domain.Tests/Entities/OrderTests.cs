@@ -259,7 +259,7 @@ public class OrderTests
         order.ProcessRefund("REf-123", refundAmount);
         
         Assert.Equal(OrderStatus.Refunded, order.Status);
-        var evt = Assert.IsType<OrderRefundedEvent>(order.UncommitedEvents.Last());
+        var evt = Assert.IsType<OrderReturnRefundedEvent>(order.UncommitedEvents.Last());
         Assert.Equal(refundAmount, evt.RefundAmount);
     }
 

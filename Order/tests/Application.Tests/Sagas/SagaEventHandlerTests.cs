@@ -5,15 +5,16 @@ using Application.Sagas.Persistence;
 using Application.Sagas.Steps;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace Application.Tests.Sagas;
 
 public class SagaEventHandlerTests
 {
-    private readonly ISagaRepository _repository;
-    private readonly ISaga<TestSagaData> _saga;
-    private readonly ILogger _logger;
-    private readonly TestSagaHandler _sut; // system under test 
+    public readonly ISagaRepository _repository;
+    public readonly ISaga<TestSagaData> _saga;
+    public readonly ILogger _logger;
+    public readonly TestSagaHandler _sut; // system under test 
 
 
     public SagaEventHandlerTests()
@@ -89,14 +90,12 @@ public class SagaEventHandlerTests
         _repository.GetByCorrelationIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<SagaState?>(null));
 
-        _saga
-            .When(x => x.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>()))
-            .Do(_ => throw expectedException);
+        _saga.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>()).ThrowsAsync(expectedException);
 
-        var action = async () => await _sut.HandleAsync(payload, CancellationToken.None);
+        var exception = await Record.ExceptionAsync(async () => await _sut.HandleAsync(payload, CancellationToken.None));
         
-        // await action.Should().NotThrowAsync();
-
+        Assert.Null(exception);
+        
         _logger.Received().Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
@@ -106,21 +105,21 @@ public class SagaEventHandlerTests
     }
     
 
-    private class TestEvent
+    public class TestEvent
     {
         public Guid Id { get; set; } 
         public string Value { get; set; }
     }
 
-    private class TestSagaData : SagaData
+    public class TestSagaData : SagaData
     {
         public string SomeData { get; set; }
     }
     
-    private class TestSagaContext : SagaContext {}
+    public class TestSagaContext : SagaContext {}
 
 
-    private class TestSagaHandler : SagaEventHandler<TestEvent, TestSagaData, TestSagaContext>
+    public class TestSagaHandler : SagaEventHandler<TestEvent, TestSagaData, TestSagaContext>
     {
         public override string EventType => "TestEvent";
         public override string SagaType => "TestSaga";

@@ -9,17 +9,17 @@ namespace Application.Tests.Sagas;
 
 public class SagaBaseTests
 {
-    private readonly ISagaRepository _repository = Substitute.For<ISagaRepository>();
-    private readonly ILogger _logger = Substitute.For<ILogger>();
+    public readonly ISagaRepository _repository = Substitute.For<ISagaRepository>();
+    public readonly ILogger _logger = Substitute.For<ILogger>();
     
     // mock the steps
-    private readonly ISagaStep<TestSagaData, TestSagaContext> _step1 =
+    public readonly ISagaStep<TestSagaData, TestSagaContext> _step1 =
         Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
 
-    private readonly ISagaStep<TestSagaData, TestSagaContext> _step2 =
+    public readonly ISagaStep<TestSagaData, TestSagaContext> _step2 =
         Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
 
-    private class TestSaga : SagaBase<TestSagaData, TestSagaContext>
+    public class TestSaga : SagaBase<TestSagaData, TestSagaContext>
     {
         public TestSaga(ISagaRepository repo, IEnumerable<ISagaStep<TestSagaData, TestSagaContext>> steps,
             ILogger logger)
@@ -28,9 +28,9 @@ public class SagaBaseTests
         protected override string SagaType => "TestSaga";
     }
 
-    private class TestSagaData : SagaData {}
+    public class TestSagaData : SagaData {}
 
-    private class TestSagaContext : SagaContext {}
+    public class TestSagaContext : SagaContext {}
 
     [Fact]
     public async Task ExecuteAsync_ShouldRunAllSteps_AndComplete_WhenAllStepsSucceed()
