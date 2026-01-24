@@ -13,9 +13,12 @@ public sealed class Order : AggregateRoot<OrderId>
     private Address _deliveryAddress;
     private Money _totalPrice;
     private OrderStatus _status;
-    private TrackingId _trackingId;
+    private TrackingId? _trackingId;
+    private PaymentId? _paymentId;
+    
     private List<OrderItem> _items = new();
     private DateTime _createdAt;
+    private DateTime? _completedAt;
     private DateTime? _updatedAt;
     private List<string> _failedMessages = new List<string>();
 
@@ -25,6 +28,10 @@ public sealed class Order : AggregateRoot<OrderId>
     private List<OrderItem> _returnedItems = new();
 
     public CustomerId CustomerId => _customerId;
+    public TrackingId? TrackingId => _trackingId;
+    public PaymentId? PaymentId => _paymentId;
+    public DateTime? CompletedAt => _completedAt;
+
     public OrderStatus Status => _status;
     public Money TotalPrice => _totalPrice;
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
@@ -52,7 +59,7 @@ public sealed class Order : AggregateRoot<OrderId>
 
         var order = new Order();
         var totalPrice = CalculateTotalPrice(items);
-
+        
         var evt = new OrderCreatedEvent(
             OrderId.CreateUnique(),
             customerId,
@@ -65,14 +72,19 @@ public sealed class Order : AggregateRoot<OrderId>
         return order;
     }
 
-    public void Pay()
+    public void Pay(PaymentId paymentId)
     {
         if (_status != OrderStatus.Pending && _status != OrderStatus.AwaitingPayment)
             throw new OrderDomainException($"Cannot pay order in {_status} status");
 
+        if (paymentId == null)
+            throw new OrderDomainException("Payment ID is required");
+
+        
         var evt = new OrderPaidEvent(
             Id,
             _customerId,
+            paymentId,
             _totalPrice,
             DateTime.UtcNow
         );
@@ -128,6 +140,18 @@ public sealed class Order : AggregateRoot<OrderId>
         RaiseEvent(evt);
     }
 
+    public void AssignTracking(string trackingNumber)
+    {
+        if (_status != OrderStatus.Paid && _status != OrderStatus.Approved)
+            throw new OrderDomainException("Cannot assign tracking before payment");
+
+        if (string.IsNullOrWhiteSpace(trackingNumber))
+            throw new OrderDomainException("Tracking number is required");
+
+        _trackingId = TrackingId.From(new Guid(trackingNumber));
+        _updatedAt = DateTime.UtcNow;
+    }
+
     public void RequestReturn(string reason, List<OrderItem> itemsToReturn)
     {
         if (_status != OrderStatus.Completed)
@@ -137,6 +161,18 @@ public sealed class Order : AggregateRoot<OrderId>
         if (itemsToReturn.Count == 0)
             throw new OrderDomainException("Must specify at least one item to return");
 
+        if (!_completedAt.HasValue)
+            throw new OrderDomainException("Cannot determine order completion date");
+
+        var orderAge = DateTime.Now - _completedAt.Value;
+        var returnWindow = GetReturnWindowForOrder();
+
+        if (orderAge > returnWindow)
+            throw new OrderDomainException(
+                $"Return window expired. Order was completed {orderAge.Days} days ago. "
+                + $"Return window is {returnWindow.Days} days. ");
+        
+        
         // validate all items belong to this order
         foreach (var item in itemsToReturn.Where(item => _items.All(i => i.ProductId != item.ProductId)))
         {
@@ -174,7 +210,7 @@ public sealed class Order : AggregateRoot<OrderId>
         if (_status != OrderStatus.ReturnReceived)
             throw new OrderDomainException($"Cannot process refund for order in {_status} status");
 
-        var evt = new OrderRefundedEvent(
+        var evt = new OrderReturnRefundedEvent(
             Id,
             _customerId,
             refundId,
@@ -198,9 +234,11 @@ public sealed class Order : AggregateRoot<OrderId>
         
         RaiseEvent(evt);
     }
+    
+    // public void AssignTrackingId() {}
 
 
-// event application
+    // event application
 
 
     private void Apply(OrderCreatedEvent evt)
@@ -210,7 +248,7 @@ public sealed class Order : AggregateRoot<OrderId>
         _totalPrice = evt.TotalPrice;
         _deliveryAddress = evt.DeliveryAddress;
         _items = evt.Items.ToList();
-        _trackingId = TrackingId.CreateUnique();
+        _trackingId = null;
         _status = OrderStatus.Pending;
         _createdAt = evt.CreatedAt;
 
@@ -225,6 +263,7 @@ public sealed class Order : AggregateRoot<OrderId>
     {
         _status = OrderStatus.Paid;
         _updatedAt = evt.PaidAt;
+        _paymentId = evt.PaymentId;
     }
 
 
@@ -232,6 +271,7 @@ public sealed class Order : AggregateRoot<OrderId>
     {
         _status = OrderStatus.Completed;
         _updatedAt = evt.CompletedAt;
+        _completedAt = evt.CompletedAt; 
     }
 
     private void Apply(OrderApprovedEvent evt)
@@ -262,7 +302,7 @@ public sealed class Order : AggregateRoot<OrderId>
         _updatedAt = evt.ReceivedAt;
     }
 
-    private void Apply(OrderRefundedEvent evt)
+    private void Apply(OrderReturnRefundedEvent evt)
     {
         _status = OrderStatus.Refunded;
         _updatedAt = evt.RefundedAt;
@@ -307,7 +347,7 @@ public sealed class Order : AggregateRoot<OrderId>
             case OrderReturnReceivedEvent e:
                 Apply(e);
                 break;
-            case OrderRefundedEvent e:
+            case OrderReturnRefundedEvent e:
                 Apply(e);
                 break;
             case OrderReturnCompletedEvent e:
@@ -347,4 +387,16 @@ public sealed class Order : AggregateRoot<OrderId>
             .Select(item => item.GetSubTotal())
             .Aggregate(Money.Default(currency), (acc, price) => acc.Add(price));
     }
+
+    private TimeSpan GetReturnWindowForOrder()
+    {
+        // first iteration
+        return TimeSpan.FromDays(14);
+        
+        // second iteration: business logic - check product type, country regulation
+        
+        // third iteration: customer tier - isPremium, isSubscribed => largerWindow
+    }
+    
+
 }
