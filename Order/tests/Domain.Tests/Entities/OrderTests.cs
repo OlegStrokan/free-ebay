@@ -1,6 +1,5 @@
 using Domain.Common;
 using Domain.Entities;
-using Domain.Events;
 using Domain.Events.CreateOrder;
 using Domain.Events.OrderReturn;
 using Domain.Exceptions;
@@ -13,6 +12,7 @@ public class OrderTests
 
     private readonly CustomerId _customerId = CustomerId.CreateUnique();
     private readonly PaymentId _paymentId = PaymentId.From("PaymentId");
+    private readonly TrackingId _trackingId = TrackingId.From("TrackingId");
     private readonly Address _address = Address.Create("Zizkov 18", "Prague", "Czech Republic", "18000");
     private readonly ProductId _productId = ProductId.CreateUnique();
     private readonly Money _price = Money.Create(100, "USD");
@@ -22,14 +22,21 @@ public class OrderTests
         return new List<OrderItem>() { OrderItem.Create(_productId, 2, _price) };
     }
 
-    private Order CreateCompleteOrder()
+    private Order CreateCompleteOrder(DateTime? completedAt = null)
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
-        order.Pay(_paymentId);
-        order.Approve();
-        order.Complete();
-        order.MarkEventsAsCommited(); // clear history
-        return order;
+        var completionTime = completedAt ?? DateTime.UtcNow;
+        
+        var orderId = OrderId.CreateUnique();
+        var history = new List<IDomainEvent>
+        {
+            new OrderCreatedEvent(orderId, _customerId, _price.Multiply(2), _address, CreateDefaultItems(),
+                completionTime.AddHours(-2)),
+            new OrderPaidEvent(orderId, _customerId, _paymentId, _price.Multiply(2), completionTime.AddHours(-1)),
+            new OrderApprovedEvent(orderId, _customerId, completionTime.AddMinutes(-30)),
+            new OrderCompletedEvent(orderId, _customerId, completionTime)
+        };
+
+        return Order.FromEvents(history);
     }
     
     [Fact]
@@ -63,6 +70,7 @@ public class OrderTests
         order.Pay(_paymentId);
         
         Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Equal(_paymentId, order.PaymentId);
         Assert.IsType<OrderPaidEvent>(order.UncommitedEvents.Last());
         Assert.Equal(2, order.Version);
     }
@@ -78,6 +86,35 @@ public class OrderTests
         Assert.Contains("Cannot pay order in Paid status", ex.Message);
     }
 
+    [Fact]
+    public void Pay_ShouldThrowException_WhenPaymentIdNull()
+    {
+        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        Assert.Throws<OrderDomainException>(() => order.Pay(null!));
+    }
+
+    [Fact]
+    public void AssignTracking_ShouldUpdateStatus_WhenPaid()
+    {
+        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        order.Pay(_paymentId);
+        
+        order.AssignTracking(_trackingId);
+        
+        Assert.Equal(_trackingId, order.TrackingId);
+        var evt = Assert.IsType<OrderTrackingAssignedEvent>(order.UncommitedEvents.Last());
+        Assert.Equal(_trackingId, evt.TrackingId);
+    }
+
+    [Fact]
+    public void AssignTracking_ShouldThrow_WhenPending()
+    {
+        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+
+        var ex = Assert.Throws<OrderDomainException>(() => order.AssignTracking(_trackingId));
+        Assert.Contains("Cannot assign tracking", ex.Message);
+    }
+    
     [Fact]
     public void Approve_WhenPaid_ShouldTransitionToApproved()
     {
@@ -188,14 +225,25 @@ public class OrderTests
         Assert.Equal("First Reason", message); 
     
         Assert.DoesNotContain("Second Reason", order.FailedMessage);
+    }
 
+    [Fact]
+    public void RevertTrackingAssignment_ShouldClearTrackingId()
+    {
+        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        order.Pay(_paymentId);
+        order.AssignTracking(_trackingId);
         
+        order.RevertTrackingAssignment();
+        
+        Assert.Null(order.TrackingId);
+        Assert.IsType<OrderTrackingRemovedEvent>(order.UncommitedEvents.Last());
     }
     
     // return /refund tests
 
     [Fact]
-    public void RequestReturn_WhenCompleted_ShouldTransitionToReturnRequested()
+    public void RequestReturn_ShouldSucceed_WhenWithinReturnWindow()
     {
         var order = CreateCompleteOrder();
         var reason = "Damaged Item";
@@ -249,7 +297,38 @@ public class OrderTests
     }
 
     [Fact]
-    public void ProcessRefund_ShouldSuccedd_OnlyWhenStatusIsReturnReceived()
+    public void RequestReturn_ShouldThrowException_WhenReturnWindowExpired()
+    {
+        var pastDate = DateTime.UtcNow.AddDays(-15);
+        var order = CreateCompleteOrder(pastDate);
+        var itemsToReturn = CreateDefaultItems();
+
+
+        var ex = Assert.Throws<OrderDomainException>(() =>
+            order.RequestReturn("Late return", itemsToReturn));
+
+        Assert.Contains("Return window expired", ex.Message);
+    }
+
+    // this test is obsolete. if order not Complete, error will be thrown before this check
+    // if order is Complete, the exception won't throw because _completedAt won't be null
+    // [Fact]
+    // public void RequestReturn_ShouldThrowException_WhenCompletionDateUnknown()
+    // {
+    //     var order = Order.Create(_customerId, _address, CreateDefaultItems());
+    //     order.Pay(_paymentId);
+    //     order.Approve();
+    //     order.Complete();
+    //     
+    //     var ex = Assert.Throws<OrderDomainException>(() =>
+    //         order.RequestReturn("Reason", CreateDefaultItems()));
+    //     
+    //     Assert.Contains("Cannot determine order completion date", ex.Message);
+    // }
+    
+    
+    [Fact]
+    public void ProcessRefund_ShouldSucceed_OnlyWhenStatusIsReturnReceived()
     {
         var order = CreateCompleteOrder();
         order.RequestReturn("Reason", CreateDefaultItems());
@@ -293,8 +372,6 @@ public class OrderTests
         Assert.IsType<OrderReturnCompletedEvent>(order.UncommitedEvents.Last());
     }
 
-
-
     // infra tests
     
     [Fact]
@@ -309,14 +386,17 @@ public class OrderTests
         {
             new OrderCreatedEvent(orderId, _customerId, totalPrice, _address, items, now),
             new OrderPaidEvent(orderId, _customerId, _paymentId, totalPrice, now.AddMinutes(5)),
-            new OrderApprovedEvent(orderId, _customerId, now.AddMinutes(30))
+            new OrderTrackingAssignedEvent(orderId, _trackingId, now.AddMinutes(10)),
+            new OrderApprovedEvent(orderId, _customerId, now.AddMinutes(30)),
+            new OrderCompletedEvent(orderId, _customerId, now.AddDays(1))
         };
 
         var order = Order.FromEvents(history);
         
         Assert.Equal(orderId, order.Id);
-        Assert.Equal(OrderStatus.Approved, order.Status);
-        Assert.Equal(3, order.Version);
+        Assert.Equal(OrderStatus.Completed, order.Status);
+        Assert.Equal(_trackingId, order.TrackingId);
+        Assert.Equal(5, order.Version);
         Assert.Empty(order.UncommitedEvents); // reconstruction shouldn't create "new" events
     }
 
