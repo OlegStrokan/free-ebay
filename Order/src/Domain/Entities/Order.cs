@@ -160,6 +160,43 @@ public sealed class Order : AggregateRoot<OrderId>
         RaiseEvent(evt);
     }
 
+    public void RevertTrackingAssignment()
+    {
+        if (_trackingId == null)
+        {
+            return;
+        }
+
+        if (_status != OrderStatus.Paid && _status != OrderStatus.Approved)
+            throw new OrderDomainException(
+                $"Cannot revert tracking for order in {_status} status");
+
+        var evt = new OrderTrackingRemovedEvent(
+            Id,
+            _trackingId,
+            DateTime.UtcNow);
+        
+        RaiseEvent(evt);
+    }
+
+    public void RevertReturnReceipt()
+    {
+        if (_status != OrderStatus.ReturnReceived)
+            throw new OrderDomainException(
+                $"Cannot revert return receipt for order in {_status} status. " +
+                $"Expected: ReturnReceived");
+
+        var evt = new OrderReturnReceiptRevertedEvent(
+            Id,
+            _customerId,
+            DateTime.UtcNow);
+        
+        RaiseEvent(evt);
+    }
+    
+    // return order
+    
+
     public void RequestReturn(string reason, List<OrderItem> itemsToReturn)
     {
         if (_status != OrderStatus.Completed)
@@ -297,6 +334,19 @@ public sealed class Order : AggregateRoot<OrderId>
         _updatedAt = evt.AssignedAt;
     }
 
+    private void Apply(OrderTrackingRemovedEvent evt)
+    {
+        _trackingId = null;
+        _updatedAt = evt.RemovedAt;
+    }
+
+    private void Apply(OrderReturnReceiptRevertedEvent evt)
+    {
+        _status = OrderStatus.ReturnRequested;
+        _returnReceivedAt = null;
+        _updatedAt = evt.RevertedAt;
+    }
+
     private void Apply(OrderReturnRequestedEvent evt)
     {
         _status = OrderStatus.ReturnRequested;
@@ -355,10 +405,16 @@ public sealed class Order : AggregateRoot<OrderId>
             case OrderTrackingAssignedEvent e:
                 Apply(e);
                 break;
+            case OrderTrackingRemovedEvent e:
+                Apply(e);
+                break;
             case OrderReturnRequestedEvent e:
                 Apply(e);
                 break;
             case OrderReturnReceivedEvent e:
+                Apply(e);
+                break;
+            case OrderReturnReceiptRevertedEvent e:
                 Apply(e);
                 break;
             case OrderReturnRefundedEvent e:

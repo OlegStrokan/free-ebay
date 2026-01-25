@@ -41,7 +41,7 @@ public class UpdateOrderStatusStep(
             if (string.IsNullOrEmpty(context.PaymentId))
                 return StepResult.Failure("Payment ID not found in saga context");
 
-            var paymentId = PaymentId.From(new Guid(context.PaymentId));
+            var paymentId = PaymentId.From(context.PaymentId);
             order.Pay(paymentId);
 
             await orderRepository.AddAsync(order, cancellationToken);

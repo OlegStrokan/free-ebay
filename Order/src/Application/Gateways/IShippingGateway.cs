@@ -14,7 +14,12 @@ public interface IShippingGateway
         CancellationToken cancellationToken
         );
 
-    [Retry(maxRetries:3, delayMilliseconds: 500)]
+    [Retry(maxRetries: 3, delayMilliseconds: 500)]
+    Task<string> GetTrackingNumberAsync(
+        string shipmentId,
+        CancellationToken cancellationToken);
+    
+    [Retry(maxRetries: 3, delayMilliseconds: 500)]
     Task CancelShipmentAsync(
         string shipmentId,
         string reason,
