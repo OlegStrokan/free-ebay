@@ -31,9 +31,9 @@ public sealed class Order : AggregateRoot<OrderId>
     public TrackingId? TrackingId => _trackingId;
     public PaymentId? PaymentId => _paymentId;
     public DateTime? CompletedAt => _completedAt;
-
     public OrderStatus Status => _status;
     public Money TotalPrice => _totalPrice;
+    
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
     public IReadOnlyList<string> FailedMessage => _failedMessages.AsReadOnly();
     public IReadOnlyList<OrderItem> ReturnedItems => _returnedItems.AsReadOnly();
@@ -206,6 +206,7 @@ public sealed class Order : AggregateRoot<OrderId>
         if (itemsToReturn.Count == 0)
             throw new OrderDomainException("Must specify at least one item to return");
 
+        // wont happens because orderStatus.Completed always have completedAt, but still...
         if (!_completedAt.HasValue)
             throw new OrderDomainException("Cannot determine order completion date");
 
