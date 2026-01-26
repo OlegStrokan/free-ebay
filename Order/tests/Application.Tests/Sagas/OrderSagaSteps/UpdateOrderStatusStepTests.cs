@@ -30,7 +30,7 @@ public class UpdateOrderStatusStepTests
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_WhenOrderIsUpdated()
     {
-        var context = new OrderSagaContext();
+        var context = new OrderSagaContext { PaymentId = "PaymentId" };
         var order = CreateSampleOrder();
         var data = CreateSampleSaga(order.Id.Value);
         
