@@ -1,18 +1,11 @@
-using System.Text.Json;
 using Application.Gateways;
-using Application.Interfaces;
 using Application.Sagas.Steps;
-using Domain.Interfaces;
-using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class AwaitReturnShipmentStep(
     IShippingGateway shippingGateway,
-    IOrderRepository orderRepository,
-    IOutboxRepository outboxRepository,
-    IUnitOfWork unitOfWork,
     ILogger<AwaitReturnShipmentStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -55,9 +48,7 @@ public sealed class AwaitReturnShipmentStep(
 
             var receivedAt = DateTime.UtcNow;
             context.ReturnReceivedAt = receivedAt;
-
-            await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-
+            
             return StepResult.SuccessResult(new Dictionary<string, object>
             {
                 ["ReturnShipmentId"] = returnShipmentId,
