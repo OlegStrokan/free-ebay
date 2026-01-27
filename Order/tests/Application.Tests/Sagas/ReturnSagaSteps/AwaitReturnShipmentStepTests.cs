@@ -2,14 +2,13 @@ using Application.DTOs;
 using Application.Gateways;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
-using Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
 namespace Application.Tests.Sagas.ReturnSagaSteps;
 
-public sealed class AwaitReturnShipmentStepTests
+public class AwaitReturnShipmentStepTests
 {
     private readonly IShippingGateway _shippingGateway = Substitute.For<IShippingGateway>();
     private readonly ILogger<AwaitReturnShipmentStep> _logger = Substitute.For<ILogger<AwaitReturnShipmentStep>>();
@@ -59,7 +58,11 @@ public sealed class AwaitReturnShipmentStepTests
         var context = new ReturnSagaContext();
         var errorMessage = "Shipping API Unavailable";
 
-        _shippingGateway.CreateReturnShipmentAsync(default, default, default!, default)
+        _shippingGateway.CreateReturnShipmentAsync(
+                Arg.Any<Guid>(), 
+                Arg.Any<Guid>(), 
+                Arg.Any<List<OrderItemDto>>(), 
+                Arg.Any<CancellationToken>())
             .Throws(new Exception(errorMessage));
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
@@ -81,11 +84,20 @@ public sealed class AwaitReturnShipmentStepTests
         var data = CreateSampleData();
         var shipmentId = "SHIP-OK";
 
-        _shippingGateway.CreateReturnShipmentAsync(default, default, default!, default)
-            .ReturnsForAnyArgs(shipmentId);
+        _shippingGateway.CreateReturnShipmentAsync(
+                Arg.Any<Guid>(), 
+                Arg.Any<Guid>(), 
+                Arg.Any<List<OrderItemDto>>(), 
+                Arg.Any<CancellationToken>())
+            .Returns(shipmentId);
 
-        _shippingGateway.RegisterWebhookAsync(default, default, default!, default)
-            .Throws(new Exception(exceptionMessage));
+        // FIX: Match any arguments for the webhook call
+        _shippingGateway.RegisterWebhookAsync(
+                Arg.Any<string>(), 
+                Arg.Any<string>(), 
+                Arg.Any<string[]>(), 
+                Arg.Any<CancellationToken>())
+            .ThrowsAsync(new Exception(exceptionMessage));
 
         var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
@@ -132,7 +144,7 @@ public sealed class AwaitReturnShipmentStepTests
         var data = CreateSampleData();
         var context = new ReturnSagaContext { ReturnShipmentId = "ReturnShipmentId" };
 
-        _shippingGateway.CancelReturnShipmentAsync(default!, default, default)
+        _shippingGateway.CancelReturnShipmentAsync(Arg.Any<string>(), Arg.Any<string>(), CancellationToken.None)
             .Throws(new Exception("Gateway Timeout"));
         
         // record.exceptionAsync used to prove that the method does not throw

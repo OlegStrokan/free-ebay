@@ -141,7 +141,7 @@ public class UpdateOrderStatusStepTests
     private static Order CreateSampleOrder()
     {
         var customerId = CustomerId.CreateUnique();
-        var address = Address.Create("Zizkov 18", "Prague", "Czech Republic", "18000");
+        var address = Address.Create("Zizkova 18", "Prague", "Czech Republic", "18000");
 
         var productId = ProductId.CreateUnique();
         var price = Money.Create(100, "USD");
