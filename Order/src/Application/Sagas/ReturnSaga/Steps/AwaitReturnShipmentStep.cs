@@ -44,10 +44,7 @@ public sealed class AwaitReturnShipmentStep(
                 callbackUrl: "should be updated ",
                 events: ["return.delivered"],
                 cancellationToken);
-
-
-            var receivedAt = DateTime.UtcNow;
-            context.ReturnReceivedAt = receivedAt;
+            
             
             return StepResult.SuccessResult(new Dictionary<string, object>
             {
