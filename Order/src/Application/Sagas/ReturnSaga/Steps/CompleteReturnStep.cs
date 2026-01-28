@@ -81,7 +81,7 @@ public sealed class CompleteReturnStep(
                 "Failed to complete return for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure("$Return completion failed: {ex.Message}");
+            return StepResult.Failure($"Return completion failed: {ex.Message}");
         }
     }
 
