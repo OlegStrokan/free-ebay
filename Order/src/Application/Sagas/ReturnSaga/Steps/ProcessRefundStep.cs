@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Xml.Schema;
+using Application.Common.Enums;
 using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas.Steps;
@@ -34,9 +36,28 @@ public class ProcessRefundStep(
                 data.RefundAmount,
                 data.Currency);
 
+            
+            var order = await orderRepository.GetByIdAsync(
+                OrderId.From(data.CorrelationId), cancellationToken);
+
+            if (order == null)
+            {
+                return StepResult.Failure($"Order {data.CorrelationId} not found");
+            }
+            
+            if (order.PaymentId == null)
+                return StepResult.Failure("Order has no payment ID - cannot process refund");
+
+            
+            logger.LogInformation(
+                "Processing refund for order {OrderId}, amount {Amount} {Currency}, original payment {PaymentId}",
+                data.CorrelationId,
+                data.RefundAmount,
+                data.Currency,
+                order.PaymentId);
+            
             var refundId = await paymentGateway.RefundAsync(
-                // @think: in real app, store original payment id - what do you mean by that?
-                paymentId: $"original-payment-{data.CorrelationId}",
+                paymentId: order.PaymentId,
                 amount: data.RefundAmount,
                 reason: $"Return request: {data.ReturnReason}",
                 cancellationToken);
@@ -47,13 +68,6 @@ public class ProcessRefundStep(
                 "Refund processed successfully. Refund ID: {RefundId}",
                 refundId);
 
-            var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId), cancellationToken);
-
-            if (order == null)
-            {
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
-            }
 
             order.ProcessRefund(
                 refundId,
@@ -84,6 +98,7 @@ public class ProcessRefundStep(
             return StepResult.SuccessResult(new Dictionary<string, object>
             {
                 ["RefundId"] = refundId,
+                ["OriginalPaymentId"] = order.PaymentId.ToString(),
                 ["Amount"] = data.RefundAmount,
                 ["Currency"] = data.Currency,
             });
@@ -117,29 +132,74 @@ public class ProcessRefundStep(
 
         try
         {
-            logger.LogWarning(
-                "CRITICAL: Attempting to reverse refund {RefundId} for order {OrderId}",
-                context.RefundId,
-                data.CorrelationId);
-
-            // @think: in real world reversing a refund is complex
-            // we might need to re-charge the customer or mark for manual review
-
-            logger.LogError(
-                "Refund {RefundId} cannot be automatically reversed. " +
-                "MANUAL INTERVENTION REQUIRED - Customer may need to be re-charged.",
+            logger.LogCritical(
+                "CRITICAL: Refund compensation triggered for order {OrderId}, refund {RefundId}. " +
+                "Refund has been issued to customer but return saga failed. " +
+                "Customer has money AND potentially keeping the product. " +
+                "IMMEDIATE ACTION REQUIRED: Review order and determine if re-charge is needed.",
+                data.CorrelationId,
                 context.RefundId);
 
-            // @think: Send alert to operation team
-            // await _alertingService.SendCriticalAlert(...);
+            await SendCriticalAlertAsync(
+                alertType: "RefundCompensationRequired",
+                orderId: data.CorrelationId,
+                refundId: context.RefundId,
+                message: "Refund issued but return saga failed - manual review required",
+                severity: AlertSeverity.Critical,
+                cancellationToken);
+
+            await CreateManualInterventionTicketAsync(
+                orderId: data.CorrelationId,
+                refundId: context.RefundId,
+                issue: "Refund issued but downstream steps failed",
+                suggestedAction: "1. Verify if customer returned items\n" +
+                                 "2. If items not returned, contact customer\n" +
+                                 "3. If customer unresponsive, initiate re-charge or collection",
+                cancellationToken);
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
-                "Failed during refund compensation for {RefundId}. " + 
+                "Failed to send alert during refund compensation for {RefundId}. " +
                 "CRITICAL: Manual review required!",
                 context.RefundId);
         }
+    }
+    
+    // @todo: make separate class with more dynamic behavior
+    private async Task SendCriticalAlertAsync(
+        string alertType,
+        Guid orderId,
+        string refundId,
+        string message,
+        AlertSeverity severity,
+        CancellationToken cancellationToken)
+    {
+        // in MVP integrate with: pagerDuty, email, sms, slack...fucking something
+        
+        logger.LogInformation("Sending {Severity} alert: {AlertType} for order {OrderId}",
+            severity,
+            alertType,
+            orderId);
+
+        await Task.CompletedTask;
+    }
+    
+    // @todo make separate class. Request should be sent on help desk
+    private async Task CreateManualInterventionTicketAsync(
+        Guid orderId,
+        string refundId,
+        string issue,
+        string suggestedAction,
+        CancellationToken cancellationToken)
+    {
+        logger.LogInformation(
+            "Creating manual intervention ticket for order {OrderId}",
+            orderId);
+        
+        // create ticket: jira/internal
+
+        await Task.CompletedTask;
     }
 }
