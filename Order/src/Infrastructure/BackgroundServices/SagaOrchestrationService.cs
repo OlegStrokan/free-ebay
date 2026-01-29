@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.Sagas.Handlers;
+using Application.Sagas.Handlers.SagaCreation;
 using Confluent.Kafka;
 using Infrastructure.Messaging;
 
