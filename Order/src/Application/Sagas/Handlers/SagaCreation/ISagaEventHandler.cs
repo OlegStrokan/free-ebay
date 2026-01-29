@@ -1,4 +1,4 @@
-namespace Application.Sagas.Handlers;
+namespace Application.Sagas.Handlers.SagaCreation;
 
 public interface ISagaEventHandler
 {

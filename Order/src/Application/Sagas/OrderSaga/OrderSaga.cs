@@ -6,10 +6,10 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.OrderSaga;
 
 public sealed class OrderSaga(
-    ISagaRepository repository,
+    ISagaRepository sagaRepository,
     IEnumerable<ISagaStep<OrderSagaData, OrderSagaContext>> steps,
     ILogger<OrderSaga> logger)
-    : SagaBase<OrderSagaData, OrderSagaContext>(repository, steps, logger), IOrderSaga
+    : SagaBase<OrderSagaData, OrderSagaContext>(sagaRepository, steps, logger), IOrderSaga
 {
     protected override string SagaType => "OrderSaga";
 }

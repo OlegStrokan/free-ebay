@@ -17,12 +17,19 @@ public sealed class StepResult
     public bool Success { get; }
     public string? ErrorMessage { get; }
     public Dictionary<string, object>? Data { get; }
+    public Dictionary<string, object> Metadata { get; }
 
-    private StepResult(bool success, string? errorMessage = null, Dictionary<string, object>? data = null)
+    private StepResult(
+        bool success,
+        string? errorMessage = null, 
+        Dictionary<string, object>? data = null,
+        Dictionary<string, object>? metadata = null)
     {
         Success = success;
         ErrorMessage = errorMessage;
         Data = data ?? new Dictionary<string, object>();
+        Metadata = metadata ?? new Dictionary<string, object>();
+
     }
 
     public static StepResult SuccessResult(Dictionary<string, object>? data = null)

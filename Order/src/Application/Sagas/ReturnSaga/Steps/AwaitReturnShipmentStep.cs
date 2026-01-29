@@ -50,6 +50,7 @@ public sealed class AwaitReturnShipmentStep(
             {
                 ["ReturnShipmentId"] = returnShipmentId,
                 ["Status"] = "WaitingForDelivery",
+                ["SagaState"] = "WaitingForEvent",
                 ["Message"] = "Return label created. Waiting for customer to ship package."
             });
         }

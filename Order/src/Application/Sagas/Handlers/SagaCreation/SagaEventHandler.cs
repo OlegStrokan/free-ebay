@@ -2,7 +2,7 @@ using System.Text.Json;
 using Application.Sagas.Persistence;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Sagas.Handlers;
+namespace Application.Sagas.Handlers.SagaCreation;
 
 public abstract class SagaEventHandler<TEvent, TData, TContext> : ISagaEventHandler
      where TData : SagaData

@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.ReturnSaga;
 
 public sealed class ReturnSaga(
-    ISagaRepository repository,
+    ISagaRepository sagaRepository,
     IEnumerable<ISagaStep<ReturnSagaData, ReturnSagaContext>> steps,
     ILogger<ReturnSaga> logger)
-    : SagaBase<ReturnSagaData, ReturnSagaContext>(repository, steps, logger), IReturnSaga
+    : SagaBase<ReturnSagaData, ReturnSagaContext>(sagaRepository, steps, logger), IReturnSaga
 {
     protected override string SagaType => "ReturnSaga";
 }

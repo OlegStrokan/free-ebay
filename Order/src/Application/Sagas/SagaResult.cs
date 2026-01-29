@@ -33,6 +33,7 @@ public enum SagaStatus
 {
     Pending,
     Running,
+    WaitingForEvent,
     Completed,
     Failed,
     Compensating,

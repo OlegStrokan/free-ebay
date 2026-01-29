@@ -26,9 +26,6 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
         Steps = steps.OrderBy(s => s.Order).ToList();
     }
     
-    protected abstract IEnumerable<ISagaStep<TData, TContext>> GetSteps();
-    
-    
     public async Task<SagaResult> ExecuteAsync(TData data, CancellationToken cancellationToken)
     {
         var sagaId = Guid.NewGuid();
@@ -84,12 +81,10 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
                 
                 // @think: should we create saga/sagaStep domain entity with 
                 // additional logic for state changing type shit
+                // UPD: We AGNI, but comment will remain in honor to anti-AI development
 
                 return SagaResult.Success(sagaId);
             }
-
-            
-            // if (sagaState.Status == SagaStatus.WaitingForEvent) {}
             
             if (!stepResult.Success)
             {

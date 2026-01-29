@@ -1,5 +1,6 @@
 using Application.DTOs;
 using Application.Sagas.Handlers;
+using Application.Sagas.Handlers.SagaCreation;
 using Application.Sagas.Persistence;
 using Microsoft.Extensions.Logging;
 
@@ -23,7 +24,6 @@ public class OrderCreatedEventHandler
         return new OrderSagaData
         {
             CorrelationId = eventDto.OrderId,
-            // OrderId = eventDto.OrderId,
             CustomerId = eventDto.CustomerId,
             Items = eventDto.Items,
             TotalAmount = eventDto.TotalAmount,
