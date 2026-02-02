@@ -292,7 +292,7 @@ public sealed class Order : AggregateRoot<OrderId>
     }
 
 
-    private static Money CalculateTotalPrice(List<OrderItem> items)
+    public static Money CalculateTotalPrice(List<OrderItem> items)
     {
         var currency = items[0].PriceAtPurchase.Currency;
         return items

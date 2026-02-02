@@ -7,5 +7,6 @@ namespace Application.Commands.RequestReturn;
 public record RequestReturnCommand(
     Guid OrderId,
     string Reason,
-    List<OrderItemDto> ItemsToReturn
+    List<OrderItemDto> ItemsToReturn,
+    string IdempotencyKey
     ) : IRequest<Result<Guid>>;

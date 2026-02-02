@@ -14,6 +14,8 @@ namespace Application.Commands.RequestReturn;
 
 public class RequestReturnCommandHandler(
     IOrderRepository orderRepository,
+    IReturnRequestRepository returnRequestRepository,
+    IIdempotencyRepository idempotencyRepository,
     IOutboxRepository outboxRepository,
     IUnitOfWork unitOfWork,
     ILogger<RequestReturnCommandHandler> logger
@@ -25,6 +27,22 @@ public class RequestReturnCommandHandler(
     {
         try
         {
+
+            var existingRecord = await idempotencyRepository.GetByKeyAsync(
+                request.IdempotencyKey,
+                cancellationToken);
+
+            if (existingRecord != null)
+            {
+                logger.LogInformation(
+                    "Duplicate return request detected for idempotency key {Key}. " +
+                    "Returning existing order {OrderId}",
+                    request.IdempotencyKey,
+                    existingRecord.ResultId);
+
+                return Result<Guid>.Success(existingRecord.ResultId);
+            }
+            
             logger.LogInformation(
                 "Processing return request for order {OrderId}",
                 request.OrderId);
@@ -49,16 +67,29 @@ public class RequestReturnCommandHandler(
                         Money.Create(dto.Price, dto.Currency)
                     )).ToList();
 
-                order.RequestReturn(request.Reason, itemsToReturn);
+                var refundAmount = Order.CalculateTotalPrice(itemsToReturn);
+
+                var returnWindow = TimeSpan.FromDays(14);
+
+                var returnRequest = ReturnRequest.Create(
+                    OrderId.From(request.OrderId),
+                    order.CustomerId,
+                    request.Reason,
+                    itemsToReturn,
+                    refundAmount,
+                    order.CompletedAt.Value,
+                    order.Items.ToList(),
+                    returnWindow);
+                
+                
 
                 logger.LogInformation(
-                    "Return request created for order {OrderId} with {ItemCount} items",
-                    order.Id.Value,
-                    itemsToReturn.Count);
+                    "ReturnRequest created with ID  {ReturnRequestId} for order {OrderId}",
+                   returnRequest.Id.Value, order.Id.Value);
 
-                await orderRepository.AddAsync(order, cancellationToken);
+                await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
 
-                foreach (var domainEvent in order.UncommitedEvents)
+                foreach (var domainEvent in returnRequest.UncommitedEvents)
                 {
                     await outboxRepository.AddAsync(
                         domainEvent.EventId,
@@ -68,8 +99,14 @@ public class RequestReturnCommandHandler(
                         cancellationToken);
                 }
 
+                await idempotencyRepository.SaveAsync(
+                    request.IdempotencyKey,
+                    order.Id.Value,
+                    DateTime.UtcNow,
+                    cancellationToken);
+
                 logger.LogInformation(
-                    "Saved {EventCount} event(s) to outbox for return request on order {OrderId}",
+                    "Saved {EventCount} events to outbox and idempotency key for return request on order {OrderId}",
                     order.UncommitedEvents.Count,
                     order.Id.Value);
 
@@ -79,7 +116,7 @@ public class RequestReturnCommandHandler(
                 order.MarkEventsAsCommited();
 
                 logger.LogInformation(
-                    "Return request transaction commited for order {OrderId}",
+                    "Return request transaction committed for order {OrderId}",
                     order.Id.Value);
 
                 return Result<Guid>.Success(order.Id.Value);
@@ -93,7 +130,7 @@ public class RequestReturnCommandHandler(
 
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to process for order {OrderId}", request.OrderId);
+            logger.LogError(ex, "Failed to process for return request for order {OrderId}", request.OrderId);
             return Result<Guid>.Failure($"Failed to request return: {ex.Message}");
         }
     }
