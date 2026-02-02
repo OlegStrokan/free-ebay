@@ -17,14 +17,32 @@ public class CreateOrderCommandHandler
     (
         IOrderRepository orderRepository,
         IOutboxRepository outboxRepository,
+        IIdempotencyRepository idempotencyRepository,
         IUnitOfWork unitOfWork,
         ILogger<CreateOrderCommandHandler> logger
         ) : IRequestHandler<CreateOrderCommand, Result<Guid>>
 {
-    public async Task<Result<Guid>> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(
+        CreateOrderCommand request, 
+        CancellationToken cancellationToken)
     {
         try
         {
+            var existingRecord = await idempotencyRepository.GetByKeyAsync(
+                request.IdempotencyKey,
+                cancellationToken);
+
+            if (existingRecord != null)
+            {
+                logger.LogInformation(
+                    "Duplicate request detected for idempotency key {Key}. " +
+                    "Returning existing order {OrderId}",
+                    request.IdempotencyKey,
+                    existingRecord.ResultId);
+
+                return Result<Guid>.Success(existingRecord.ResultId);
+            }
+            
             var customerId = CustomerId.From(request.CustomerId);
             var address = Address.Create(
                 request.DeliveryAddress.Street,
@@ -63,6 +81,12 @@ public class CreateOrderCommandHandler
                         domainEvent.OccurredOn,
                         cancellationToken);
                 }
+
+                await idempotencyRepository.SaveAsync(
+                    request.IdempotencyKey,
+                    order.Id.Value,
+                    DateTime.UtcNow,
+                    cancellationToken);
 
                 logger.LogInformation(
                     "Saved {EventCount} event to outbox for order {OrderId}",
