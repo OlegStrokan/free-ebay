@@ -2,7 +2,7 @@ namespace Application.Sagas.Persistence;
 
 
 // for db
-public sealed class SagaState
+public sealed class SagaState<TContext> where TContext : SagaContext
 {
     public Guid Id { get; set; }
     
@@ -10,7 +10,7 @@ public sealed class SagaState
     public string CurrentStep { get; set; } = string.Empty;
     public SagaStatus Status { get; set; }
     public string SagaType { get; set; } = string.Empty;
-    public string Context { get; set; } = string.Empty;
+    public TContext Context { get; set; } = default!;
     public string Payload { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
