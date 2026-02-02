@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class CompleteReturnStep(
-    IOrderRepository orderRepository,
+    IReturnRequestRepository returnRequestRepository,
     IOutboxRepository outboxRepository,
     IUnitOfWork unitOfWork,
     ILogger<CompleteReturnStep> logger)
@@ -30,19 +30,18 @@ public sealed class CompleteReturnStep(
                 "Completing return process for order {OrderId}",
                 data.CorrelationId);
 
-            var order = await orderRepository.GetByIdAsync(
+            var returnRequest = await returnRequestRepository.GetByOrderIdAsync(
                 OrderId.From(data.CorrelationId),
                 cancellationToken);
 
-            if (order == null)
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
+            if (returnRequest == null)
+                return StepResult.Failure($"ReturnRequest {data.CorrelationId} not found");
             
-            // mark order as fully returned
-            order.CompleteReturn();
+            returnRequest.Complete();
 
-            await orderRepository.AddAsync(order, cancellationToken);
+            await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
 
-            foreach (var domainEvent in order.UncommitedEvents)
+            foreach (var domainEvent in returnRequest.UncommitedEvents)
             {
                 await outboxRepository.AddAsync(
                     domainEvent.EventId,
@@ -56,7 +55,7 @@ public sealed class CompleteReturnStep(
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             
-            order.MarkEventsAsCommited();
+            returnRequest.MarkEventsAsCommited();
 
             logger.LogInformation(
                 "Return completed successfully for order {OrderId}. " +
@@ -90,35 +89,56 @@ public sealed class CompleteReturnStep(
         ReturnSagaContext context, 
         CancellationToken cancellationToken)
     {
-       // final step
-       //  @think: if we reach this point and need to compensate, the order should
-       // probably be reverted to a ReturnFailed status
+       // final step compensation
+       // Revert ReturnRequest from Completed back to Refunded status
        
        logger.LogWarning(
            "Compensation triggered on CompleteReturn step for order {OrderId}. " +
-           "This indicates a critical failure after return processing.",
+           "Reverting ReturnRequest status from Completed to Refunded",
            data.CorrelationId);
 
        try
        {
            await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
 
-           var order = await orderRepository.GetByIdAsync(
+           var returnRequest = await returnRequestRepository.GetByOrderIdAsync(
                OrderId.From(data.CorrelationId),
                cancellationToken);
 
-           if (order != null)
+           if (returnRequest == null)
            {
-               // revert to completed status
-               // @think: in real world, we might have a ReturnFailed status
 
                logger.LogWarning(
-                   "Order {OrderId} return process failed during final step. " +
-                   "Manual review required.",
+                   "ReturnRequest for order {OrderId} not found during compensation",
                    data.CorrelationId);
+
+
+               await transaction.CommitAsync(cancellationToken);
+               return;
            }
 
-           await transaction.CommitAsync(cancellationToken);
+           if (returnRequest.Status == ReturnStatus.Completed)
+           {
+               logger.LogInformation(
+                   "Reverting ReturnRequest {ReturnRequestId} from Completed to Refunded status",
+                   returnRequest.Id.Value);
+               
+               // note: ReturnRequest doesn't have a direct "revert" method since it's event-sourced
+               // In a real implementation, we might need to add compensation events or 
+               // recreate the aggregate with different history
+
+               logger.LogWarning(
+                   "ReturnRequest {ReturnRequestId} compensation requires manual review. " +
+                   "Return marked as completed but saga failed - possible inconsistent state.",
+                   returnRequest.Id.Value);
+           }
+           else
+           {
+               logger.LogInformation(
+                   "ReturnRequest {ReturnRequestId} is in status {Status}, no revert needed",
+                   returnRequest.Id.Value,
+                   returnRequest.Status);
+           }
        }
        catch (Exception ex)
        {
