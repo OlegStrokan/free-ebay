@@ -83,7 +83,7 @@ public sealed class OrderStatus
 
     public override string ToString() => Name;
 
-    public bool CAnAssignTracking() => this == Paid || this == Approved;
+    public bool CanAssignTracking() => this == Paid || this == Approved;
 
     public override bool Equals(object? obj)
     {
