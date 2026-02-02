@@ -1,23 +1,11 @@
 
 namespace Domain.Common;
 
+// For Event Sourcing aggregates, no need for separate domain events collection
+// Events are stored in event store and replayed to rebuild state
 public abstract class AggregateRoot<TId> : Entity<TId>
 {
-    private readonly List<IDomainEvent> _domainEvents = new();
-    
-    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-    
     protected AggregateRoot(TId id ) : base(id) {}
     
     protected AggregateRoot() : base() {}
-
-    protected void AddDomainEvent(IDomainEvent newDomainEvent)
-    {
-        _domainEvents.Add(newDomainEvent);
-    }
-
-    public void ClearDomainEvents()
-    {
-        _domainEvents.Clear();
-    }
 } 
