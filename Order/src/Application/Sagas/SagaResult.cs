@@ -25,6 +25,9 @@ public sealed class SagaResult
     public static SagaResult Failed(Guid sagaId, string errorMessage)
         => new(sagaId, false, SagaStatus.Failed, errorMessage);
     
+    public static SagaResult CriticalFailure(Guid sagaId, string errorMessage)
+        => new(sagaId, false, SagaStatus.FailedToCompensate, errorMessage);
+    
     public static SagaResult Compensated(Guid sagaId)
         => new(sagaId, false, SagaStatus.Compensated);
 }
@@ -36,6 +39,7 @@ public enum SagaStatus
     WaitingForEvent,
     Completed,
     Failed,
+    FailedToCompensate,
     Compensating,
     Compensated
 }

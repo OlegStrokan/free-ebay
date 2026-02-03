@@ -1,6 +1,8 @@
 using System.Text.Json;
+using Application.Interfaces;
 using Application.Sagas.Persistence;
 using Application.Sagas.Steps;
+using Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Sagas;
@@ -11,16 +13,19 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
 {
     private readonly ISagaRepository _sagaRepository;
     private readonly ILogger _logger;
+    private readonly ISagaErrorClassifier _errorClassifier;
     protected readonly IEnumerable<ISagaStep<TData, TContext>> Steps;
     protected abstract string SagaType { get; }
 
     protected SagaBase(
         ISagaRepository sagaRepository,
         IEnumerable<ISagaStep<TData, TContext>> steps,
+        ISagaErrorClassifier errorClassifier,
         ILogger logger)
     {
         _sagaRepository = sagaRepository;
         _logger = logger;
+        _errorClassifier = errorClassifier;
         Steps = steps.OrderBy(s => s.Order).ToList();
     }
 
@@ -198,41 +203,60 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
         TContext context,
         CancellationToken cancellationToken)
     {
-        var stepLog = new SagaStepLog
+        // @think: right now we have boilerplate retries
+        // maybe we can use retry decorator which used by external systems (gateway calls)
+
+        const int maxRetries = 3;
+        int retryCount = 0;
+
+        while (true)
         {
-            Id = Guid.NewGuid(),
-            SagaId = sagaId,
-            StepName = step.StepName,
-            Status = StepStatus.Running,
-            StartedAt = DateTime.UtcNow
-        };
 
-        try
-        {
-            var startTime = DateTime.UtcNow;
-            var result = await step.ExecuteAsync(data, context, cancellationToken);
-            var endTime = DateTime.UtcNow;
+            var stepLog = new SagaStepLog
+            {
+                Id = Guid.NewGuid(),
+                SagaId = sagaId,
+                StepName = step.StepName,
+                Status = StepStatus.Running,
+                StartedAt = DateTime.UtcNow
+            };
 
-            stepLog.CompletedAt = endTime;
-            stepLog.DurationMs = (int)(endTime - startTime).TotalMilliseconds;
-            stepLog.Status = result.Success ? StepStatus.Completed : StepStatus.Failed;
-            stepLog.ErrorMessage = result.ErrorMessage;
+            try
+            {
+                var startTime = DateTime.UtcNow;
+                var result = await step.ExecuteAsync(data, context, cancellationToken);
+                var endTime = DateTime.UtcNow;
 
-            await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
+                stepLog.CompletedAt = endTime;
+                stepLog.DurationMs = (int)(endTime - startTime).TotalMilliseconds;
+                stepLog.Status = result.Success ? StepStatus.Completed : StepStatus.Failed;
+                stepLog.ErrorMessage = result.ErrorMessage;
 
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception in step {StepName} of saga {SagaId}", step.StepName, sagaId);
+                await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
 
-            stepLog.Status = StepStatus.Failed;
-            stepLog.ErrorMessage = ex.Message;
-            stepLog.CompletedAt = DateTime.UtcNow;
+                return result;
+            }
 
-            await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
+            catch (Exception ex) when (_errorClassifier.IsTransient(ex) && retryCount < maxRetries)
+            {
+                retryCount++;
+                _logger.LogWarning(ex, "Transient error in {StepName}. Retry {Count}/{Max}",
+                    step.StepName, retryCount, maxRetries);
 
-            return StepResult.Failure(ex.Message);
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retryCount)), cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception in step {StepName} of saga {SagaId}", step.StepName, sagaId);
+
+                stepLog.Status = StepStatus.Failed;
+                stepLog.ErrorMessage = ex.Message;
+                stepLog.CompletedAt = DateTime.UtcNow;
+
+                await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
+
+                return StepResult.Failure(ex.Message);
+            }
         }
     }
 
@@ -263,17 +287,38 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
             if (!completedSteps.Contains(step.StepName))
                 continue;
 
-            try
-            {
-                await step.CompensateAsync(data, context, cancellationToken);
+            int retryCount = 0;
+            const int maxRetries = 3;
 
-                var stepLog = sagaState.Steps.First(s => s.StepName == step.StepName);
-                stepLog.Status = StepStatus.Compensated;
-                await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
-            }
-            catch (Exception ex)
+            while (true)
             {
-                _logger.LogError(ex, "Failed to compensate step {StepName}", step.StepName);
+                try
+                {
+                    await step.CompensateAsync(data, context, cancellationToken);
+
+                    var stepLog = sagaState.Steps.First(s => s.StepName == step.StepName);
+                    stepLog.Status = StepStatus.Compensated;
+                    await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
+
+                    break;
+                }
+                catch (Exception ex) when (_errorClassifier.IsTransient(ex) && retryCount < maxRetries)
+                {
+                    retryCount++;
+                    _logger.LogWarning(ex, "Compensation transient failure for {StepName}. Retry {Count}/{Max}",
+                        step.StepName, retryCount, maxRetries);
+
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retryCount)), cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogCritical(ex, "FATAL: Compensation failed permanently for {StepName} in saga {SagaId}",
+                        step.StepName, sagaId);
+
+                    sagaState.Status = SagaStatus.FailedToCompensate;
+                    await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+                    throw;
+                }
             }
         }
 
