@@ -18,6 +18,18 @@ public sealed class ReserveInventoryStep(
     {
         try
         {
+            if (!string.IsNullOrEmpty(context.ReservationId))
+            {
+                logger.LogInformation(
+                    "Inventory already reserved with {ReservationId}. Skipping.",
+                    context.ReservationId);
+        
+                return StepResult.SuccessResult(new Dictionary<string, object>
+                {
+                    ["ReservationId"] = context.ReservationId,
+                    ["Idempotent"] = true
+                });
+            }
             logger.LogInformation(
                 "Reserving inventory for order {OrderId} with {ItemCount} items",
                 data.CorrelationId,
