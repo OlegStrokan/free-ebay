@@ -1,21 +1,18 @@
-using System.Text.Json;
 using Application.Interfaces;
 using Application.Sagas.Steps;
-using Domain.Interfaces;
+using Domain.Exceptions;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Sagas.OrderSaga.Steps;
 
 public class UpdateOrderStatusStep(
-    IOrderRepository orderRepository,
-    IOutboxRepository outboxRepository,
-    IUnitOfWork unitOfWork,
+    ISagaOrderPersistenceService orderPersistenceService,
     ILogger<UpdateOrderStatusStep> logger
     )
     : ISagaStep<OrderSagaData, OrderSagaContext>
 {
-    public string StepName => "UpdateOrderStatus";
+    public string StepName => "m";
     public int Order => 3;
 
     public async Task<StepResult> ExecuteAsync(
@@ -23,48 +20,37 @@ public class UpdateOrderStatusStep(
         OrderSagaContext context, 
         CancellationToken cancellationToken)
     {
-        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             logger.LogInformation(
                 "Updating order {OrderId} status to Paid",
                 data.CorrelationId);
 
-            var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId),
-                cancellationToken);
-
-
-            if (order == null)
+            if (context.OrderStatusUpdated)
             {
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
+                logger.LogInformation(
+                    "Order {OrderId} status already updated, skipping",
+                    data.CorrelationId);
+                return StepResult.SuccessResult();
             }
 
             if (string.IsNullOrEmpty(context.PaymentId))
                 return StepResult.Failure("Payment ID not found in saga context");
 
-            var paymentId = PaymentId.From(context.PaymentId);
-            
-            order.Pay(paymentId);
+            await orderPersistenceService.ExecuteAsync(
+                data.CorrelationId,
+                order =>
+                {
+                    var paymentId = PaymentId.From(context.PaymentId);
+                    order.Pay(paymentId);
+                    return Task.CompletedTask;
+                },
+                cancellationToken);
 
-            await orderRepository.AddAsync(order, cancellationToken);
-            
-            foreach (var domainEvent in order.UncommitedEvents)
-            {
-                await outboxRepository.AddAsync(
-                    domainEvent.EventId,
-                    domainEvent.GetType().Name,
-                    JsonSerializer.Serialize(domainEvent),
-                    domainEvent.OccurredOn,
-                    cancellationToken
-                );
-            }
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            context.OrderStatusUpdated = true;
 
             logger.LogInformation(
-                "Successfully updated order {OrderId} to Paid status and saved event to outbox",
+                "Successfully updated order {OrderId} to Paid status",
                 data.CorrelationId);
 
             return StepResult.SuccessResult(new Dictionary<string, object>
@@ -73,11 +59,15 @@ public class UpdateOrderStatusStep(
                 ["Status"] = "Paid"
             });
         }
+        catch (OrderNotFoundException ex)
+        { 
+            //return StepResult.Failure($"Order {data.CorrelationId} not found");
+            // Specific handling: Maybe this order shouldn't exist? 
+            // We return a failure that tells the Saga to stop and compensate.
+            return StepResult.Failure($"Critical Error: {ex.Message}");
+        }
         catch (Exception ex)
         {
-
-            await transaction.RollbackAsync(cancellationToken);
-            
             logger.LogError(
                 ex,
                 "Failed to update order {OrderId} status",
@@ -93,49 +83,29 @@ public class UpdateOrderStatusStep(
         CancellationToken cancellationToken)
     {
 
-        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             logger.LogInformation(
                 "Cancelling order {OrderId}",
                 data.CorrelationId);
 
-            var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId),
+            await orderPersistenceService.ExecuteAsync(
+                data.CorrelationId,
+                order =>
+                {
+                    var failureMessages = new List<string> { "Saga compensation - order creation failed" };
+                    order.Cancel(failureMessages);
+                    return Task.CompletedTask;
+                },
                 cancellationToken);
 
-            if (order == null)
-            {
-                logger.LogWarning("Order {OrderId} nto found for cancellation", data.CorrelationId);
-                return;
-            }
-
-            var failureReasons = new List<string>
-            {
-                "Saga compensation triggered",
-                "One or more saga steps failed"
-            };
-            
-            order.Cancel(failureReasons);
-
-            await orderRepository.AddAsync(order, cancellationToken);
-
-            foreach (var domainEvent in order.UncommitedEvents)
-            {
-                await outboxRepository.AddAsync(
-                    domainEvent.EventId,
-                    domainEvent.GetType().Name,
-                    JsonSerializer.Serialize(domainEvent),
-                    domainEvent.OccurredOn,
-                    cancellationToken);
-            }
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            
             logger.LogInformation("Successfully cancelled order {OrderId}",
                 data.CorrelationId);
 
+        }
+        catch (OrderNotFoundException ex)
+        {
+            logger.LogWarning("Compensate skipped: Order {OrderId} not found. It may have never been created.", data.CorrelationId);
         }
         catch (Exception ex)
         {

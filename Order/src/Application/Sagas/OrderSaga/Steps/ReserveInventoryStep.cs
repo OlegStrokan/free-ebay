@@ -23,6 +23,8 @@ public sealed class ReserveInventoryStep(
                 data.CorrelationId,
                 data.Items.Count);
 
+            // have you ever heard about idempotency type shit? @todo
+            
             var reservationId = await inventoryGateway.ReserveAsync(
                 orderId: data.CorrelationId,
                 items: data.Items,

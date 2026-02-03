@@ -29,6 +29,7 @@ public sealed class CreateShipmentStep(
                 "Creating shipment for order {OrderId}",
                 data.CorrelationId);
 
+            // da fuck? where is idempotency? @todo
             var shipmentId = await _shippingGateway.CreateShipmentAsync(
                 orderId: data.CorrelationId,
                 deliveryAddress: data.DeliveryAddress,
