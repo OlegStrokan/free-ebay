@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class ConfirmReturnReceivedStep(
-    IOrderRepository orderRepository,
     IOutboxRepository outboxRepository,
+    IReturnRequestRepository returnRequestRepository,
     IUnitOfWork unitOfWork,
     ILogger<ConfirmReturnReceivedStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
@@ -31,43 +31,41 @@ public sealed class ConfirmReturnReceivedStep(
                 data.CorrelationId,
                 context.ReturnShipmentId);
 
-            var order = await orderRepository.GetByIdAsync(
+            var returnRequest = await returnRequestRepository.GetByOrderIdAsync(
                 OrderId.From(data.CorrelationId),
                 cancellationToken);
 
-            if (order == null)
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
+            if (returnRequest == null)
+                return StepResult.Failure($"ReturnRequest for order {data.CorrelationId} not found");
 
-            if (order.Status != OrderStatus.ReturnRequested)
+            if (returnRequest.Status != ReturnStatus.Received)
             {
                 logger.LogWarning(
-                    "Order {OrderId} is in status {Status}, expected ReturnRequested",
-                    data.CorrelationId,
-                    order.Status);
+                    "ReturnRequest {ReturnRequestId} is in status {Status}, expected Pending",
+                    returnRequest.Id.Value,
+                    returnRequest.Status);
 
 
-                if (order.Status == OrderStatus.ReturnReceived)
+                if (returnRequest.Status == ReturnStatus.Received)
                 {
                     logger.LogInformation(
-                        "Order {OrderId} already marked as return Received (duplicate webhook)",
-                        data.CorrelationId);
+                        "ReturnRequest {ReturnRequestId} already marked as received (duplicate webhook)",
+                        returnRequest.Id.Value);
 
                     return StepResult.SuccessResult(new Dictionary<string, object>
                     {
                         ["Status"] = "AlreadyProcessed"
                     });
                 }
-
-
-                return StepResult.Failure(
-                    $"Order in unexpected status: {order.Status}");
+                
+                return StepResult.Failure($"ReturnRequest in unexpected status: {returnRequest.Status}");
             }
 
-            order.ConfirmReturnReceived();
+            returnRequest.MarkAsReceived();
 
-            await orderRepository.AddAsync(order, cancellationToken);
+            await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
 
-            foreach (var domainEvent in order.UncommitedEvents)
+            foreach (var domainEvent in returnRequest.UncommitedEvents)
             {
                 await outboxRepository.AddAsync(
                     domainEvent.EventId,
@@ -78,14 +76,9 @@ public sealed class ConfirmReturnReceivedStep(
             }
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
-            order.MarkEventsAsCommited();
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken); ;
             
-            order.MarkEventsAsCommited();
+            returnRequest.MarkEventsAsCommited();
 
             var receivedAt = DateTime.UtcNow;
             context.ReturnReceivedAt = receivedAt;
@@ -129,65 +122,49 @@ public sealed class ConfirmReturnReceivedStep(
                 "Compensating ConfirmReturnReceived for order {OrderId}",
                 data.CorrelationId);
 
-            var order = await orderRepository.GetByIdAsync(
+            var returnRequest = await returnRequestRepository.GetByOrderIdAsync(
                 OrderId.From(data.CorrelationId),
                 cancellationToken);
 
-            if (order == null)
+            if (returnRequest == null)
             {
                 logger.LogWarning(
-                    "Order {OrderId} not found during compensation",
+                    "ReturnRequest for order {OrderId} not found during compensation",
                     data.CorrelationId);
                 await transaction.CommitAsync(cancellationToken);
                 return;
             }
 
-            if (order.Status == OrderStatus.ReturnReceived)
+            if (returnRequest.Status == ReturnStatus.Received)
             {
                 logger.LogInformation(
-                    "Reverting return receipt for order {OrderId} (status: {Status} -> ReturnRequested)",
-                    data.CorrelationId,
-                    order.Status);
+                    "Reverting ReturnRequest {ReturnRequestId} from Received to Pending status",
+                    returnRequest.Id.Value);
 
-                order.RevertReturnReceipt();
-
-                await orderRepository.AddAsync(order, cancellationToken);
-
-                foreach (var domainEvent in order.UncommitedEvents)
-                {
-                    await outboxRepository.AddAsync(
-                        domainEvent.EventId,
-                        domainEvent.GetType().Name,
-                        JsonSerializer.Serialize(domainEvent),
-                        domainEvent.OccurredOn,
-                        cancellationToken);
-                }
-
-                order.MarkEventsAsCommited();
-
-                logger.LogInformation(
-                    "Successfully reverted return receipt for order {OrderId}",
-                    data.CorrelationId);
-
+                // Note: In event-sourced systems, compensation typically involves
+                // adding compensating events rather than directly modifying state.
+                // For this MVP, we'll log the need for manual intervention.
+                
+                logger.LogWarning(
+                    "ReturnRequest {ReturnRequestId} was marked as received but saga failed. " +
+                    "Manual review required to determine if items were actually returned.",
+                    returnRequest.Id.Value);
             }
             else
             {
                 logger.LogInformation(
-                    "Order {OrderId} is in status {Status}, no revert needed",
-                    data.CorrelationId,
-                    order.Status);
+                    "ReturnRequest {ReturnRequestId} is in status {Status}, no revert needed",
+                    returnRequest.Id.Value,
+                    returnRequest.Status);
             }
 
-            await unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync(cancellationToken);
-            
             logger.LogError(
                 ex,
-                "Failed to compensate ConfirmReturnReceived for order {OrderId}. Manuel intervention required!",
+                "Failed to compensate ConfirmReturnReceived for order {OrderId}. Manual intervention required!",
                 data.CorrelationId);
         }
     }

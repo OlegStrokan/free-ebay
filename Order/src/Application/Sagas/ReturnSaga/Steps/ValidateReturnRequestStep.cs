@@ -10,6 +10,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class ValidateReturnRequestStep(
     IOrderRepository orderRepository,
+    IReturnRequestRepository returnRequestRepository,
     IOutboxRepository outboxRepository,
     IUnitOfWork unitOfWork,
     ILogger<ValidateReturnRequestStep> logger
@@ -36,6 +37,11 @@ public sealed class ValidateReturnRequestStep(
 
             if (order == null)
                 return StepResult.Failure($"Order {data.CorrelationId} not found");
+
+            if (order.Status != OrderStatus.Completed)
+                return StepResult.Failure(
+                    $"Order {data.CorrelationId} must be completed to request return." +
+                    $"Current status: {order.Status}");
             
             var itemsToReturn = data.ReturnedItems.Select(dto =>
                 OrderItem.Create(
@@ -44,9 +50,20 @@ public sealed class ValidateReturnRequestStep(
                     Money.Create(dto.Price, dto.Currency)
                 )).ToList();
 
-            order.RequestReturn(data.ReturnReason, itemsToReturn);
+            var refundAmount = Money.Create(data.RefundAmount, data.Currency);
+            var returnWindow = TimeSpan.FromDays(14); // @todo: move to domain service and shit
 
-            await orderRepository.AddAsync(order, cancellationToken);
+            var returnRequest = ReturnRequest.Create(
+                orderId: OrderId.From(data.CorrelationId),
+                customerId: CustomerId.From(data.CustomerId),
+                reason: data.ReturnReason,
+                itemsToReturn: itemsToReturn,
+                refundAmount: refundAmount,
+                orderCompletedAt: order.CompletedAt!.Value, // order must be already completed
+                orderItems: order.Items.ToList(),
+                returnWindow: returnWindow);
+            
+            await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
 
             foreach (var domainEvent in order.UncommitedEvents)
             {
@@ -93,10 +110,13 @@ public sealed class ValidateReturnRequestStep(
         ReturnSagaContext context,
         CancellationToken cancellationToken)
     {
-        // if validation fails, there's nothing to compensate, the order status would still be completed
+        // If validation succeeds, a ReturnRequest is created. If later saga steps fail,
+        // the ReturnRequest remains as a record of the return attempt.
+        // No automatic cleanup is performed as this represents a valid business state.
         
         logger.LogInformation(
-            "No compensation needed for ValidateReturnRequest step (order {OrderId})",
+            "No compensation needed for ValidateReturnRequest step (order {OrderId}). " +
+            "ReturnRequest created successfully.",
             data.CorrelationId);
 
         await Task.CompletedTask;

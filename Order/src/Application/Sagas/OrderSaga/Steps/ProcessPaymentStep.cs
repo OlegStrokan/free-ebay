@@ -21,6 +21,21 @@ public sealed class ProcessPaymentStep(
     {
         try
         {
+
+            if (!string.IsNullOrEmpty(context.PaymentId))
+            {
+                logger.LogInformation(
+                    "Payment already processed for order {OrderId} with PaymentId {PaymentId}. Skipping.",
+                    data.CorrelationId,
+                    context.PaymentId);
+
+                return StepResult.SuccessResult(new Dictionary<string, object>
+                {
+                    ["PaymentId"] = context.PaymentId,
+                    ["Idempotent"] = true
+                });
+            }
+            
             logger.LogInformation(
                 "Processing payment for order {OrderId}, amount {Amount} {Currency}",
                 data.CorrelationId,

@@ -13,6 +13,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 public class ProcessRefundStep(
     IPaymentGateway paymentGateway,
     IOrderRepository orderRepository,
+    IReturnRequestRepository returnRequestRepository,
     IOutboxRepository outboxRepository,
     IUnitOfWork unitOfWork,
     ILogger<ProcessRefundStep> logger
@@ -36,6 +37,15 @@ public class ProcessRefundStep(
                 data.RefundAmount,
                 data.Currency);
 
+            var returnRequest = await returnRequestRepository.GetByOrderIdAsync(
+                OrderId.From(data.CorrelationId), cancellationToken);
+
+            if (returnRequest == null)
+                return StepResult.Failure($"ReturnRequest for order {data.CorrelationId} not found");
+
+            if (returnRequest.Status != ReturnStatus.Received)
+                return StepResult.Failure($"ReturnRequest is unexpected status {returnRequest.Status}. Expected: Received");
+            
             
             var order = await orderRepository.GetByIdAsync(
                 OrderId.From(data.CorrelationId), cancellationToken);
@@ -67,15 +77,12 @@ public class ProcessRefundStep(
             logger.LogInformation(
                 "Refund processed successfully. Refund ID: {RefundId}",
                 refundId);
-
-
-            order.ProcessRefund(
-                refundId,
-                Money.Create(data.RefundAmount, data.Currency));
-
-            await orderRepository.AddAsync(order, cancellationToken);
-
-            foreach (var domainEvent in order.UncommitedEvents)
+            
+            returnRequest.ProcessRefund(refundId);
+            
+            await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
+            
+            foreach (var domainEvent in returnRequest.UncommitedEvents)
             {
                 await outboxRepository.AddAsync(
                     domainEvent.EventId,
@@ -88,7 +95,7 @@ public class ProcessRefundStep(
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            order.MarkEventsAsCommited();
+            returnRequest.MarkEventsAsCommited();
 
             logger.LogInformation(
                 "Refund {RefundId} processed and saved for order {OrderId}",

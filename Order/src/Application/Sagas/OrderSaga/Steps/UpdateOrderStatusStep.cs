@@ -18,9 +18,11 @@ public class UpdateOrderStatusStep(
     public string StepName => "UpdateOrderStatus";
     public int Order => 3;
 
-    public async Task<StepResult> ExecuteAsync(OrderSagaData data, OrderSagaContext context, CancellationToken cancellationToken)
+    public async Task<StepResult> ExecuteAsync(
+        OrderSagaData data,
+        OrderSagaContext context, 
+        CancellationToken cancellationToken)
     {
-
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
@@ -42,14 +44,11 @@ public class UpdateOrderStatusStep(
                 return StepResult.Failure("Payment ID not found in saga context");
 
             var paymentId = PaymentId.From(context.PaymentId);
+            
             order.Pay(paymentId);
 
             await orderRepository.AddAsync(order, cancellationToken);
             
-            logger.LogInformation(
-                "Successfully updated order {OrderId} to Paid status and saved event to outbox",
-                data.CorrelationId);
-
             foreach (var domainEvent in order.UncommitedEvents)
             {
                 await outboxRepository.AddAsync(
@@ -63,6 +62,10 @@ public class UpdateOrderStatusStep(
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Successfully updated order {OrderId} to Paid status and saved event to outbox",
+                data.CorrelationId);
 
             return StepResult.SuccessResult(new Dictionary<string, object>
             {
@@ -84,7 +87,10 @@ public class UpdateOrderStatusStep(
         }
     }
 
-    public async Task CompensateAsync(OrderSagaData data, OrderSagaContext context, CancellationToken cancellationToken)
+    public async Task CompensateAsync(
+        OrderSagaData data,
+        OrderSagaContext context, 
+        CancellationToken cancellationToken)
     {
 
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
