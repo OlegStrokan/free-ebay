@@ -3,13 +3,14 @@ using Domain.ValueObjects;
 
 namespace Domain.Events.OrderReturn;
 
-public record OrderReturnRefundedEvent(
+public sealed record ReturnRefundProcessedEvent(
+    ReturnRequestId ReturnRequestId,
     OrderId OrderId,
     CustomerId CustomerId,
     string RefundId,
     Money RefundAmount,
     DateTime RefundedAt) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredOn { get; } = RefundedAt;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
 }
