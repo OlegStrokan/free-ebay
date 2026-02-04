@@ -7,7 +7,7 @@ namespace Api.GrpcServices;
 
 public class RefreshTokenGrpcService(
     ILogger<RefreshTokenGrpcService> logger,
-    RefreshTokenUseCase refreshTokenUseCaseUseCase
+    IRefreshTokenUseCase refreshTokenUseCaseUseCase
 ) : AuthService.AuthServiceBase
 {
     public override async Task<RefreshTokenResponse> RefreshToken(RefreshTokenRequest request, ServerCallContext context)
@@ -36,7 +36,7 @@ public class RefreshTokenGrpcService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error refreshing token");
-            throw new RpcException(new Status(StatusCode.Internal, "Token  refresh failed"));
+            throw new RpcException(new Status(StatusCode.Internal, "Token refresh failed"));
         }
     }
 

@@ -5,9 +5,9 @@ using RevokeTokenResponse = Protos.Auth.RevokeTokenResponse;
 
 namespace Api.GrpcServices;
 
-public class RevokeTokenService (
-    ILogger<RevokeTokenService> logger,
-    RevokeTokenUseCase revokeTokenUseCase) : AuthService.AuthServiceBase
+public class RevokeTokenGrpcService (
+    ILogger<RevokeTokenGrpcService> logger,
+    IRevokeTokenUseCase revokeTokenUseCase) : AuthService.AuthServiceBase
 {
     public override async Task<RevokeTokenResponse> RevokeToken(RevokeTokenRequest request, ServerCallContext context)
     {

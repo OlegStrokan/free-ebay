@@ -10,7 +10,7 @@ using RegisterResponse = Application.UseCases.Register.RegisterResponse;
 
 namespace Api.Tests;
 
-public class RegisterUseCaseTests
+public class RegisterGrpcTests
 {
     [Fact]
     public async Task ShouldReturnSuccessResponse()

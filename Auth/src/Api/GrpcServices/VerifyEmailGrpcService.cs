@@ -5,9 +5,9 @@ using VerifyEmailResponse = Protos.Auth.VerifyEmailResponse;
 
 namespace Api.GrpcServices;
 
-public class VerifyEmailService (
-    ILogger<VerifyEmailService> logger,
-    VerifyEmailUseCase verifyEmailUseCase) : AuthService.AuthServiceBase
+public class VerifyEmailGrpcService (
+    ILogger<VerifyEmailGrpcService> logger,
+    IVerifyEmailUseCase verifyEmailUseCase) : AuthService.AuthServiceBase
 {
     public override async Task<VerifyEmailResponse> VerifyEmail(VerifyEmailRequest request, ServerCallContext context)
     {

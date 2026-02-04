@@ -6,8 +6,8 @@ using ValidateTokenResponse = Protos.Auth.ValidateTokenResponse;
 namespace Api.GrpcServices;
 
 public class ValidateTokenGrpcService(
-    ILogger<LoginService> logger,
-    ValidateTokenUseCase validateTokenUseCase
+    ILogger<LoginGrpcService> logger,
+    IValidateTokenUseCase validateTokenUseCase
 )
     : AuthService.AuthServiceBase
 {

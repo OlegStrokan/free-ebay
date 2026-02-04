@@ -11,7 +11,7 @@ using Protos.Auth;
 
 namespace Api.Tests;
 
-public class RequestPasswordResetTests
+public class RequestPasswordResetGrpcTests
 {
     [Fact]
     public async Task ShouldRequestPasswordReset()
