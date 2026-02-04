@@ -139,12 +139,12 @@ public class RequestReturnCommandHandler(
     {
         return domainEvent switch
         {
-            OrderReturnRequestedEvent e => JsonSerializer.Serialize(new OrderReturnRequestedEventDto
+            ReturnRequestCreatedEvent e => JsonSerializer.Serialize(new ReturnRequestCreatedEventDto
             {
                 OrderId = e.OrderId.Value,
                 CustomerId = e.CustomerId.Value,
                 Reason = e.Reason,
-                ItemToReturn = e.ItemToReturn.Select(i => new OrderItemDto(
+                ItemsToReturn = e.ItemsToReturn.Select(i => new OrderItemDto(
                     i.ProductId.Value,
                     i.Quantity,
                     i.PriceAtPurchase.Amount,

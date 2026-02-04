@@ -31,6 +31,19 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
 
     public async Task<SagaResult> ExecuteAsync(TData data, CancellationToken cancellationToken)
     {
+        /* @think: what if .... you know... we could create timeout cancellation token
+        timespan = 5 min
+        use createLinkedTokenSource
+        pass to all call instead of cancellationToken
+        
+        */
+        
+        /* @think: what if we will add like 400 lines of divined code to create event
+         driven stuff + adding 30-40 lines to sagaBase class?
+         now we have logs, but if Berezovsky will lose money because of us?
+      */
+        
+        
         var sagaId = Guid.NewGuid();
         var context = new TContext(); 
 
@@ -93,10 +106,13 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
                     "Step {StepName} failed in saga {SagaId}. Starting compensation...",
                     step.StepName, sagaId);
 
+                sagaState.Status = SagaStatus.Failed;
+                await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+                
                 await CompensateAsync(sagaId, cancellationToken);
                 return SagaResult.Failed(sagaId, stepResult.ErrorMessage ?? "Unknown error");
             }
-
+            
             await _sagaRepository.SaveAsync(sagaState, cancellationToken);
         }
 
@@ -298,7 +314,8 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
 
                     var stepLog = sagaState.Steps.First(s => s.StepName == step.StepName);
                     stepLog.Status = StepStatus.Compensated;
-                    await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
+                    await _sagaRepository.SaveCompensationStateAsync(
+                        sagaState, stepLog, cancellationToken);
 
                     break;
                 }

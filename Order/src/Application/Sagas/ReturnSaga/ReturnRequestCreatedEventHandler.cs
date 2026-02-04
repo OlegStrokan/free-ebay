@@ -1,21 +1,20 @@
 using Application.DTOs;
-using Application.Sagas.Handlers;
 using Application.Sagas.Handlers.SagaCreation;
 using Application.Sagas.Persistence;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Sagas.ReturnSaga;
 
-public class OrderReturnRequestedEventHandler
+public class ReturnRequestCreatedEventHandler
 : SagaEventHandler<ReturnRequestCreatedEventDto, ReturnSagaData, ReturnSagaContext>
 {
-    public override string EventType => "OrderReturnRequestEvent";
+    public override string EventType => "ReturnRequestCreatedEvent";
     public override string SagaType => "ReturnSaga";
 
-    public OrderReturnRequestedEventHandler(
+    public ReturnRequestCreatedEventHandler(
         IReturnSaga saga,
         ISagaRepository sagaRepository,
-        ILogger<OrderReturnRequestedEventHandler> logger)
+        ILogger<ReturnRequestCreatedEventHandler> logger)
         : base(saga, sagaRepository, logger)
     { }
 

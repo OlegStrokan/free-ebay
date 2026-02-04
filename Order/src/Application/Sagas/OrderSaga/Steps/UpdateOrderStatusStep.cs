@@ -12,7 +12,7 @@ public class UpdateOrderStatusStep(
     )
     : ISagaStep<OrderSagaData, OrderSagaContext>
 {
-    public string StepName => "m";
+    public string StepName => "UpdateOrderStatus";
     public int Order => 3;
 
     public async Task<StepResult> ExecuteAsync(
@@ -37,7 +37,7 @@ public class UpdateOrderStatusStep(
             if (string.IsNullOrEmpty(context.PaymentId))
                 return StepResult.Failure("Payment ID not found in saga context");
 
-            await orderPersistenceService.ExecuteAsync(
+            await orderPersistenceService.UpdateOrderAsync(
                 data.CorrelationId,
                 order =>
                 {
@@ -89,7 +89,7 @@ public class UpdateOrderStatusStep(
                 "Cancelling order {OrderId}",
                 data.CorrelationId);
 
-            await orderPersistenceService.ExecuteAsync(
+            await orderPersistenceService.UpdateOrderAsync(
                 data.CorrelationId,
                 order =>
                 {

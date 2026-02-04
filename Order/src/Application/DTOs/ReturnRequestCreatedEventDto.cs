@@ -1,11 +1,11 @@
 namespace Application.DTOs;
 
-public record OrderReturnRequestedEventDto
+public record ReturnRequestCreatedEventDto
 {
     public Guid OrderId { get; init; }
     public Guid CustomerId { get; init; }
     public string Reason { get; init; } = string.Empty;
-    public List<OrderItemDto> ItemToReturn { get; init; } = new();
+    public List<OrderItemDto> ItemsToReturn { get; init; } = new();
     public decimal RefundAmount { get; init; }
     public string Currency { get; init; } = string.Empty;
     public DateTime RequestedAt { get; init; }
