@@ -1,3 +1,4 @@
+using System.Data;
 using Application.Sagas;
 using Application.Sagas.Persistence;
 using Infrastructure.Persistence.DbContext;
@@ -51,5 +52,33 @@ public class SagaRepository(AppDbContext dbContext) : ISagaRepository
             .Where(x => x.Status == SagaStatus.Running && x.UpdatedAt < cutoffTime)
             .Include(x => x.Steps)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task SaveCompensationStateAsync<TContext>(
+        SagaState<TContext> sagaState, 
+        SagaStepLog stepLog,
+        CancellationToken cancellationToken) where TContext : SagaContext
+    {
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database
+                .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+
+            try
+            {
+                dbContext.SagaStepLogs.Update(stepLog);
+                dbContext.SagaStates.Update(sagaState);
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        })
     }
 }

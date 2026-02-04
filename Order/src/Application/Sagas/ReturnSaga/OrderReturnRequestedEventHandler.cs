@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.ReturnSaga;
 
 public class OrderReturnRequestedEventHandler
-: SagaEventHandler<OrderReturnRequestedEventDto, ReturnSagaData, ReturnSagaContext>
+: SagaEventHandler<ReturnRequestCreatedEventDto, ReturnSagaData, ReturnSagaContext>
 {
     public override string EventType => "OrderReturnRequestEvent";
     public override string SagaType => "ReturnSaga";
@@ -19,14 +19,14 @@ public class OrderReturnRequestedEventHandler
         : base(saga, sagaRepository, logger)
     { }
 
-    protected override ReturnSagaData MapEventToSagaData(OrderReturnRequestedEventDto eventDto)
+    protected override ReturnSagaData MapEventToSagaData(ReturnRequestCreatedEventDto eventDto)
     {
         return new ReturnSagaData
         {
             CorrelationId = eventDto.OrderId,
             CustomerId = eventDto.CustomerId,
             ReturnReason = eventDto.Reason,
-            ReturnedItems = eventDto.ItemToReturn,
+            ReturnedItems = eventDto.ItemsToReturn,
             RefundAmount = eventDto.RefundAmount,
             Currency = eventDto.Currency
         };

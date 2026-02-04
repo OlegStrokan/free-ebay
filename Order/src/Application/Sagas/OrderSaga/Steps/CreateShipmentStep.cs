@@ -25,11 +25,25 @@ public sealed class CreateShipmentStep(
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken); 
         try
         {
+            
+            if (!string.IsNullOrEmpty(context.ShipmentId))
+            {
+                _logger.LogInformation(
+                    "Shipment already reserved with {ShipmentId}. Skipping.",
+                    context.ShipmentId);
+        
+                return StepResult.SuccessResult(new Dictionary<string, object>
+                {
+                    ["ShipmentId"] = context.ShipmentId,
+                    ["Idempotent"] = true
+                });
+            }
+            
             _logger.LogInformation(
                 "Creating shipment for order {OrderId}",
                 data.CorrelationId);
 
-            // da fuck? where is idempotency? @todo
+            
             var shipmentId = await _shippingGateway.CreateShipmentAsync(
                 orderId: data.CorrelationId,
                 deliveryAddress: data.DeliveryAddress,

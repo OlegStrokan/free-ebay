@@ -26,4 +26,10 @@ public interface ISagaRepository
         TimeSpan timeout,
         CancellationToken cancellationToken
     ) where TContext : SagaContext;
+    
+    Task SaveCompensationStateAsync<TContext>(
+        SagaState<TContext> sagaState,
+        SagaStepLog stepLog,
+        CancellationToken cancellationToken) 
+        where TContext : SagaContext;
 }
