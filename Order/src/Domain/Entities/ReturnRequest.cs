@@ -46,18 +46,18 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         TimeSpan returnWindow)
     {
         if (string.IsNullOrWhiteSpace(reason))
-            throw new OrderDomainException("Return reason is required");
+            throw new DomainException("Return reason is required");
 
         if (itemsToReturn == null || itemsToReturn.Count == 0)
-            throw new OrderDomainException("Must specify at least one item to return");
+            throw new DomainException("Must specify at least one item to return");
 
         if (!refundAmount.IsGreaterThenZero())
-            throw new OrderDomainException("Refund amount must be greater than zero");
+            throw new DomainException("Refund amount must be greater than zero");
 
         // Validate return window
         var orderAge = DateTime.Now - orderCompletedAt;
         if (orderAge > returnWindow)
-            throw new OrderDomainException(
+            throw new DomainException(
                 $"Return window expired. Order was completed {orderAge.Days} days ago. "
                 + $"Return window is {returnWindow.Days} days. ");
 
@@ -65,7 +65,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         foreach (var item in itemsToReturn.Where(item =>
                      orderItems.All(i => i.ProductId != item.ProductId)))
         {
-            throw new OrderDomainException($"Product {item.ProductId.Value} is not part of the order");
+            throw new DomainException($"Product {item.ProductId.Value} is not part of the order");
         }
 
         var returnRequest = new ReturnRequest();
@@ -85,7 +85,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public void MarkAsReceived()
     {
         if (_status != ReturnStatus.Pending)
-            throw new OrderDomainException($"Cannot mark as received in {_status} status");
+            throw new DomainException($"Cannot mark as received in {_status} status");
 
         var evt = new ReturnItemsReceivedEvent(
             Id,
@@ -99,10 +99,10 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public void ProcessRefund(string refundId)
     {
         if (_status != ReturnStatus.Received)
-            throw new OrderDomainException($"Cannot process refund in {_status} status");
+            throw new DomainException($"Cannot process refund in {_status} status");
 
         if (string.IsNullOrWhiteSpace(refundId))
-            throw new OrderDomainException("Refund ID is required");
+            throw new DomainException("Refund ID is required");
 
         var evt = new ReturnRefundProcessedEvent(
             Id,
@@ -118,7 +118,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public void Complete()
     {
         if (_status != ReturnStatus.Refunded)
-            throw new OrderDomainException($"Cannot complete return in {_status} status");
+            throw new DomainException($"Cannot complete return in {_status} status");
 
         var evt = new ReturnCompletedEvent(
             Id,
