@@ -3,6 +3,7 @@ using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Application.Interfaces;
 using Application.Sagas.Steps;
+using Domain.Exceptions;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -10,11 +11,9 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.OrderSaga.Steps;
 
 public sealed class CreateShipmentStep(
-    IShippingGateway _shippingGateway,
-    IOrderRepository orderRepository,
-    IOutboxRepository outboxRepository,
-    IUnitOfWork unitOfWork,
-    ILogger<CreateShipmentStep> _logger
+    IShippingGateway shippingGateway,
+    ISagaOrderPersistenceService orderPersistenceService,
+    ILogger<CreateShipmentStep> logger
     ) : ISagaStep<OrderSagaData, OrderSagaContext>
 {
     public string StepName => "CreateShipment";
@@ -22,79 +21,60 @@ public sealed class CreateShipmentStep(
     
     public async Task<StepResult> ExecuteAsync(OrderSagaData data, OrderSagaContext context, CancellationToken cancellationToken)
     {
-        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken); 
         try
         {
-            
+
             if (!string.IsNullOrEmpty(context.ShipmentId))
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Shipment already reserved with {ShipmentId}. Skipping.",
                     context.ShipmentId);
-        
+
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["ShipmentId"] = context.ShipmentId,
                     ["Idempotent"] = true
                 });
             }
-            
-            _logger.LogInformation(
+
+            logger.LogInformation(
                 "Creating shipment for order {OrderId}",
                 data.CorrelationId);
 
-            
-            var shipmentId = await _shippingGateway.CreateShipmentAsync(
+
+            var shipmentId = await shippingGateway.CreateShipmentAsync(
                 orderId: data.CorrelationId,
                 deliveryAddress: data.DeliveryAddress,
                 items: data.Items,
                 cancellationToken);
-            
-            
+
+
             context.ShipmentId = shipmentId;
 
 
-            var trackingNumber = await _shippingGateway.GetTrackingNumberAsync(
+            var trackingNumber = await shippingGateway.GetTrackingNumberAsync(
                 shipmentId, cancellationToken);
-            
-            
+
+
             // @think: should we? we just need trackingNumber for assigning tracking in order aggregate
             // context.TrackingNumber = trackingNumber
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Tracking number retrieved: {TrackingNumber}",
                 trackingNumber);
 
-            var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId),
+            await orderPersistenceService.UpdateOrderAsync(
+                data.CorrelationId,
+                order =>
+                {
+                    var trackingId = TrackingId.From(trackingNumber);
+                    order.AssignTracking(trackingId);
+                    return Task.CompletedTask;
+                },
                 cancellationToken);
-
-            if (order == null)
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
-
-            var trackingId = TrackingId.From(trackingNumber);
             
-            order.AssignTracking(trackingId);
 
-            await orderRepository.AddAsync(order, cancellationToken);
-
-            foreach (var domainEvent in order.UncommitedEvents)
-            {
-                await outboxRepository.AddAsync(
-                    domainEvent.EventId,
-                    domainEvent.GetType().Name,
-                    JsonSerializer.Serialize(domainEvent),
-                    domainEvent.OccurredOn,
-                    cancellationToken);
-            }
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            
-            order.MarkEventsAsCommited();
-
-            
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Successfully created shipment {ShipmentId} with tracking {TrackingNumber} for order {OrderId}",
                 shipmentId,
                 trackingNumber,
@@ -106,9 +86,17 @@ public sealed class CreateShipmentStep(
                 ["DeliveryAddress"] = $"{data.DeliveryAddress.Street}, {data.DeliveryAddress.City}"
             });
         }
+        catch (OrderNotFoundException ex)
+        {
+            logger.LogInformation(
+                ex,
+                "Order with ID {OrderId} not found ",
+                data.CorrelationId);
+                return StepResult.Failure($"Order {data.CorrelationId} not found");
+        }
         catch (InvalidAddressException ex)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 ex,
                 "Invalid delivery address for order {OrderId}",
                 data.CorrelationId);
@@ -117,7 +105,7 @@ public sealed class CreateShipmentStep(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 ex,
                 "Invalid delivery address for order {OrderId}",
                 data.CorrelationId);
@@ -130,81 +118,60 @@ public sealed class CreateShipmentStep(
     {
         if (string.IsNullOrEmpty(context.ShipmentId))
         {
-            _logger.LogInformation("No shipment to cancel for order {OrderId}", data.CorrelationId);
+            logger.LogInformation("No shipment to cancel for order {OrderId}", data.CorrelationId);
             return;
         }
-
-        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-
+        
         try
         {
-            _logger.LogInformation("Compensating shipment {ShipmentId} for order {OrderId}",
+            logger.LogInformation("Compensating shipment {ShipmentId} for order {OrderId}",
                 context.ShipmentId,
                 data.CorrelationId);
 
             try
             {
-
-
-                await _shippingGateway.CancelShipmentAsync(
+                
+                await shippingGateway.CancelShipmentAsync(
                     shipmentId: context.ShipmentId,
                     reason: "Order cancelled - saga compensation",
                     cancellationToken);
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Successfully cancelled shipment {ShipmentId}",
                     context.ShipmentId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                logger.LogError(
                     ex,
                     "Failed to cancel shipment {ShipmentId}. Manual cancellation may be required",
                     context.ShipmentId);
                 // don't throw - continue to revert order tracking
             }
 
-            var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId),
-                cancellationToken);
-
-            if (order != null)
-            {
-                _logger.LogInformation(
-                    "Removing tracking {TrackingNumber} from {OrderId}",
-                    order.TrackingId,
-                    data.CorrelationId);
-
-                order.RevertTrackingAssignment();
-
-                await orderRepository.AddAsync(order, cancellationToken);
-
-                foreach (var domainEvent in order.UncommitedEvents)
+            await orderPersistenceService.UpdateOrderAsync(
+                data.CorrelationId,
+                order =>
                 {
-                    await outboxRepository.AddAsync(
-                        domainEvent.EventId,
-                        domainEvent.GetType().Name,
-                        JsonSerializer.Serialize(domainEvent),
-                        domainEvent.OccurredOn,
-                        cancellationToken);
-                }
-
-                _logger.LogInformation(
-                    "Tracking removed from order {OrderId}",
-                    data.CorrelationId);
-            }
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+                    order.RevertTrackingAssignment();
+                    return Task.CompletedTask;
+                },
+                cancellationToken);
             
-            _logger.LogInformation(
+            
+            logger.LogInformation(
                 "Successfully compensated shipment step for order {OrderId}",
                 data.CorrelationId);
         }
+        catch (OrderNotFoundException ex)
+        {
+            logger.LogWarning("Compensate skipped: Order {OrderId} not found. It may have never been created.", data.CorrelationId);
+        }
+        
         catch (Exception ex)
         {
             
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Failed to compensate shipment {ShipmentId}. Manual intervention required",
                 context.ShipmentId);

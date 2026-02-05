@@ -22,9 +22,6 @@ public class UpdateOrderStatusStep(
     {
         try
         {
-            logger.LogInformation(
-                "Updating order {OrderId} status to Paid",
-                data.CorrelationId);
 
             if (context.OrderStatusUpdated)
             {
@@ -36,7 +33,11 @@ public class UpdateOrderStatusStep(
 
             if (string.IsNullOrEmpty(context.PaymentId))
                 return StepResult.Failure("Payment ID not found in saga context");
-
+            
+            logger.LogInformation(
+                "Updating order {OrderId} status to Paid",
+                data.CorrelationId);
+            
             await orderPersistenceService.UpdateOrderAsync(
                 data.CorrelationId,
                 order =>
