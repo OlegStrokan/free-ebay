@@ -57,7 +57,7 @@ public class OrderTests
     [Fact]
     public void Create_ShouldThrowException_WhenOrderItemsIsEmptyOrZero()
     {
-        Assert.Throws<OrderDomainException>(() =>
+        Assert.Throws<DomainException>(() =>
             Order.Create(_customerId, _address, new List<OrderItem>()));
     }
 
@@ -82,7 +82,7 @@ public class OrderTests
 
         order.Pay(_paymentId);
 
-        var ex = Assert.Throws<OrderDomainException>(() => order.Pay(_paymentId));
+        var ex = Assert.Throws<DomainException>(() => order.Pay(_paymentId));
         Assert.Contains("Cannot pay order in Paid status", ex.Message);
     }
 
@@ -90,7 +90,7 @@ public class OrderTests
     public void Pay_ShouldThrowException_WhenPaymentIdNull()
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
-        Assert.Throws<OrderDomainException>(() => order.Pay(null!));
+        Assert.Throws<DomainException>(() => order.Pay(null!));
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class OrderTests
     {
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
 
-        var ex = Assert.Throws<OrderDomainException>(() => order.AssignTracking(_trackingId));
+        var ex = Assert.Throws<DomainException>(() => order.AssignTracking(_trackingId));
         Assert.Contains("Cannot assign tracking", ex.Message);
     }
     
@@ -137,7 +137,7 @@ public class OrderTests
         order.Pay(_paymentId);
         order.Approve();
 
-        var ex = Assert.Throws<OrderDomainException>(() => order.Approve());
+        var ex = Assert.Throws<DomainException>(() => order.Approve());
         Assert.Contains("Cannot approve order in Approved status", ex.Message);
     }
 
@@ -165,7 +165,7 @@ public class OrderTests
         
         order.Complete();
 
-        var ex = Assert.Throws<OrderDomainException>(() => order.Complete());
+        var ex = Assert.Throws<DomainException>(() => order.Complete());
         Assert.Contains("Cannot complete order in Completed status", ex.Message);
     }
 
@@ -205,7 +205,7 @@ public class OrderTests
 
         var initialMessageCount = order.FailedMessage.Count;
 
-        Assert.Throws<OrderDomainException>(() =>
+        Assert.Throws<DomainException>(() =>
             order.Cancel(new List<string> { "Illegal Cancellation" }));
         
         // verify the list was not touched because the exception was thrown before the foreach loop
@@ -218,7 +218,7 @@ public class OrderTests
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
         order.Cancel(new List<string> { "First Reason" }); 
 
-         Assert.Throws<OrderDomainException>(() => 
+         Assert.Throws<DomainException>(() => 
             order.Cancel(new List<string> { "Second Reason" }));
 
         var message = Assert.Single(order.FailedMessage);
@@ -266,7 +266,7 @@ public class OrderTests
         var order = Order.Create(_customerId, _address, CreateDefaultItems());
         order.Pay(_paymentId);
 
-        var ex = Assert.Throws<OrderDomainException>(() =>
+        var ex = Assert.Throws<DomainException>(() =>
             order.RequestReturn("Reason", CreateDefaultItems()));
 
         Assert.Contains("must be Completed", ex.Message);
@@ -277,7 +277,7 @@ public class OrderTests
     {
         var order = CreateCompleteOrder();
 
-        var ex = Assert.Throws<OrderDomainException>(() =>
+        var ex = Assert.Throws<DomainException>(() =>
             order.RequestReturn("Reason", new List<OrderItem>()));
 
         Assert.Contains("Must specify at least one item", ex.Message);
@@ -290,7 +290,7 @@ public class OrderTests
 
         var foreignItem = OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD"));
 
-        var ex = Assert.Throws<OrderDomainException>(() =>
+        var ex = Assert.Throws<DomainException>(() =>
             order.RequestReturn("Reason", new List<OrderItem> { foreignItem }));
 
         Assert.Contains("is not part of this order", ex.Message);
@@ -304,7 +304,7 @@ public class OrderTests
         var itemsToReturn = CreateDefaultItems();
 
 
-        var ex = Assert.Throws<OrderDomainException>(() =>
+        var ex = Assert.Throws<DomainException>(() =>
             order.RequestReturn("Late return", itemsToReturn));
 
         Assert.Contains("Return window expired", ex.Message);
@@ -351,7 +351,7 @@ public class OrderTests
         
         // skip confirmReturnReceived()
 
-        var ex = Assert.Throws<OrderDomainException>(() =>
+        var ex = Assert.Throws<DomainException>(() =>
             order.ProcessRefund("REF-FAIL", Money.Create(200, "USD")));
 
         Assert.Contains("Cannot process refund for order", ex.Message);

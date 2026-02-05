@@ -8,4 +8,5 @@ public class ReturnSagaContext : SagaContext
     public DateTime? ReturnReceivedAt { get; set; }
     public decimal? RefundAmount { get; set; }
     public string? TrackingId { get; set; }
+    public bool ReturnRequestValidated { get; set; }
 }

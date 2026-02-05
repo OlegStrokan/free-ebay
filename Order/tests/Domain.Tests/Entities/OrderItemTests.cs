@@ -30,7 +30,7 @@ public class OrderItemTests
     public void Create_WithInvalidQuantity_ShouldThrowException(int invalidQuantity)
     {
         var exception =
-            Assert.Throws<OrderDomainException>(() => OrderItem.Create(_testProductId, invalidQuantity, _validPrice));
+            Assert.Throws<DomainException>(() => OrderItem.Create(_testProductId, invalidQuantity, _validPrice));
 
         Assert.Contains("quantity should be greater then zero", exception.Message);
     }
@@ -39,7 +39,7 @@ public class OrderItemTests
     public void Create_WithInvalidPrice_ShouldThrowException()
     {
         var exception =
-            Assert.Throws<OrderDomainException>(() => OrderItem.Create(_testProductId, ValidQuantity, Money.Default()));
+            Assert.Throws<DomainException>(() => OrderItem.Create(_testProductId, ValidQuantity, Money.Default()));
 
         Assert.Contains("price should be greater then zero", exception.Message);
     }
@@ -66,7 +66,7 @@ public class OrderItemTests
         var orderItemId = OrderItemId.From(10);
         orderItem.InitializeOrderItem(orderId, orderItemId);
 
-        var exception = Assert.Throws<OrderDomainException>(() => orderItem.InitializeOrderItem(orderId, orderItemId));
+        var exception = Assert.Throws<DomainException>(() => orderItem.InitializeOrderItem(orderId, orderItemId));
 
         Assert.Contains("already initialized", exception.Message);
     }

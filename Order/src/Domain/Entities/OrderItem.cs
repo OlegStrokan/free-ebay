@@ -44,7 +44,7 @@ public sealed class OrderItem : Entity<OrderItemId>
     internal void InitializeOrderItem(OrderId orderId, OrderItemId orderItemId)
     {
         if (OrderId != null)
-            throw new OrderDomainException("OrderItem is already initialized");
+            throw new DomainException("OrderItem is already initialized");
 
         Id = orderItemId;
         OrderId = orderId;
@@ -75,13 +75,13 @@ public sealed class OrderItem : Entity<OrderItemId>
     private static void ValidatePrice(Money price)
     {
         if (!price.IsGreaterThenZero())
-            throw new OrderDomainException($"Order item price should be greater then zero. Got {price}");
+            throw new DomainException($"Order item price should be greater then zero. Got {price}");
     }
 
     private static void ValidateQuantity(int quantity)
     {
         if (quantity <= 0)
-            throw new OrderDomainException($"Order item quantity should be greater then zero. Got {quantity}");
+            throw new DomainException($"Order item quantity should be greater then zero. Got {quantity}");
     }
 
     public static class Builder
