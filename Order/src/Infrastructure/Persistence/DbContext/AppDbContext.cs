@@ -1,3 +1,4 @@
+using Application.Interfaces;
 using Application.Models;
 using Application.Sagas.Persistence;
 using Infrastructure.Persistence.Configurations;
@@ -10,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<SagaState> SagaStates => Set<SagaState>();
     public DbSet<SagaStepLog> SagaStepLogs => Set<SagaStepLog>();
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -17,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
         builder.ApplyConfiguration(new OutboxMessageConfiguration());
         builder.ApplyConfiguration(new SagaStateConfiguration());
         builder.ApplyConfiguration(new SagaStepLogConfiguration());
+        builder.ApplyConfiguration(new IdempotencyRecordConfiguration());
     }
     
 }
