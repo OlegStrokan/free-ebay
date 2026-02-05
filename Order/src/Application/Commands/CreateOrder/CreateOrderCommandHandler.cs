@@ -14,8 +14,7 @@ namespace Application.Commands.CreateOrder;
 
 public class CreateOrderCommandHandler
     (
-        IOrderRepository orderRepository,
-        IOutboxRepository outboxRepository,
+        IOrderPersistenceService orderPersistenceService,
         IIdempotencyRepository idempotencyRepository,
         IUnitOfWork unitOfWork,
         ILogger<CreateOrderCommandHandler> logger
@@ -64,52 +63,18 @@ public class CreateOrderCommandHandler
                 customerId.Value
             );
 
-
-            await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-
-            try
-            {
-                await orderRepository.AddAsync(order, cancellationToken);
-
-                foreach (var domainEvent in order.UncommitedEvents)
-                {
-                    await outboxRepository.AddAsync(
-                        domainEvent.EventId,
-                        domainEvent.GetType().Name,
-                        SerializeEvent(domainEvent),
-                        domainEvent.OccurredOn,
-                        cancellationToken);
-                }
-
-                await idempotencyRepository.SaveAsync(
-                    request.IdempotencyKey,
-                    order.Id.Value,
-                    DateTime.UtcNow,
-                    cancellationToken);
-
+            var orderId = await orderPersistenceService.CreateOrderAsync(
+                order,
+                request.IdempotencyKey,
+                cancellationToken);
+            
                 logger.LogInformation(
                     "Saved {EventCount} event to outbox for order {OrderId}",
                     order.UncommitedEvents.Count,
                     order.Id.Value
                 );
 
-                await unitOfWork.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-
-                order.MarkEventsAsCommited();
-
-                logger.LogInformation(
-                    "Transaction committed for order {OrderId}",
-                    order.Id.Value
-                );
-
-                return Result<Guid>.Success(order.Id.Value);
-            }
-            catch
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw;
-            }
+            return Result<Guid>.Success(order.Id.Value);
         }
         catch (Exception ex)
         {

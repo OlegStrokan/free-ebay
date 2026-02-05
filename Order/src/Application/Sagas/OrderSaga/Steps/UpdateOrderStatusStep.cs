@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.OrderSaga.Steps;
 
 public class UpdateOrderStatusStep(
-    ISagaOrderPersistenceService orderPersistenceService,
+    IOrderPersistenceService orderPersistenceService,
     ILogger<UpdateOrderStatusStep> logger
     )
     : ISagaStep<OrderSagaData, OrderSagaContext>

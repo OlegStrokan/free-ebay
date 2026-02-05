@@ -12,7 +12,7 @@ namespace Application.Sagas.OrderSaga.Steps;
 
 public sealed class CreateShipmentStep(
     IShippingGateway shippingGateway,
-    ISagaOrderPersistenceService orderPersistenceService,
+    IOrderPersistenceService orderPersistenceService,
     ILogger<CreateShipmentStep> logger
     ) : ISagaStep<OrderSagaData, OrderSagaContext>
 {
