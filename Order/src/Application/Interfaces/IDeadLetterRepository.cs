@@ -1,7 +1,7 @@
 namespace Application.Interfaces;
 
 public sealed record DeadLetterMessage(
-    Guid id,
+    Guid Id,
     string Type,
     string Content,
     DateTime OccurredOn,
