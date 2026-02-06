@@ -8,7 +8,7 @@ public class OutboxMessage
     public DateTime OccurredOnUtc { get; private set; }
     
     public DateTime? ProcessedOnUtc { get; private set; }
-    public int RetryCount { get; set; }
+    public int RetryCount { get; private set; }
     public DateTime? LastRetryAtUtc { get; set; }
     public string? Error { get; private set; }
 
@@ -20,15 +20,20 @@ public class OutboxMessage
         Type = type;
         Content = content;
         OccurredOnUtc = occurredOnUtc;
+        RetryCount = 0;
     }
 
     public void MarkAsProcessed(DateTime processedAt)
     {
         ProcessedOnUtc = processedAt;
+        Error = null;
+
     }
 
-    public void LogError(string error)
+    public void UpdateFailure(string error, DateTime retryAt)
     {
         Error = error;
+        RetryCount++;
+        LastRetryAtUtc = retryAt;
     }
 }

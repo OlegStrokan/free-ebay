@@ -39,26 +39,30 @@ public class OutboxRepository(AppDbContext dbContext) : IOutboxRepository
         
     }
 
-    public Task IncrementRetryCountAsync(Guid messageId, CancellationToken ct)
+    public async Task IncrementRetryCountAsync(Guid messageId, CancellationToken ct)
     {
-        throw new NotImplementedException();
+        var message = await dbContext.OutboxMessages
+            .FirstOrDefaultAsync(m => m.Id == messageId, ct);
+
+        if (message != null)
+        {
+            message.UpdateFailure("Processing failed", DateTime.UtcNow);
+
+            await dbContext.SaveChangesAsync(ct);
+        }
     }
 
-    public Task DeleteAsync(Guid messageId, CancellationToken ct)
+    public async Task DeleteAsync(Guid messageId, CancellationToken ct)
     {
-        throw new NotImplementedException();
+        await dbContext.OutboxMessages
+            .Where(m => m.Id == messageId)
+            .ExecuteDeleteAsync(ct);
     }
 
     public async Task DeleteProcessedMessagesAsync(DateTime olderThen, CancellationToken ct)
     {
-        var oldMessages = await dbContext.OutboxMessages
+        await dbContext.OutboxMessages
             .Where(m => m.ProcessedOnUtc != null && m.ProcessedOnUtc < olderThen)
-            .ToListAsync(ct);
-
-        if (oldMessages.Any())
-        {
-            dbContext.OutboxMessages.RemoveRange(oldMessages);
-            await dbContext.SaveChangesAsync(ct);
-        }
+            .ExecuteDeleteAsync(ct);
     }
 }
