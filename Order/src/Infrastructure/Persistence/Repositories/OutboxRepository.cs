@@ -39,6 +39,16 @@ public class OutboxRepository(AppDbContext dbContext) : IOutboxRepository
         
     }
 
+    public Task IncrementRetryCountAsync(Guid messageId, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task DeleteAsync(Guid messageId, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task DeleteProcessedMessagesAsync(DateTime olderThen, CancellationToken ct)
     {
         var oldMessages = await dbContext.OutboxMessages

@@ -2,34 +2,34 @@ namespace Application.Sagas.Persistence;
 
 public interface ISagaRepository
 {
-    Task<SagaState<TContext>?> GetByIdAsync<TContext>(
+    Task<SagaState?> GetByIdAsync(
         Guid sagaId,
         CancellationToken cancellationToken
-        ) where TContext : SagaContext;
+    );
 
-    Task<SagaState<TContext>?> GetByCorrelationIdAsync<TContext>(
+    Task<SagaState?> GetByCorrelationIdAsync(
         Guid correlationId,
         string sagaType, CancellationToken
-            cancellationToken) where TContext : SagaContext;
+            cancellationToken);
 
-    Task SaveAsync<TContext>(
-        SagaState<TContext> sagaState,
+    Task SaveAsync(
+        SagaState sagaState,
         CancellationToken cancellationToken
-    ) where TContext : SagaContext;
-    
+    );
+
     Task SaveStepAsync(
         SagaStepLog stepLog,
         CancellationToken cancellationToken
-        );
+    );
 
-    Task<List<SagaState<TContext>>> GetStuckSagasAsync<TContext>(
+    Task<List<SagaState>> GetStuckSagasAsync(
         TimeSpan timeout,
         CancellationToken cancellationToken
-    ) where TContext : SagaContext;
-    
-    Task SaveCompensationStateAsync<TContext>(
-        SagaState<TContext> sagaState,
+    );
+
+    Task SaveCompensationStateAsync(
+        SagaState sagaState,
         SagaStepLog stepLog,
-        CancellationToken cancellationToken) 
-        where TContext : SagaContext;
+        CancellationToken cancellationToken
+    );
 }
