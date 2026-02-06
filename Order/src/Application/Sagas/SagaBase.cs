@@ -51,14 +51,14 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
             "Starting {SagaType} for correlation {CorrelationId} with {StepCount} steps",
             SagaType, data.CorrelationId, Steps.Count());
 
-        var sagaState = new SagaState<TContext>
+        var sagaState = new SagaState
         {
             Id = sagaId,
             CorrelationId = data.CorrelationId,
             Status = SagaStatus.Running,
             SagaType = SagaType,
             Payload = JsonSerializer.Serialize(data),
-            Context = context, 
+            Context = JsonSerializer.Serialize(context), 
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -82,8 +82,7 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
                 context, 
                 cancellationToken);
 
-            // ✅ Update typed context directly
-            sagaState.Context = context;
+            sagaState.Context = JsonSerializer.Serialize(context);
             sagaState.CurrentStep = step.StepName;
             sagaState.UpdatedAt = DateTime.UtcNow;
 
@@ -130,13 +129,14 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
         string fromStepName,
         CancellationToken cancellationToken)
     {
-        var typedContext = (TContext)context;
 
         _logger.LogInformation(
             "Resuming {SagaType} for correlation {CorrelationId} from step {StepName}",
             SagaType, data.CorrelationId, fromStepName);
 
-        var sagaState = await _sagaRepository.GetByCorrelationIdAsync<TContext>(
+        var typedContext = (TContext)context; // Safe because of generic constraints
+        
+        var sagaState = await _sagaRepository.GetByCorrelationIdAsync(
             data.CorrelationId,
             SagaType,
             cancellationToken);
@@ -165,8 +165,7 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
 
         sagaState.Status = SagaStatus.Running;
         sagaState.UpdatedAt = DateTime.UtcNow;
-        sagaState.Context = typedContext; 
-        await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+        sagaState.Context = JsonSerializer.Serialize(typedContext);        await _sagaRepository.SaveAsync(sagaState, cancellationToken);
 
         var resumeStep = Steps.FirstOrDefault(s => s.StepName == fromStepName);
         if (resumeStep == null)
@@ -184,7 +183,7 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
             var stepResult = await ExecuteStepAsync(
                 sagaState.Id, step, data, typedContext, cancellationToken);
 
-            sagaState.Context = typedContext; 
+            sagaState.Context = JsonSerializer.Serialize(typedContext); 
             sagaState.CurrentStep = step.StepName;
             sagaState.UpdatedAt = DateTime.UtcNow;
 
@@ -278,7 +277,7 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
 
     public async Task<SagaResult> CompensateAsync(Guid sagaId, CancellationToken cancellationToken)
     {
-        var sagaState = await _sagaRepository.GetByIdAsync<TContext>(sagaId, cancellationToken);
+        var sagaState = await _sagaRepository.GetByIdAsync(sagaId, cancellationToken);
         if (sagaState == null)
             throw new InvalidOperationException($"Saga {sagaId} not found");
 
@@ -291,8 +290,8 @@ public abstract class SagaBase<TData, TContext> : ISaga<TData>
         await _sagaRepository.SaveAsync(sagaState, cancellationToken);
 
         var data = JsonSerializer.Deserialize<TData>(sagaState.Payload)!;
-        var context = sagaState.Context; 
-
+        var context = JsonSerializer.Deserialize<TContext>(sagaState.Context) ?? new TContext();
+        
         var completedSteps = sagaState.Steps
             .Where(s => s.Status == StepStatus.Completed)
             .Select(s => s.StepName)

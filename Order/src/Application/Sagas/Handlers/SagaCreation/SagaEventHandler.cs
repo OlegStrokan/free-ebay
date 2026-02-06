@@ -51,7 +51,7 @@ public abstract class SagaEventHandler<TEvent, TData, TContext> : ISagaEventHand
             );
         
         // check if saga already exists: idempotency
-        var existingSaga = await _sagaRepository.GetByCorrelationIdAsync<TContext>(
+        var existingSaga = await _sagaRepository.GetByCorrelationIdAsync(
             sagaData.CorrelationId,
             SagaType,
             cancellationToken);

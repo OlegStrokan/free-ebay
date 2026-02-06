@@ -41,5 +41,7 @@ public enum SagaStatus
     Failed,
     FailedToCompensate,
     Compensating,
-    Compensated
+    Compensated,
+    // could be hit
+    // TimedOut
 }
