@@ -14,10 +14,8 @@ namespace Application.Commands.RequestReturn;
 
 public class RequestReturnCommandHandler(
     IOrderRepository orderRepository,
-    IReturnRequestRepository returnRequestRepository,
     IIdempotencyRepository idempotencyRepository,
-    IOutboxRepository outboxRepository,
-    IUnitOfWork unitOfWork,
+    IReturnRequestPersistenceService returnRequestPersistenceService,
     ILogger<RequestReturnCommandHandler> logger
         ) : IRequestHandler<RequestReturnCommand, Result<Guid>>
 {
@@ -46,11 +44,7 @@ public class RequestReturnCommandHandler(
             logger.LogInformation(
                 "Processing return request for order {OrderId}",
                 request.OrderId);
-
-            await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-
-            try
-            {
+            
                 var order = await orderRepository.GetByIdAsync(
                     OrderId.From(request.OrderId),
                     cancellationToken);
@@ -59,6 +53,11 @@ public class RequestReturnCommandHandler(
                 {
                     return Result<Guid>.Failure($"Order {request.OrderId} not found");
                 }
+                
+                if (order.Status != OrderStatus.Completed)
+                    return Result<Guid>.Failure(
+                        $"Order {request.OrderId} must be completed to request return. " +
+                        $"Current status: {order.Status}");
 
                 var itemsToReturn = request.ItemsToReturn.Select(dto =>
                     OrderItem.Create(
@@ -77,7 +76,7 @@ public class RequestReturnCommandHandler(
                     request.Reason,
                     itemsToReturn,
                     refundAmount,
-                    order.CompletedAt.Value,
+                    order.CompletedAt!.Value, // already not null
                     order.Items.ToList(),
                     returnWindow);
                 
@@ -87,45 +86,18 @@ public class RequestReturnCommandHandler(
                     "ReturnRequest created with ID  {ReturnRequestId} for order {OrderId}",
                    returnRequest.Id.Value, order.Id.Value);
 
-                await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
-
-                foreach (var domainEvent in returnRequest.UncommitedEvents)
-                {
-                    await outboxRepository.AddAsync(
-                        domainEvent.EventId,
-                        domainEvent.GetType().Name,
-                        SerializeEvent(domainEvent),
-                        domainEvent.OccurredOn,
-                        cancellationToken);
-                }
-
-                await idempotencyRepository.SaveAsync(
+                var resultOrderId = await returnRequestPersistenceService.CreateReturnRequestAsync(
+                    returnRequest,
                     request.IdempotencyKey,
                     order.Id.Value,
-                    DateTime.UtcNow,
                     cancellationToken);
-
+                
                 logger.LogInformation(
-                    "Saved {EventCount} events to outbox and idempotency key for return request on order {OrderId}",
-                    order.UncommitedEvents.Count,
-                    order.Id.Value);
-
-                await unitOfWork.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-
-                order.MarkEventsAsCommited();
-
-                logger.LogInformation(
-                    "Return request transaction committed for order {OrderId}",
-                    order.Id.Value);
+                    "ReturnRequest saved successfully with {EventCount} events for order {OrderId}",
+                    returnRequest.UncommitedEvents.Count,
+                    resultOrderId);
 
                 return Result<Guid>.Success(order.Id.Value);
-            }
-            catch
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw;
-            }
         }
 
         catch (Exception ex)

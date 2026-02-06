@@ -16,7 +16,6 @@ public class CreateOrderCommandHandler
     (
         IOrderPersistenceService orderPersistenceService,
         IIdempotencyRepository idempotencyRepository,
-        IUnitOfWork unitOfWork,
         ILogger<CreateOrderCommandHandler> logger
         ) : IRequestHandler<CreateOrderCommand, Result<Guid>>
 {

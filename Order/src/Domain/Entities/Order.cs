@@ -47,7 +47,7 @@ public sealed class Order : AggregateRoot<OrderId>
         List<OrderItem> items)
     {
         if (items == null || items.Count == 0)
-            throw new OrderDomainException("Order must have a least one item");
+            throw new DomainException("Order must have a least one item");
 
         var order = new Order();
         var totalPrice = CalculateTotalPrice(items);
@@ -69,7 +69,7 @@ public sealed class Order : AggregateRoot<OrderId>
         _status.ValidateTransitionTo(OrderStatus.Paid);
         
         if (paymentId == null)
-            throw new OrderDomainException("Payment ID is required");
+            throw new DomainException("Payment ID is required");
 
         
         var evt = new OrderPaidEvent(
@@ -131,10 +131,10 @@ public sealed class Order : AggregateRoot<OrderId>
     public void AssignTracking(TrackingId trackingId)
     {
         if (_status.CanAssignTracking())
-            throw new OrderDomainException("Cannot assign tracking before payment");
+            throw new DomainException("Cannot assign tracking before payment");
 
         if (trackingId == null)
-            throw new OrderDomainException("Tracking ID is required");
+            throw new DomainException("Tracking ID is required");
 
         var evt = new OrderTrackingAssignedEvent(
             Id,
@@ -156,7 +156,7 @@ public sealed class Order : AggregateRoot<OrderId>
         }
 
         if (_status.CanAssignTracking())
-            throw new OrderDomainException(
+            throw new DomainException(
                 $"Cannot revert tracking for order in {_status} status");
 
         var evt = new OrderTrackingRemovedEvent(
