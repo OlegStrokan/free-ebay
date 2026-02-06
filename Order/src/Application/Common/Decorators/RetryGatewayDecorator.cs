@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Common.Decorators;
 
+// @think: too much voodoo. dispatch proxy is sync but so we spell a lot of magic 
 public class RetryGatewayDecorator<TGateway> : DispatchProxy
 {
     private TGateway _decorated = default!;
@@ -23,65 +24,93 @@ public class RetryGatewayDecorator<TGateway> : DispatchProxy
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
-        if (targetMethod == null)
-            throw new ArgumentNullException(nameof(targetMethod));
+        if (targetMethod == null) throw new ArgumentNullException(nameof(targetMethod));
 
         var retryAttr = targetMethod.GetCustomAttribute<RetryAttribute>();
 
         if (retryAttr == null)
             return targetMethod.Invoke(_decorated, args);
+        
+        // if it's not task
+        if (!typeof(Task).IsAssignableFrom(targetMethod.ReturnType))
+            return InvokeSyncWithRetry(targetMethod, args, retryAttr);
+        
+        
+        // if it's task
+        var returnType = targetMethod.ReturnType;
+        var taskResultType = returnType.IsGenericType
+            ? returnType.GetGenericArguments()[0]
+            : typeof(object);
 
-        return InvokeWithRetry(targetMethod, args, retryAttr);
+        var method = typeof(RetryGatewayDecorator<TGateway>)
+            .GetMethod(nameof(InvokeAsyncWithRetryInternal), BindingFlags.NonPublic | BindingFlags.Instance)
+            ?.MakeGenericMethod(taskResultType);
+
+        return method?.Invoke(this, new object?[] { targetMethod, args, retryAttr });
     }
 
-    private object? InvokeWithRetry(MethodInfo method, object?[]? args, RetryAttribute retryAttr)
+    private async Task<T?> InvokeAsyncWithRetryInternal<T>(MethodInfo method, object?[]? args,
+        RetryAttribute? retryAttr)
     {
         var attempt = 0;
-        Exception? lastException = null;
-
-        while (attempt <= retryAttr.MaxRetries)
+        while (true)
         {
             try
             {
                 var result = method.Invoke(_decorated, args);
-
-                if (result is Task task)
+            
+                // If the method returns task<T>, await it
+                if (result is Task<T> task) return await task;
+            
+                // If the method returns a plain tak, await it and return default
+                if (result is Task plainTask)
                 {
-                    task.GetAwaiter().GetResult();
-
-                    if (task.GetType().IsGenericType)
-                    {
-                        var resultProperty = task.GetType().GetProperty("Result");
-                        return resultProperty?.GetValue(task);
-                    }
-
-                    return null;
+                    await plainTask;
+                    return default;
                 }
 
-                return result;
+                return (T?)result;
             }
-            catch (TargetInvocationException ex) when (
-                IsTransientException(ex.InnerException) && attempt < retryAttr.MaxRetries)
+            catch (TargetInvocationException ex) when (IsTransientException(ex.InnerException) && attempt < retryAttr?.MaxRetries)
             {
-                lastException = ex.InnerException;
                 attempt++;
-
-                var delay = CalculateDelay(attempt, retryAttr);
-
-                _logger.LogWarning(ex.InnerException,
-                    "Transient failure in {Method}, attempt {Attempt}/{MaxRetries}. Retrying in {Delay}ms...",
-                    method.Name, attempt, retryAttr.MaxRetries, delay);
-                
-                Thread.Sleep(delay);
+                var delay = CalculateDelay(attempt, retryAttr!);
+                _logger.LogWarning("Retry {Attempt} for {Method} after {Delay}ms", attempt, method.Name, delay);
+            
+                await Task.Delay(delay); // non-blocking 
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw ex.InnerException ?? ex;
             }
         }
-        
-        _logger.LogError(
-            lastException,
-            "Failed after {Attemps} attemps: {Method}",
-            attempt, method.Name);
+    }
 
-        throw lastException!;
+
+
+    private object? InvokeSyncWithRetry(MethodInfo method, object?[]? args, RetryAttribute retryAttr)
+    {
+        var attempt = 0;
+        while (true)
+        {
+            try
+            {
+                return method.Invoke(_decorated, args);
+            }
+            catch (TargetInvocationException ex) when (IsTransientException(ex.InnerException) &&
+                                                       attempt < retryAttr.MaxRetries)
+            {
+                attempt++;
+                var delay = CalculateDelay(attempt, retryAttr);
+                _logger.LogWarning("Retry {Attempt} for {Method}", attempt, method.Name);
+                Thread.Sleep(delay);
+            }
+            catch (TargetInvocationException ex)
+            {
+                _logger.LogError(ex.InnerException, "Failed after {Attempt} attempts", attempt);
+                throw ex.InnerException ?? ex;
+            }
+        }
     }
 
     private bool IsTransientException(Exception? ex)
