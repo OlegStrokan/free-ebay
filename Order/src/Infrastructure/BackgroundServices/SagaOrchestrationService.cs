@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Application.Interfaces;
 using Application.Sagas.Handlers;
 using Application.Sagas.Handlers.SagaCreation;
 using Confluent.Kafka;
@@ -20,6 +21,10 @@ public class SagaOrchestrationService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
        logger.LogInformation("SagaOrchestrationService started");
+       
+       kafkaConsumer.Subscribe(_topic);
+       logger.LogInformation("Subscribed to topic: {Topic}", _topic);
+       
        try
        {
            while (!stoppingToken.IsCancellationRequested)
@@ -69,6 +74,7 @@ public class SagaOrchestrationService(
        }
        finally
        {
+           kafkaConsumer.Unsubscribe();
            kafkaConsumer.Close();
            logger.LogInformation("SagaOrchestrationService stopped");
        }
@@ -80,10 +86,9 @@ public class SagaOrchestrationService(
     {
         using var scope = serviceProvider.CreateScope();
 
-        var handlers = scope.ServiceProvider.GetServices<ISagaEventHandler>();
-
-        var handler = handlers.FirstOrDefault(h => h.EventType == eventWrapper.EventType);
-
+        var factory = serviceProvider.GetRequiredService<ISagaHandlerFactory>();
+        var handler = factory.GetHandler(scope.ServiceProvider, eventWrapper.EventType);
+        
         if (handler == null)
         {
             logger.LogWarning(
