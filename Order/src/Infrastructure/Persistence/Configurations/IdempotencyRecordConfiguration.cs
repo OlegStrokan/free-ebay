@@ -10,16 +10,12 @@ public class IdempotencyRecordConfiguration : IEntityTypeConfiguration<Idempoten
     {
         builder.ToTable("IdempotencyRecords");
 
-        builder.Property(r => r.Key);
+        builder.HasKey(r => r.Key);
 
         builder.Property(r => r.Key).HasMaxLength(200).IsRequired();
 
         builder.Property(r => r.CreatedAt).IsRequired();
-
-        builder.Property(r => r.CreatedAt).IsRequired();
-
-        builder.HasIndex(r => r.Key).IsUnique();
-
+        
         builder.HasIndex(r => r.CreatedAt);
     }
 }

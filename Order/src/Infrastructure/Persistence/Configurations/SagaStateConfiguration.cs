@@ -16,10 +16,9 @@ public class SagaStateConfiguration : IEntityTypeConfiguration<SagaState>
 
         builder.Property(x => x.SagaType).IsRequired().HasMaxLength(100);
         builder.Property(x => x.CurrentStep).IsRequired().HasMaxLength(100);
-        builder.Property(x => x.Payload).HasConversion<string>().HasMaxLength(20);
 
-        builder.Property(x => x.Context).HasColumnType("nvarchar(max)");
-        builder.Property(x => x.Payload).HasColumnType("nvarchar(max)");
+        builder.Property(x => x.Context).HasColumnType("text");
+        builder.Property(x => x.Payload).HasColumnType("text");
 
         builder.HasIndex(x => x.UpdatedAt);
 

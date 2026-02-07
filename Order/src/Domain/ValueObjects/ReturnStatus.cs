@@ -60,7 +60,7 @@ public class ReturnStatus
             1 => Received,
             2 => Refunded,
             3 => Completed,
-            _ => throw new ArgumentException($"Unknown OrderStatus value: {value}", nameof(value))
+            _ => throw new ArgumentException($"Unknown ReturnStatus value: {value}", nameof(value))
         };
     }
 
@@ -72,14 +72,14 @@ public class ReturnStatus
             "Received" => Received,
             "Refunded" => Refunded,
             "Completed" => Completed,
-            _ => throw new ArgumentException($"Unknown OrderStatus name: {name}", nameof(name))
+            _ => throw new ArgumentException($"Unknown ReturnStatus name: {name}", nameof(name))
         };
     }
     
     
     public override bool Equals(object? obj)
     {
-        return obj is OrderStatus other && Value == other.Value;
+        return obj is ReturnStatus other && Value == other.Value;
 
     }
 

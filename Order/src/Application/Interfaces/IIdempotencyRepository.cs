@@ -1,9 +1,21 @@
 namespace Application.Interfaces;
 
-public sealed record IdempotencyRecord(
-    string Key,
-    Guid ResultId,
-    DateTime CreatedAt);
+public sealed record IdempotencyRecord
+{
+    public string Key { get; private set; } = string.Empty;
+    public Guid ResultId { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    
+    private IdempotencyRecord() {}
+
+    public IdempotencyRecord(string key, Guid resultId, DateTime createdAt)
+    {
+        Key = key;
+        ResultId = resultId;
+        CreatedAt = createdAt;
+    }
+    
+}
 
 public interface IIdempotencyRepository
 {
