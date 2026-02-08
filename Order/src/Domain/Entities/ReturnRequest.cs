@@ -28,10 +28,6 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public DateTime RequestedAt => _requestedAt;
     public DateTime? ReceivedAt => _receivedAt;
     public string? RefundId => _refundId;
-    public int Version { get; private set; }
-
-    private readonly List<IDomainEvent> _uncommitedEvents = new();
-    public IReadOnlyList<IDomainEvent> UncommitedEvents => _uncommitedEvents.AsReadOnly();
 
     private ReturnRequest() { }
     
@@ -45,40 +41,37 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         List<OrderItem> orderItems,
         TimeSpan returnWindow)
     {
+        // validation logic (the gatekeeper)
         if (string.IsNullOrWhiteSpace(reason))
             throw new DomainException("Return reason is required");
 
-        if (itemsToReturn == null || itemsToReturn.Count == 0)
+        if (itemsToReturn == null || !itemsToReturn.Any())
             throw new DomainException("Must specify at least one item to return");
 
         if (!refundAmount.IsGreaterThenZero())
             throw new DomainException("Refund amount must be greater than zero");
 
-        // Validate return window
-        var orderAge = DateTime.Now - orderCompletedAt;
+        var orderAge = DateTime.UtcNow - orderCompletedAt;
         if (orderAge > returnWindow)
-            throw new DomainException(
-                $"Return window expired. Order was completed {orderAge.Days} days ago. "
-                + $"Return window is {returnWindow.Days} days. ");
+            throw new DomainException($"Return window expired. Return window is {returnWindow.Days} days.");
 
-        // Validate all items belong to the order
-        foreach (var item in itemsToReturn.Where(item =>
-                     orderItems.All(i => i.ProductId != item.ProductId)))
+        foreach (var item in itemsToReturn)
         {
-            throw new DomainException($"Product {item.ProductId.Value} is not part of the order");
+            if (orderItems.All(i => i.ProductId != item.ProductId))
+                throw new DomainException($"Product {item.ProductId.Value} is not part of the order");
         }
 
+        // raise event (the command phase)
         var returnRequest = new ReturnRequest();
-        var evt = new ReturnRequestCreatedEvent(
+        returnRequest.RaiseEvent(new ReturnRequestCreatedEvent(
             ReturnRequestId.CreateUnique(),
             orderId,
             customerId,
             reason,
             itemsToReturn,
             refundAmount,
-            DateTime.UtcNow);
+            DateTime.UtcNow));
 
-        returnRequest.RaiseEvent(evt);
         return returnRequest;
     }
 
@@ -87,13 +80,11 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         if (_status != ReturnStatus.Pending)
             throw new DomainException($"Cannot mark as received in {_status} status");
 
-        var evt = new ReturnItemsReceivedEvent(
+        RaiseEvent(new ReturnItemsReceivedEvent(
             Id,
             _orderId,
             _customerId,
-            DateTime.UtcNow);
-
-        RaiseEvent(evt);
+            DateTime.UtcNow));
     }
 
     public void ProcessRefund(string refundId)
@@ -104,15 +95,13 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         if (string.IsNullOrWhiteSpace(refundId))
             throw new DomainException("Refund ID is required");
 
-        var evt = new ReturnRefundProcessedEvent(
+        RaiseEvent(new ReturnRefundProcessedEvent(
             Id,
             _orderId,
             _customerId,
             refundId,
             _refundAmount,
-            DateTime.UtcNow);
-
-        RaiseEvent(evt);
+            DateTime.UtcNow));
     }
 
     public void Complete()
@@ -120,16 +109,15 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         if (_status != ReturnStatus.Refunded)
             throw new DomainException($"Cannot complete return in {_status} status");
 
-        var evt = new ReturnCompletedEvent(
+        RaiseEvent(new ReturnCompletedEvent(
             Id,
             _orderId,
             _customerId,
-            DateTime.UtcNow);
-
-        RaiseEvent(evt);
+            DateTime.UtcNow));
     }
 
-    // Event application methods
+    // the assistant - state mutation only ---
+
     private void Apply(ReturnRequestCreatedEvent evt)
     {
         Id = evt.ReturnRequestId;
@@ -161,49 +149,12 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         _completedAt = evt.CompletedAt;
     }
 
-    // Event sourcing infrastructure
-    private void RaiseEvent(IDomainEvent evt)
-    {
-        ApplyEvent(evt);
-        _uncommitedEvents.Add(evt);
-    }
+    // --- rebuild ---
 
-    private void ApplyEvent(IDomainEvent evt)
+    public static ReturnRequest FromHistory(IEnumerable<IDomainEvent> history)
     {
-        switch (evt)
-        {
-            case ReturnRequestCreatedEvent e:
-                Apply(e);
-                break;
-            case ReturnItemsReceivedEvent e:
-                Apply(e);
-                break;
-            case ReturnRefundProcessedEvent e:
-                Apply(e);
-                break;
-            case ReturnCompletedEvent e:
-                Apply(e);
-                break;
-            default:
-                throw new InvalidOperationException($"Unknown event type {evt.GetType().Name}");
-        }
-
-        Version++;
-    }
-
-    public static ReturnRequest FromEvents(IEnumerable<IDomainEvent> history)
-    {
-        var returnRequest = new ReturnRequest();
-        foreach (var evt in history)
-        {
-            returnRequest.ApplyEvent(evt);
-        }
-        return returnRequest;
-    }
-
-    public void MarkEventsAsCommited()
-    {
-        _uncommitedEvents.Clear();
+        var request = new ReturnRequest();
+        request.LoadFromHistory(history);
+        return request;
     }
 }
-

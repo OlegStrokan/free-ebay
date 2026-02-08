@@ -1,11 +1,11 @@
-using System.Diagnostics.Tracing;
 using Domain.Common;
 using Domain.Events.CreateOrder;
-using Domain.Events.OrderReturn;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Entities;
+
+// clean separation between command methods (Cancel, Pay) and Apply methods to prevent shit in the future
 
 public sealed class Order : AggregateRoot<OrderId>
 {
@@ -20,7 +20,7 @@ public sealed class Order : AggregateRoot<OrderId>
     private DateTime _createdAt;
     private DateTime? _completedAt;
     private DateTime? _updatedAt;
-    private List<string> _failedMessages = new List<string>();
+    private List<string> _failedMessages = new();
     
     public CustomerId CustomerId => _customerId;
     public TrackingId? TrackingId => _trackingId;
@@ -31,9 +31,7 @@ public sealed class Order : AggregateRoot<OrderId>
     
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
     public IReadOnlyList<string> FailedMessage => _failedMessages.AsReadOnly();
-
-    public int Version { get; private set; }
-
+    
     private readonly List<IDomainEvent> _uncommitedEvents = new();
 
     public IReadOnlyList<IDomainEvent> UncommitedEvents => _uncommitedEvents.AsReadOnly();
@@ -110,20 +108,16 @@ public sealed class Order : AggregateRoot<OrderId>
         RaiseEvent(evt);
     }
 
-    public void Cancel(List<string> failedMessages)
+    public void Cancel(List<string> reasons)
     {
         _status.ValidateTransitionTo(OrderStatus.Cancelled);
 
         var evt = new OrderCancelledEvent(
             Id,
             _customerId,
+            reasons,
             DateTime.UtcNow
             );
-
-        foreach (var message in failedMessages)
-        {
-            _failedMessages.Add(message);
-        }
 
         RaiseEvent(evt);
     }
@@ -141,9 +135,6 @@ public sealed class Order : AggregateRoot<OrderId>
             trackingId,
             DateTime.UtcNow
         );
-        
-        _trackingId = trackingId;
-        _updatedAt = DateTime.UtcNow;
         
         RaiseEvent(evt);
     }
@@ -220,6 +211,7 @@ public sealed class Order : AggregateRoot<OrderId>
     {
         _status = OrderStatus.Cancelled;
         _updatedAt = evt.CancelledAt;
+        _failedMessages.AddRange(evt.Reasons);
     }
 
     private void Apply(OrderTrackingAssignedEvent evt)
@@ -233,66 +225,16 @@ public sealed class Order : AggregateRoot<OrderId>
         _trackingId = null;
         _updatedAt = evt.RemovedAt;
     }
-
-    // event sourcing infrastructure
-
-    private void RaiseEvent(IDomainEvent evt)
-    {
-        ApplyEvent(evt);
-        _uncommitedEvents.Add(evt);
-    }
     
-    private void ApplyEvent(IDomainEvent evt)
-    {
-        switch (evt)
-        {
-            case OrderCreatedEvent e:
-                Apply(e);
-                break;
-            case OrderPaidEvent e:
-                Apply(e);
-                break;
-            case OrderApprovedEvent e:
-                Apply(e);
-                break;
-            case OrderCompletedEvent e:
-                Apply(e);
-                break;
-            case OrderCancelledEvent e:
-                Apply(e);
-                break;
-            case OrderTrackingAssignedEvent e:
-                Apply(e);
-                break;
-            case OrderTrackingRemovedEvent e:
-                Apply(e);
-                break;
-
-            default:
-                throw new InvalidOperationException($"Unknown event type {evt.GetType().Name}");
-        }
-        
-        Version++;
-    }
 
     // reconstruction
-    public static Order FromEvents(IEnumerable<IDomainEvent> history)
+    public static Order FromHistory(IEnumerable<IDomainEvent> history)
     {
         var order = new Order();
-
-        foreach (var evt in history)
-        {
-            order.ApplyEvent(evt);
-        }
-
+        order.LoadFromHistory(history);
         return order;
     }
-
-    public void MarkEventsAsCommited()
-    {
-        _uncommitedEvents.Clear();
-    }
-
+    
 
     public static Money CalculateTotalPrice(List<OrderItem> items)
     {
