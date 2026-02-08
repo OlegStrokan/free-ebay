@@ -9,7 +9,7 @@ public sealed record PaymentId
     private PaymentId(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("TrackingId cannot be empty", nameof(value));
+            throw new ArgumentException("PaymentId cannot be empty", nameof(value));
         Value = value;
     }
 

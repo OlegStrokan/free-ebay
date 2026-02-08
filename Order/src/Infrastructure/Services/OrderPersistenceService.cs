@@ -12,11 +12,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Services;
 
 
-public class SagaOrderPersistenceService(
+public class OrderPersistenceService(
     IOutboxRepository outboxRepository,
     IOrderRepository orderRepository,
+    IIdempotencyRepository idempotencyRepository,
     AppDbContext dbContext,
-    ILogger<SagaOrderPersistenceService> logger) : ISagaOrderPersistenceService
+    ILogger<OrderPersistenceService> logger) : IOrderPersistenceService
 {
     public async Task UpdateOrderAsync(
         Guid orderId,
@@ -64,6 +65,55 @@ public class SagaOrderPersistenceService(
                 throw;
             }
         });
+    }
+    
+    public async Task<Order> CreateOrderAsync(
+        Order order,
+        string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database
+                .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+
+
+            try
+            {
+                await orderRepository.AddAsync(order, cancellationToken);
+
+                foreach (var domainEvent in order.UncommitedEvents)
+                {
+                    await outboxRepository.AddAsync(
+                        domainEvent.EventId,
+                        domainEvent.GetType().Name,
+                        JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                        domainEvent.OccurredOn,
+                        cancellationToken);
+                }
+
+                await idempotencyRepository.SaveAsync(
+                    idempotencyKey,
+                    order.Id.Value,
+                    DateTime.UtcNow,
+                    cancellationToken);
+
+                order.MarkEventsAsCommited();
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Transaction failed for order {OrderId}", order.Id.Value);
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
+        
+        return order;
     }
 }
 

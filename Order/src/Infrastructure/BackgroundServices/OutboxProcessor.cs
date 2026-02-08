@@ -12,7 +12,7 @@ public sealed class OutboxProcessor(
     private readonly int _batchSize = configuration.GetValue<int>("Outbox:BatchSize", 20);
     private readonly int _maxRetries = configuration.GetValue<int>("Outbox:MaxRetries", 5);
     private readonly int _maxAgeDays = configuration.GetValue<int>("Outbox:MaxAgeDays", 7);
-    private readonly int _pollIntervalMs = configuration.GetValue<int>("Outbox:PollInternalMs", 2000);
+    private readonly int _pollIntervalMs = configuration.GetValue<int>("Outbox:PollIntervalMs", 2000);
     private readonly int _maxDegreeOfParallelism = configuration.GetValue<int>("Outbox:MaxParallelism", 5);
 
 
