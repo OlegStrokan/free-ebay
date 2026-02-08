@@ -130,7 +130,7 @@ public sealed class Order : AggregateRoot<OrderId>
 
     public void AssignTracking(TrackingId trackingId)
     {
-        if (_status.CanAssignTracking())
+        if (!_status.CanAssignTracking())
             throw new DomainException("Cannot assign tracking before payment");
 
         if (trackingId == null)
@@ -155,7 +155,7 @@ public sealed class Order : AggregateRoot<OrderId>
             return;
         }
 
-        if (_status.CanAssignTracking())
+        if (!_status.CanAssignTracking())
             throw new DomainException(
                 $"Cannot revert tracking for order in {_status} status");
 
@@ -167,11 +167,13 @@ public sealed class Order : AggregateRoot<OrderId>
         RaiseEvent(evt);
     }
 
-   
-    // return order
+    public bool isEligibleForReturn()
+    {
+        return Status == OrderStatus.Completed &&
+               CompletedAt.HasValue &&
+               (DateTime.UtcNow - CompletedAt.Value).TotalDays <= 14;
+    }
     
-
-
     // event application
 
 

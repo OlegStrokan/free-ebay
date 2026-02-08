@@ -6,14 +6,14 @@ namespace Domain.Entities;
 
 public sealed class OrderItem : Entity<OrderItemId>
 {
-    public OrderId OrderId { get; private set; }
+    public OrderId? OrderId { get; private set; }
     public ProductId ProductId { get; private set; }
     public int Quantity { get; private set; }
     public Money PriceAtPurchase { get; private set; }
 
     private OrderItem(
         OrderItemId id,
-        OrderId orderId,
+        OrderId? orderId,
         ProductId productId,
         int quantity,
         Money price) : base(id)
@@ -34,7 +34,7 @@ public sealed class OrderItem : Entity<OrderItemId>
         return new OrderItem(
             //orderItem can't exist without Order, we lock it
             OrderItemId.From(0), // will be set during order initialization
-            null!, // will be set during order initialization
+            null, // will be set during order initialization
             productId,
             quantity,
             price
@@ -83,14 +83,4 @@ public sealed class OrderItem : Entity<OrderItemId>
         if (quantity <= 0)
             throw new DomainException($"Order item quantity should be greater then zero. Got {quantity}");
     }
-
-    public static class Builder
-    {
-        public static OrderItem Build(ProductId productId, int quantity, Money price)
-        {
-            return Create(productId, quantity, price);
-        }
-    }
-    
-
 }

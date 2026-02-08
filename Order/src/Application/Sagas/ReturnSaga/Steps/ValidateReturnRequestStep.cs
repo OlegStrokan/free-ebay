@@ -11,6 +11,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 public sealed class ValidateReturnRequestStep(
     IOrderRepository orderRepository,
     IReturnRequestPersistenceService returnRequestPersistenceService,
+    IReturnRequestRepository returnRequestRepository,
     ILogger<ValidateReturnRequestStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -53,7 +54,29 @@ public sealed class ValidateReturnRequestStep(
                 return StepResult.Failure(
                     $"Order {data.CorrelationId} must be completed to request return." +
                     $"Current status: {order.Status}");
-            
+
+            var existingRequest = await returnRequestRepository.GetByOrderIdAsync(
+                OrderId.From(data.CorrelationId), cancellationToken);
+
+            if (existingRequest != null)
+            {
+                logger.LogInformation("ReturnRequest already exists for Order {OrderId}. Attaching saga.",
+                    data.CorrelationId);
+                context.ReturnRequestValidated = true;
+
+                return StepResult.SuccessResult(new Dictionary<string, object>
+                {
+                    ["OrderId"] = data.CorrelationId,
+                    ["Idempotent"] = true,
+                    ["Source"] = "ExistingRecord"
+                });
+            }
+
+            if (!order.isEligibleForReturn())
+            {
+                return StepResult.Failure($"Order {data.CorrelationId} id not eligible for return.");
+            }
+
             var itemsToReturn = data.ReturnedItems.Select(dto =>
                 OrderItem.Create(
                     ProductId.From(dto.ProductId),
@@ -64,6 +87,7 @@ public sealed class ValidateReturnRequestStep(
             var refundAmount = Money.Create(data.RefundAmount, data.Currency);
             var returnWindow = TimeSpan.FromDays(14); // @todo: move to domain service and shit
 
+            
             var returnRequest = ReturnRequest.Create(
                 orderId: OrderId.From(data.CorrelationId),
                 customerId: CustomerId.From(data.CustomerId),
