@@ -13,9 +13,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 public class ProcessRefundStep(
     IPaymentGateway paymentGateway,
     IOrderRepository orderRepository,
-    IReturnRequestRepository returnRequestRepository,
-    IOutboxRepository outboxRepository,
-    IUnitOfWork unitOfWork,
+    IReturnRequestPersistenceService returnRequestPersistenceService,
     ILogger<ProcessRefundStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -27,25 +25,27 @@ public class ProcessRefundStep(
         ReturnSagaContext context,
         CancellationToken cancellationToken)
     {
-        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
-
         try
         {
+
+            if (!string.IsNullOrEmpty(context.RefundId))
+            {
+                logger.LogInformation(
+                    "Refund already processed with {RefundId}. Skipping.",
+                    context.RefundId);
+
+                return StepResult.SuccessResult(new Dictionary<string, object>
+                {
+                    ["RefundId"] = context.RefundId,
+                    ["Idempotent"] = true
+                });
+            }
+            
             logger.LogInformation(
                 "Processing refund for order {OrderId}, amount {Amount} {Current}",
                 data.CorrelationId,
                 data.RefundAmount,
                 data.Currency);
-
-            var returnRequest = await returnRequestRepository.GetByOrderIdAsync(
-                OrderId.From(data.CorrelationId), cancellationToken);
-
-            if (returnRequest == null)
-                return StepResult.Failure($"ReturnRequest for order {data.CorrelationId} not found");
-
-            if (returnRequest.Status != ReturnStatus.Received)
-                return StepResult.Failure($"ReturnRequest is unexpected status {returnRequest.Status}. Expected: Received");
-            
             
             var order = await orderRepository.GetByIdAsync(
                 OrderId.From(data.CorrelationId), cancellationToken);
@@ -77,25 +77,19 @@ public class ProcessRefundStep(
             logger.LogInformation(
                 "Refund processed successfully. Refund ID: {RefundId}",
                 refundId);
-            
-            returnRequest.ProcessRefund(refundId);
-            
-            await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
-            
-            foreach (var domainEvent in returnRequest.UncommitedEvents)
-            {
-                await outboxRepository.AddAsync(
-                    domainEvent.EventId,
-                    domainEvent.GetType().Name,
-                    JsonSerializer.Serialize(domainEvent),
-                    domainEvent.OccurredOn,
-                    cancellationToken);
-            }
 
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            await returnRequestPersistenceService.UpdateReturnRequestAsync(
+                data.CorrelationId,
+                returnRequest =>
+                {
+                    if (returnRequest.Status != ReturnStatus.Received)
+                        throw new InvalidOperationException(
+                            $"ReturnRequest is in unexpected status {returnRequest.Status}. Expected: Received");
 
-            returnRequest.MarkEventsAsCommited();
+                    returnRequest.ProcessRefund(refundId);
+                    return Task.CompletedTask;
+                },
+                cancellationToken);
 
             logger.LogInformation(
                 "Refund {RefundId} processed and saved for order {OrderId}",
@@ -112,8 +106,6 @@ public class ProcessRefundStep(
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync(cancellationToken);
-            
             logger.LogError(
                 ex,
                 "Failed to process refund for order {OrderId}",
@@ -183,7 +175,7 @@ public class ProcessRefundStep(
         AlertSeverity severity,
         CancellationToken cancellationToken)
     {
-        // in MVP integrate with: pagerDuty, email, sms, slack...fucking something
+        // @todo: integrate with: pagerDuty, email, sms, slack...fucking something
         
         logger.LogInformation("Sending {Severity} alert: {AlertType} for order {OrderId}",
             severity,
@@ -205,7 +197,7 @@ public class ProcessRefundStep(
             "Creating manual intervention ticket for order {OrderId}",
             orderId);
         
-        // create ticket: jira/internal
+        // @todo: create ticket: jira/internal
 
         await Task.CompletedTask;
     }
