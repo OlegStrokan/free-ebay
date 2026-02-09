@@ -8,6 +8,6 @@ public record OrderTrackingAssignedEvent(
     TrackingId TrackingId,
     DateTime AssignedAt) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredOn { get; } = AssignedAt;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn => AssignedAt;
 }

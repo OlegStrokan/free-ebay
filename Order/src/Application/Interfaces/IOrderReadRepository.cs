@@ -3,7 +3,7 @@ namespace Application.Interfaces;
 public interface IOrderReadRepository
 {
     Task<OrderResponse?> GetByIdAsync(Guid orderId, CancellationToken ct = default);
-    Task<OrderResponse?> GetGyTrackingIdAsync(Guid trackingId, CancellationToken ct = default);
+    Task<OrderResponse?> GetByTrackingIdAsync(Guid trackingId, CancellationToken ct = default);
     Task<List<OrderSummaryResponse>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct = default);
     Task<List<OrderSummaryResponse>> GetOrderAsync(int pageNumber, int pageSize, CancellationToken ct = default);
 }

@@ -134,7 +134,7 @@ public sealed class ValidateReturnRequestStep(
         ReturnSagaContext context,
         CancellationToken cancellationToken)
     {
-        // If validation succeeds, a ReturnRequest is created. If later saga steps fail,
+        // @think: If validation succeeds, a ReturnRequest is created. If later saga steps fail,
         // the ReturnRequest remains as a record of the return attempt.
         // No automatic cleanup is performed as this represents a valid business state.
         
