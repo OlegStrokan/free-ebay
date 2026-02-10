@@ -39,6 +39,23 @@ public class SagaRepository(AppDbContext dbContext) : ISagaRepository
         }
     }
 
+    public async Task SaveStepAsync(SagaStepLog stepLog, CancellationToken cancellationToken)
+    {
+        var existing = await dbContext.SagaStepLogs
+            .AnyAsync(x => x.Id == stepLog.Id, cancellationToken);
+
+        if (!existing)
+        {
+            await dbContext.SagaStepLogs.AddAsync(stepLog, cancellationToken);
+        }
+        else
+        {
+            dbContext.SagaStepLogs.Update(stepLog);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<List<SagaStepLog>> GetStepLogsAsync(Guid sagaId, CancellationToken cancellationToken)
     {
         return await dbContext.SagaStepLogs
@@ -47,12 +64,11 @@ public class SagaRepository(AppDbContext dbContext) : ISagaRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<SagaState>> GetStuckSagasAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    public async Task<List<SagaState>> GetStuckSagasAsync(DateTime updatedBeforeCutoff, CancellationToken cancellationToken)
     {
-        var cutoffTime = DateTime.UtcNow.Subtract(timeout);
 
         return await dbContext.SagaStates
-            .Where(x => x.Status == SagaStatus.Running && x.UpdatedAt < cutoffTime)
+            .Where(x => x.Status == SagaStatus.Running && x.UpdatedAt < updatedBeforeCutoff)
             .Include(x => x.Steps)
             .ToListAsync(cancellationToken);
     }

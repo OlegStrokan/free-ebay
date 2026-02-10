@@ -51,7 +51,7 @@ public class OrderPersistenceService(
                         cancellationToken);
                 }
 
-                order.MarkEventsAsCommited();
+                order.ClearUncommittedEvents();
 
                 await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -100,7 +100,7 @@ public class OrderPersistenceService(
                     DateTime.UtcNow,
                     cancellationToken);
 
-                order.MarkEventsAsCommited();
+                order.ClearUncommittedEvents();
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
