@@ -10,7 +10,7 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
     where TData : SagaData
     where TContext : SagaContext, new()
 {
-    private readonly ISaga<TData> _saga;
+    private readonly ISagaBase<TData> _saga;
     private readonly ISagaRepository _sagaRepository;
     private readonly ILogger _logger;
     
@@ -21,7 +21,7 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
     protected abstract string ResumeAtStepName { get; }
 
     protected SagaContinuationEventHandler(
-        ISaga<TData> saga,
+        ISagaBase<TData> saga,
         ISagaRepository sagaRepository,
         ILogger logger)
     {

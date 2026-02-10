@@ -8,7 +8,7 @@ public abstract class SagaEventHandler<TEvent, TData, TContext> : ISagaEventHand
      where TData : SagaData
      where TContext : SagaContext, new()
 {
-    private readonly ISaga<TData> _saga;
+    private readonly ISagaBase<TData> _saga;
     private readonly ISagaRepository _sagaRepository;
     private readonly ILogger _logger;
     
@@ -16,7 +16,7 @@ public abstract class SagaEventHandler<TEvent, TData, TContext> : ISagaEventHand
     public abstract string SagaType { get;  }
 
     protected SagaEventHandler(
-        ISaga<TData> saga,
+        ISagaBase<TData> saga,
         ISagaRepository sagaRepository,
         ILogger logger)
     {

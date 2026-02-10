@@ -13,18 +13,18 @@ namespace Application.Tests.Sagas;
 public class SagaEventHandlerTests
 {
     public readonly ISagaRepository _repository;
-    public readonly ISaga<TestSagaData> _saga;
+    public readonly ISagaBase<TestSagaData> SagaBase;
     public readonly ILogger _logger;
     public readonly TestSagaHandler _sut; // system under test 
 
 
     public SagaEventHandlerTests()
     {
-        _saga = Substitute.For<ISaga<TestSagaData>>();
+        SagaBase = Substitute.For<ISagaBase<TestSagaData>>();
         _repository = Substitute.For<ISagaRepository>();
         _logger = Substitute.For<ILogger>();
 
-        _sut = new TestSagaHandler(_saga, _repository, _logger);
+        _sut = new TestSagaHandler(SagaBase, _repository, _logger);
     }
 
     [Fact]
@@ -37,13 +37,13 @@ public class SagaEventHandlerTests
             .GetByCorrelationIdAsync(testEvent.Id, "TestSaga", Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<SagaState?>(null));
 
-        _saga
+        SagaBase
             .ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>())
             .Returns(SagaResult.Success(Guid.NewGuid()));
 
         await _sut.HandleAsync(payload, CancellationToken.None);
 
-        await _saga.Received(1).ExecuteAsync(
+        await SagaBase.Received(1).ExecuteAsync(
             Arg.Is<TestSagaData>(d => d.CorrelationId == testEvent.Id && d.SomeData == "Test"),
             Arg.Any<CancellationToken>());
     }
@@ -61,7 +61,7 @@ public class SagaEventHandlerTests
 
         await _sut.HandleAsync(payload, CancellationToken.None);
 
-        await _saga.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
+        await SagaBase.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class SagaEventHandlerTests
 
         await _sut.HandleAsync(invalidJson, CancellationToken.None);
 
-        await _saga.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
+        await SagaBase.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
         
         _logger.Received().Log(
             LogLevel.Warning,
@@ -91,7 +91,7 @@ public class SagaEventHandlerTests
         _repository.GetByCorrelationIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<SagaState?>(null));
 
-        _saga.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>()).ThrowsAsync(expectedException);
+        SagaBase.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>()).ThrowsAsync(expectedException);
 
         var exception = await Record.ExceptionAsync(async () => await _sut.HandleAsync(payload, CancellationToken.None));
         
@@ -125,8 +125,8 @@ public class SagaEventHandlerTests
         public override string EventType => "TestEvent";
         public override string SagaType => "TestSaga";
         
-        public TestSagaHandler(ISaga<TestSagaData> saga, ISagaRepository repo, ILogger logger) 
-            : base(saga, repo, logger) {}
+        public TestSagaHandler(ISagaBase<TestSagaData> sagaBase, ISagaRepository repo, ILogger logger) 
+            : base(sagaBase, repo, logger) {}
 
         protected override TestSagaData MapEventToSagaData(TestEvent eventDto)
         {

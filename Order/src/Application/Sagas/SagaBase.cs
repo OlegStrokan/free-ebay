@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Sagas;
 
-public abstract class SagaBase<TData, TContext> : ISaga<TData>
+public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
     where TData : SagaData
     where TContext : SagaContext, new()
 {

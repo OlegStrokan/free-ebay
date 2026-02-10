@@ -23,7 +23,7 @@ public interface ISagaRepository
     );
 
     Task<List<SagaState>> GetStuckSagasAsync(
-        TimeSpan timeout,
+        TimeSpan olderThan,
         CancellationToken cancellationToken
     );
 

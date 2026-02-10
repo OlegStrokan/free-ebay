@@ -1,6 +1,6 @@
 namespace Application.Sagas;
 
-public interface ISaga<TData> 
+public interface ISagaBase<TData> 
     where TData : SagaData
 
 {
@@ -10,4 +10,3 @@ public interface ISaga<TData>
         CancellationToken cancellationToken);
     Task<SagaResult> CompensateAsync(Guid sagaId, CancellationToken cancellationToken);
 }
-
