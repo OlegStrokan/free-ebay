@@ -39,29 +39,12 @@ public class SagaRepository(AppDbContext dbContext) : ISagaRepository
         }
     }
 
-    public Task<SagaState?> GetByIdAsync<TContext>(Guid sagaId, CancellationToken cancellationToken) where TContext : SagaContext
+    public async Task<List<SagaStepLog>> GetStepLogsAsync(Guid sagaId, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
-    }
-
-    public Task<SagaState?> GetByCorrelationIdAsync<TContext>(Guid correlationId, string sagaType, CancellationToken cancellationToken) where TContext : SagaContext
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task SaveAsync<TContext>(SagaState sagaState, CancellationToken cancellationToken) where TContext : SagaContext
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task SaveStepAsync(SagaStepLog stepLog, CancellationToken cancellationToken)
-    {
-        await dbContext.SagaStepLogs.AddAsync(stepLog, cancellationToken);
-    }
-
-    public Task<List<SagaState>> GetStuckSagasAsync<TContext>(TimeSpan timeout, CancellationToken cancellationToken) where TContext : SagaContext
-    {
-        throw new NotImplementedException();
+        return await dbContext.SagaStepLogs
+            .Where(s => s.SagaId == sagaId)
+            .OrderBy(s => s.StartedAt)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<List<SagaState>> GetStuckSagasAsync(TimeSpan timeout, CancellationToken cancellationToken)

@@ -6,6 +6,11 @@ public interface ISagaRepository
         Guid sagaId,
         CancellationToken cancellationToken
     );
+    
+    Task<List<SagaStepLog>> GetStepLogsAsync(
+        Guid sagaId,
+        CancellationToken cancellationToken
+    );
 
     Task<SagaState?> GetByCorrelationIdAsync(
         Guid correlationId,
@@ -23,7 +28,7 @@ public interface ISagaRepository
     );
 
     Task<List<SagaState>> GetStuckSagasAsync(
-        TimeSpan olderThan,
+        DateTime updateBeforeCutoff,
         CancellationToken cancellationToken
     );
 
