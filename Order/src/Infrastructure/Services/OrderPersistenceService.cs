@@ -13,6 +13,7 @@ namespace Infrastructure.Services;
 
 
 public class OrderPersistenceService(
+    IEventStoreRepository eventStore,
     IOutboxRepository outboxRepository,
     IOrderRepository orderRepository,
     IIdempotencyRepository idempotencyRepository,
@@ -33,14 +34,22 @@ public class OrderPersistenceService(
 
             try
             {
-
-                // @think: is this good way to load order?
-                var order = await orderRepository.GetByIdAsync(OrderId.From(orderId), cancellationToken);
+                var order = await LoadOrderAsync(orderId, cancellationToken);
 
                 if (order is null) throw new OrderNotFoundException(orderId);
 
+                var expectedVersion = order.Version;
+                
                 await action(order);
 
+                await eventStore.SaveEventsAsync(
+                    order.Id.Value.ToString(),
+                    "Order",
+                    order.UncommitedEvents,
+                    expectedVersion,
+                    cancellationToken);
+                
+                
                 foreach (var domainEvent in order.UncommitedEvents)
                 {
                     await outboxRepository.AddAsync(
@@ -82,7 +91,12 @@ public class OrderPersistenceService(
 
             try
             {
-                await orderRepository.AddAsync(order, cancellationToken);
+                await eventStore.SaveEventsAsync(
+                    order.Id.Value.ToString(),
+                    "Order",
+                    order.UncommitedEvents,
+                    expectedVersion: -1,
+                    cancellationToken);
 
                 foreach (var domainEvent in order.UncommitedEvents)
                 {
@@ -104,6 +118,11 @@ public class OrderPersistenceService(
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
+                
+                logger.LogInformation(
+                    "Created Order {OrderId} with {EventCount} events",
+                    order.Id.Value,
+                    order.Version + 1);
             }
             catch (Exception ex)
             {
@@ -112,6 +131,19 @@ public class OrderPersistenceService(
                 throw;
             }
         });
+    }
+    
+      private async Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        var events = await eventStore.GetEventsAsync(
+            orderId.ToString(),
+            "Order",
+            cancellationToken);
+
+        if (!events.Any())
+            return null;
+
+        return Order.FromHistory(events);
     }
 }
 

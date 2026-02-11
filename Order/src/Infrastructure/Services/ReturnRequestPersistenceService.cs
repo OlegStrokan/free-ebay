@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Services;
 
 public class ReturnRequestPersistenceService(
-    IReturnRequestRepository returnRequestRepository,
+    IEventStoreRepository eventStore,
     IOutboxRepository outboxRepository,
     IIdempotencyRepository idempotencyRepository,
     AppDbContext dbContext,
@@ -32,10 +32,7 @@ public class ReturnRequestPersistenceService(
 
             try
             {
-                var returnRequest = await returnRequestRepository.GetByOrderIdAsync(
-                    OrderId.From(orderId),
-                    cancellationToken);
-
+                var returnRequest = await LoadThisNastyBitch(orderId, cancellationToken);
                 if (returnRequest is null)
                     throw new ReturnRequestNotFoundException(orderId);
 
@@ -81,8 +78,13 @@ public class ReturnRequestPersistenceService(
 
             try
             {
-                await returnRequestRepository.AddAsync(returnRequest, cancellationToken);
-
+                await eventStore.SaveEventsAsync(
+                    returnRequest.Id.Value.ToString(),
+                    "ReturnRequest",
+                    returnRequest.UncommitedEvents,
+                    expectedVersion: -1,
+                    cancellationToken);
+                
                 foreach (var domainEvent in returnRequest.UncommitedEvents)
                 {
                     await outboxRepository.AddAsync(
@@ -106,6 +108,12 @@ public class ReturnRequestPersistenceService(
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
+                
+                logger.LogInformation(
+                    "Created ReturnRequest {ReturnRequestId} with {EventCount} events",
+                    returnRequest.Id.Value,
+                    returnRequest.Version + 1);
+                
             }
             catch (Exception ex)
             {
@@ -117,4 +125,60 @@ public class ReturnRequestPersistenceService(
 
         return resultIdForIdempotency ?? returnRequest.OrderId.Value;
     }
+    
+    /*  dont judge me, i was high
+        @todo: for better performance maybe maintain an index in read model type shit
+        DONT USE THIS PEACE OF GARBAGE!
+        DONT!
+    */
+    private async Task<ReturnRequest?> LoadThisNastyBitch(
+        Guid orderId,
+        CancellationToken cancellationToken)
+    {
+        // this is not optimal, but i love ego lifting
+        // for now we query DomainEvents directly to find ReturnRequest events
+        var returnRequestEvents = await dbContext.DomainEvents
+            .Where(e => e.AggregateType == "ReturnRequest")
+            .OrderBy(e => e.OccuredOn)
+            .ToListAsync(cancellationToken);
+        
+        // deserizl and check which returnRequest belong to this order
+        foreach (var aggregateId in returnRequestEvents.Select(e => e.AggregateId).Distinct())
+        {
+            var events = await eventStore.GetEventsAsync(
+                aggregateId,
+                "ReturnRequest",
+                cancellationToken);
+
+            if (!events.Any())
+                continue;
+
+            var returnRequest = ReturnRequest.FromHistory(events);
+
+            if (returnRequest.OrderId.Value == orderId)
+                return returnRequest;
+        }
+
+        return null;
+        
+    }
+    
+    // this is preferred method to load returnRequests
+    private async Task<ReturnRequest?> LoadReturnRequestAsync(
+        Guid returnRequestId,
+        CancellationToken cancellationToken)
+    {
+        var events = await eventStore.GetEventsAsync(
+            returnRequestId.ToString(),
+            "ReturnRequest",
+            cancellationToken);
+
+        if (!events.Any())
+            return null;
+
+        return ReturnRequest.FromHistory(events);
+        
+    }
+    
+    
 }
