@@ -2,6 +2,7 @@ using Application.Interfaces;
 
 namespace Infrastructure.Persistence;
 
+// @todo: probably should be deleted
 // adapter between application IDbContextTransaction and infrastructure IDbContextTransaction
 internal sealed class EfCoreTransactionWrapper(
     Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction efTransaction,

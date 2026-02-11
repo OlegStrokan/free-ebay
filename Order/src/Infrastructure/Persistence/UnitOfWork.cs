@@ -3,6 +3,7 @@ using Infrastructure.Persistence.DbContext;
 
 namespace Infrastructure.Persistence;
 
+// @todo: probably should be deleted
 public sealed class UnitOfWork(
     AppDbContext context,
     ILogger<UnitOfWork> logger) : IUnitOfWork
