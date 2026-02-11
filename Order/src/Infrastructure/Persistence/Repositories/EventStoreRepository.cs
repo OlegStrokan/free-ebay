@@ -51,7 +51,7 @@ public class EventStoreRepository(
         return eventTypes;
     }
 
-    public async Task SaveEventsAsync<TId>(
+    public async Task SaveEventsAsync(
         string aggregateId,
         string aggregateType,
         IEnumerable<IDomainEvent> events,
@@ -96,7 +96,7 @@ public class EventStoreRepository(
             aggregateType,
             aggregateId);
     }
-
+    
     public async Task<IEnumerable<IDomainEvent>> GetEventsAsync(
         string aggregateId,
         string aggregateType, 

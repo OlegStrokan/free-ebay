@@ -5,15 +5,37 @@ using Infrastructure.Persistence.DbContext;
 
 namespace Infrastructure.Persistence.Repositories;
 
-public class OrderRepository(AppDbContext dbContext) : IOrderRepository
+public class OrderRepository(IEventStoreRepository eventStore) : IOrderRepository
 {
     public async Task<Order?> GetByIdAsync(OrderId id, CancellationToken ct = default)
     {
-        return await dbContext.
+        var events = await eventStore.GetEventsAsync(
+            id.Value.ToString(),
+            "Order",
+            ct);
+
+        if (!events.Any())
+            return null;
+
+        return Order.FromHistory(events);
+    }
+
+    public async Task AddAsync(Order order, CancellationToken ct = default)
+    {
+        // for new aggregates, expected version is -1
+        await eventStore.SaveEventsAsync(
+            order.Id.Value.ToString(),
+            "Order",
+            order.UncommitedEvents,
+            expectedVersion: -1,
+            ct);
+    }
+
+    public async Task<bool> ExistsAsync(OrderId orderId, CancellationToken ct = default)
+    {
+        return await eventStore.ExistsAsync(
+            orderId.Value.ToString(),
+            "Order",
+            ct);
     }
 }
-
-// @todo: i am dump fuck. how i could think about saving a fucking....entire order
-// so it's will override entire entity fuck
-// google it and rewrite completely this shit. we need to save every fucking events
-// into some event sourcing order table
