@@ -5,7 +5,7 @@ namespace Application.Interfaces;
 public interface IOrderPersistenceService
 {
 
-    Task<Order> CreateOrderAsync(
+    Task CreateOrderAsync(
         Order order,
         string idempotencyKey,
         CancellationToken cancellationToken);

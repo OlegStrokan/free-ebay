@@ -41,6 +41,7 @@ public class CreateOrderCommandHandler
             }
             
             var customerId = CustomerId.From(request.CustomerId);
+           
             var address = Address.Create(
                 request.DeliveryAddress.Street,
                 request.DeliveryAddress.City,
@@ -62,7 +63,7 @@ public class CreateOrderCommandHandler
                 customerId.Value
             );
 
-            var orderId = await orderPersistenceService.CreateOrderAsync(
+            await orderPersistenceService.CreateOrderAsync(
                 order,
                 request.IdempotencyKey,
                 cancellationToken);

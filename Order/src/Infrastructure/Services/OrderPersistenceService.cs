@@ -44,7 +44,7 @@ public class OrderPersistenceService(
                 foreach (var domainEvent in order.UncommitedEvents)
                 {
                     await outboxRepository.AddAsync(
-                        Guid.NewGuid(),
+                        domainEvent.EventId, // helps to detect duplicates 
                         domainEvent.GetType().Name,
                         JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
                         DateTime.UtcNow,
@@ -67,7 +67,7 @@ public class OrderPersistenceService(
         });
     }
     
-    public async Task<Order> CreateOrderAsync(
+    public async Task CreateOrderAsync(
         Order order,
         string idempotencyKey,
         CancellationToken cancellationToken)
@@ -112,8 +112,6 @@ public class OrderPersistenceService(
                 throw;
             }
         });
-        
-        return order;
     }
 }
 
