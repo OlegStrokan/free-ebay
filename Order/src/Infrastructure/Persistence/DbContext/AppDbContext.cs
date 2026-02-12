@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<DomainEvent> DomainEvents => Set<DomainEvent>();
     public DbSet<OrderReadModel> OrderReadModels => Set<OrderReadModel>();
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
