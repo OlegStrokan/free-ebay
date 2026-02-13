@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protos.Orders";
+
+package orders;
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns(CreateOrderResponse);
+  rpc RequestReturn(RequestReturnRequest) returns(RequestReturnResponse);
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+  repeated OrderItem items = 2;
+  Address delivery_address = 3;
+  string payment_method = 4;
+  string idempotency_key = 5;
+}
+
+message RequestReturnRequest {
+  string order_id = 1;
+  string reason = 2;
+  repeated OrderItem item_to_return = 3;
+  string idempotency_key = 4;
+}
+
+message CreateOrderResponse {
+  bool success = 1;
+  string order_id = 2;
+  string error_message = 3;
+}
+
+message RequestReturnResponse {
+  bool success = 1;
+  string order_id = 2;
+  string error_message = 3;
+}
+
+message OrderItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  double price = 3;
+  string currency = 4;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string country = 4;
+  string postal_code = 5;
+}
