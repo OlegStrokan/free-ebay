@@ -105,7 +105,7 @@ public class OrderReadModelUpdater(AppDbContext dbContext, ILogger<OrderReadMode
 
         readModel.Status = "Completed";
         readModel.UpdatedAt = evt.CancelledAt;
-        readModel.LastSyncedAt = DateTime.UtcNow,
+        readModel.LastSyncedAt = DateTime.UtcNow;
         readModel.Version++;
 
         await dbContext.SaveChangesAsync(ct);
