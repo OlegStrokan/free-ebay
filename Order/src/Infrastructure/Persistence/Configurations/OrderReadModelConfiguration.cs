@@ -17,8 +17,8 @@ public class OrderReadModelConfiguration : IEntityTypeConfiguration<OrderReadMod
             .ValueGeneratedNever();
 
         builder.Property(o => o.CustomerId).IsRequired();
-        builder.Property(o => o.TrackingId);
-        builder.Property(o => o.PaymentId);
+        builder.Property(o => o.TrackingId).HasMaxLength(100);
+        builder.Property(o => o.PaymentId).HasMaxLength(100);
         builder.Property(o => o.Status).IsRequired().HasMaxLength(50);
         builder.Property(o => o.TotalAmount).IsRequired().HasPrecision(18, 2);
         builder.Property(o => o.Currency).IsRequired().HasMaxLength(3);
@@ -31,8 +31,8 @@ public class OrderReadModelConfiguration : IEntityTypeConfiguration<OrderReadMod
         // store in json for swaggebility
         builder.Property(o => o.ItemsJson).IsRequired().HasColumnType("text");
 
-        builder.Property(o => o.CreateAt).IsRequired();
-        builder.Property(o => o.UpdateAt);
+        builder.Property(o => o.CreatedAt).IsRequired();
+        builder.Property(o => o.UpdatedAt);
         builder.Property(o => o.CompletedAt);
         builder.Property(o => o.Version).IsRequired().IsRequired();
         builder.Property(o => o.LastSyncedAt).IsRequired();
@@ -41,9 +41,9 @@ public class OrderReadModelConfiguration : IEntityTypeConfiguration<OrderReadMod
         builder.HasIndex(o => o.CustomerId).HasDatabaseName("OrderReadModels_CustomerId");
         builder.HasIndex(o => o.TrackingId).HasDatabaseName("OrderReadModels_TrackingId");
         builder.HasIndex(o => o.Status).HasDatabaseName("OrderReadModels_Status");
-        builder.HasIndex(o => o.CreateAt).HasDatabaseName("OrderReadModels_CreatedAt");
+        builder.HasIndex(o => o.CreatedAt).HasDatabaseName("OrderReadModels_CreatedAt");
         
         // composite index for pagination queries
-        builder.HasIndex(o => new {o.CreateAt, o.Id }).HasDatabaseName("OrderReadModels_CreatedAt_Id");
+        builder.HasIndex(o => new { CreateAt = o.CreatedAt, o.Id }).HasDatabaseName("OrderReadModels_CreatedAt_Id");
     }
 }

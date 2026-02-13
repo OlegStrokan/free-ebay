@@ -3,7 +3,7 @@ namespace Application.Interfaces;
 public interface IOrderReadRepository
 {
     Task<OrderResponse?> GetByIdAsync(Guid orderId, CancellationToken ct = default);
-    Task<OrderResponse?> GetByTrackingIdAsync(Guid trackingId, CancellationToken ct = default);
+    Task<OrderResponse?> GetByTrackingIdAsync(string trackingId, CancellationToken ct = default);
     Task<List<OrderSummaryResponse>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct = default);
     Task<List<OrderSummaryResponse>> GetOrderAsync(int pageNumber, int pageSize, CancellationToken ct = default);
 }
@@ -11,7 +11,8 @@ public interface IOrderReadRepository
 public sealed record OrderResponse(
     Guid Id,
     Guid CustomerId,
-    Guid TrackingId,
+    //@think: should it be non required or should we have default value?
+    string? TrackingId,
     string Status,
     decimal TotalAmount,
     string Currency,
@@ -25,7 +26,7 @@ public sealed record OrderResponse(
 
 public sealed record OrderSummaryResponse(
     Guid Id,
-    Guid TrackingId,
+    string? TrackingId,
     string Status,
     decimal TotalAmount,
     string Currency,

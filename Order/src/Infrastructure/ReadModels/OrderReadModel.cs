@@ -4,8 +4,8 @@ public class OrderReadModel
 {
     public Guid Id { get; set; }
     public Guid CustomerId { get; set; }
-    public Guid? TrackingId { get; set; }
-    public Guid? PaymentId { get; set; }
+    public string? TrackingId { get; set; }
+    public string? PaymentId { get; set; }
     public string Status { get; set; } = null!;
     public decimal TotalAmount { get; set; }
     public string Currency { get; set; } = null!;
@@ -18,8 +18,8 @@ public class OrderReadModel
 
     public string ItemsJson { get; set; } = null!;
     
-    public DateTime CreateAt { get; set; }
-    public DateTime? UpdateAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     
     public int Version { get; set; }
