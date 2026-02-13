@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<DomainEvent> DomainEvents => Set<DomainEvent>();
     public DbSet<OrderReadModel> OrderReadModels => Set<OrderReadModel>();
+    public DbSet<ReturnRequestReadModel> ReturnRequestReadModels => Set<ReturnRequestReadModel>();
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -27,6 +28,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
         builder.ApplyConfiguration(new IdempotencyRecordConfiguration());
         builder.ApplyConfiguration(new DomainEventConfiguration());
         builder.ApplyConfiguration(new OrderReadModelConfiguration());
+        builder.ApplyConfiguration(new ProcessedEventConfiguration());
+        builder.ApplyConfiguration(new ReturnRequestReadModelConfiguration());
     }
     
 }
