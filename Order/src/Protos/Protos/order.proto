@@ -20,7 +20,7 @@ message CreateOrderRequest {
 message RequestReturnRequest {
   string order_id = 1;
   string reason = 2;
-  repeated OrderItem item_to_return = 3;
+  repeated OrderItem items_to_return = 3;
   string idempotency_key = 4;
 }
 
@@ -46,7 +46,6 @@ message OrderItem {
 message Address {
   string street = 1;
   string city = 2;
-  string state = 3;
-  string country = 4;
-  string postal_code = 5;
+  string country = 3;
+  string postal_code = 4;
 }

@@ -76,8 +76,6 @@ using metadata we signal about shit and saga base class will handle thi shit - e
 
 IDeadLetterRepository - add implementation
 ReturnPolicyService - implement
-unitOfWork.CommitAsync() - add method
-SagaRepository - add all methods
 createManualReviewStepForReturn - add logic
 
 
@@ -92,3 +90,9 @@ Year 2025: The business changes the rule: "Orders over $500 require manual appro
 The Disaster: You try to load that $1200 order from 2024. The Apply method runs, sees $1200, checks the new $500 limit, finds it wasn't "approved" under the new rules, and throws an error. Your historical data is now unreadable.
 
 By isolating the state change, you ensure that once an event is written to the store, the Apply method will always be able to rebuild that state, regardless of how business rules change in the future.
+
+
+
+quesiton:
+where idempotency key comes from? form frontend or from gateway layer? 
+what it should be? is this good way to handle idempontecy?
