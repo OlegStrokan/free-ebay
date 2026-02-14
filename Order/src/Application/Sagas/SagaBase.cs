@@ -41,6 +41,9 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
         /* @think: what if we will add like 400 lines of divined code to create event
          driven stuff + adding 30-40 lines to sagaBase class?
          now we have logs, but if Berezovsky will lose money because of us?
+         
+         
+         UPD: it's too complex so we use SagaWatchdogService for pooling data
       */
         
         

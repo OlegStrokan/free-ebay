@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<OrderReadModel> OrderReadModels => Set<OrderReadModel>();
     public DbSet<ReturnRequestReadModel> ReturnRequestReadModels => Set<ReturnRequestReadModel>();
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
+    public DbSet<DeadLetterMessage> DeadLetterMessages => Set<DeadLetterMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -30,6 +31,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
         builder.ApplyConfiguration(new OrderReadModelConfiguration());
         builder.ApplyConfiguration(new ProcessedEventConfiguration());
         builder.ApplyConfiguration(new ReturnRequestReadModelConfiguration());
+        builder.ApplyConfiguration(new DeadLetterMessageConfiguration());
     }
     
 }

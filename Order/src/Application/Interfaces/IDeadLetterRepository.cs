@@ -1,13 +1,6 @@
-namespace Application.Interfaces;
+using Domain.Entities;
 
-public sealed record DeadLetterMessage(
-    Guid Id,
-    string Type,
-    string Content,
-    DateTime OccurredOn,
-    string FailureReason,
-    int RetryCount,
-    DateTime MovedToDeadLetterAt);
+namespace Application.Interfaces;
 
 // repo for messages that failed to process after max retries
 // or exceeded maximum age. These require manual investigation
@@ -29,4 +22,9 @@ public interface IDeadLetterRepository
 
     Task RetryAsync(Guid messageId, CancellationToken ct);
     Task DeleteAsync(Guid messageId, CancellationToken ct);
+
+    Task MarkAsResolvedAsync(
+        Guid messageId,
+        string resolutionNotes,
+        CancellationToken ct);
 }
