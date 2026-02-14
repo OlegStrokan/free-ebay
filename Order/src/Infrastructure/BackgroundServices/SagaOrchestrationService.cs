@@ -86,7 +86,7 @@ public class SagaOrchestrationService(
     {
         using var scope = serviceProvider.CreateScope();
 
-        var factory = serviceProvider.GetRequiredService<ISagaHandlerFactory>();
+        var factory = scope.ServiceProvider.GetRequiredService<ISagaHandlerFactory>();
         var handler = factory.GetHandler(scope.ServiceProvider, eventWrapper.EventType);
         
         if (handler == null)

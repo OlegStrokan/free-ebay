@@ -1,3 +1,6 @@
+
+namespace Application.Sagas;
+
 public static class SagaTypes
 {
     public const string OrderSaga = "OrderSaga";

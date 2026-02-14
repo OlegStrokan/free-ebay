@@ -37,6 +37,8 @@ public class SagaRepository(AppDbContext dbContext) : ISagaRepository
         {
             dbContext.SagaStates.Update(sagaState);
         }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task SaveStepAsync(SagaStepLog stepLog, CancellationToken cancellationToken)

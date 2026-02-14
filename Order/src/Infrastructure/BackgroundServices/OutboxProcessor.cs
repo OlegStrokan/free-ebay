@@ -39,9 +39,8 @@ public sealed class OutboxProcessor(
                 logger.LogError(ex, "Unexpected error in OutboxProcessor main loop");
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
-            
-            logger.LogInformation("OutboxProcessor stopped");
         }
+        logger.LogInformation("OutboxProcessor stopped");
     }
 
     private async Task ProcessBatchAsync(CancellationToken stoppingToken)
