@@ -12,7 +12,6 @@ public class OrderReadModel
 
     public string DeliveryStreet { get; set; } = null!;
     public string DeliveryCity { get; set; } = null!;
-    public string DeliveryState { get; set; } = null!;
     public string DeliveryCountry { get; set; } = null!;
     public string DeliveryPostalCode { get; set; } = null!;
 

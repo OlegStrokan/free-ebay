@@ -7,7 +7,7 @@ using Infrastructure.Services.EventIdempotencyChecker;
 
 namespace Infrastructure.BackgroundServices;
 
-// @think: sometimes i smells too much voodoo here. check how netflix handler this stuff
+// @think: sometimes i smell too much voodoo here. check how netflix handler this stuff
 
 public sealed class KafkaReadModelSynchronizer : BackgroundService
 {
@@ -42,8 +42,8 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
         topics = new List<string>
         {
-            configuration["Kafka:OrderEventsTopic"] ?? "order-events",
-            configuration["Kafka:ReturnEventsTopic"] ?? "return-events"
+            configuration["Kafka:OrderEventsTopic"] ?? "order.events",
+            configuration["Kafka:ReturnEventsTopic"] ?? "return.events"
         };
 
         // auto discover all event types at startup
@@ -202,7 +202,11 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             logger.LogError("Failed to deserialize event {EventType}", eventType);
             return;
         }
-        
+
+        await RouteEventHandlerAsync(domainEvent, scope, cancellationToken);
+
+        await idempotencyChecker.MarkAsProcessedAsync(eventId, eventType, cancellationToken);
+
     }
     
     // route events to appropriate handlers using reflection

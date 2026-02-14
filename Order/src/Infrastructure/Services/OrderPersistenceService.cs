@@ -4,18 +4,14 @@ using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Interfaces;
-using Domain.ValueObjects;
 using Infrastructure.Persistence.DbContext;
 using Microsoft.EntityFrameworkCore;
 
-
 namespace Infrastructure.Services;
-
 
 public class OrderPersistenceService(
     IEventStoreRepository eventStore,
     IOutboxRepository outboxRepository,
-    IOrderRepository orderRepository,
     IIdempotencyRepository idempotencyRepository,
     AppDbContext dbContext,
     ILogger<OrderPersistenceService> logger) : IOrderPersistenceService

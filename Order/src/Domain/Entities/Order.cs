@@ -31,11 +31,6 @@ public sealed class Order : AggregateRoot<OrderId>
     
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
     public IReadOnlyList<string> FailedMessage => _failedMessages.AsReadOnly();
-    
-    private readonly List<IDomainEvent> _uncommitedEvents = new();
-
-    public IReadOnlyList<IDomainEvent> UncommitedEvents => _uncommitedEvents.AsReadOnly();
-
 
     private Order() { }
 

@@ -24,7 +24,6 @@ public class OrderReadModelConfiguration : IEntityTypeConfiguration<OrderReadMod
         builder.Property(o => o.Currency).IsRequired().HasMaxLength(3);
         builder.Property(o => o.DeliveryStreet).IsRequired().HasMaxLength(200);
         builder.Property(o => o.DeliveryCity).IsRequired().HasMaxLength(100);
-        builder.Property(o => o.DeliveryState).IsRequired().HasMaxLength(100);
         builder.Property(o => o.DeliveryCountry).IsRequired().HasMaxLength(100);
         builder.Property(o => o.DeliveryPostalCode).IsRequired().HasMaxLength(20);
         

@@ -35,7 +35,7 @@ public sealed record OrderSummaryResponse(
 
 public sealed record OrderItemResponse(
     Guid ProductId,
-    int Quality,
+    int Quantity,
     decimal Price,
     string Currency
     );
@@ -44,7 +44,6 @@ public sealed record OrderItemResponse(
 public sealed record AddressResponse(
     string Street,
     string City, 
-    string State,
     string Country,
     string PostalCode
     );

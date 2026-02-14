@@ -7,7 +7,7 @@ namespace Infrastructure.Services.EventIdempotencyChecker;
 // prevent duplicates for at-least-once kafka settings
 public class EventIdempotencyChecker(
     AppDbContext dbContext, 
-    Logger<EventIdempotencyChecker> logger) : IEventIdempotencyChecker{
+    ILogger<EventIdempotencyChecker> logger) : IEventIdempotencyChecker{
     public async Task<bool> HasBeenProcessedAsync(Guid eventId, CancellationToken ct = default)
     {
         var exists = await dbContext.ProcessedEvents

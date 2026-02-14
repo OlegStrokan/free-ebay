@@ -17,7 +17,7 @@ public class DeadLetterMessageConfiguration : IEntityTypeConfiguration<DeadLette
         builder.Property(d => d.Type).IsRequired().HasMaxLength(255);
         builder.Property(d => d.Content).IsRequired().HasColumnType("text");
         builder.Property(d => d.OccuredOn).IsRequired();
-        builder.Property(d => d.FailureReason).IsRequired().HasColumnName("text");
+        builder.Property(d => d.FailureReason).IsRequired().HasColumnType("text");
         builder.Property(d => d.RetryCount);
         builder.Property(d => d.MovedToDeadLetterAt).IsRequired();
         builder.Property(d => d.DeadLetterRetryCount).IsRequired();
