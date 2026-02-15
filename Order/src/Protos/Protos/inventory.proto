@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protos.Inventory";
+
+
+service InventoryService {
+  rpc ReserveInventory (ReserveInventoryRequest) returns (ReserveInventoryResponse);
+  rpc ReleaseInventory (ReleaseInventoryRequest) returns (ReleaseInventoryResponse);
+}
+
+message InventoryItem {
+  string product_id = 1;
+  int32 quality = 2;
+}
+
+message ReserveInventoryRequest {
+  string order_id = 1;
+  repeated InventoryItem items = 2;
+}
+
+message ReserveInventoryResponse {
+  bool success = 1;
+  string reservation_id = 2;
+  string error_message = 3;
+}
+
+message ReleaseInventoryRequest {
+  string reservation_id = 1;
+}
+
+message ReleaseInventoryResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+
