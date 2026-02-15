@@ -40,22 +40,14 @@ public sealed class CreateShipmentStep(
             logger.LogInformation(
                 "Creating shipment for order {OrderId}",
                 data.CorrelationId);
-
-
-            var shipmentId = await shippingGateway.CreateShipmentAsync(
+            
+            var (shipmentId, trackingNumber) = await shippingGateway.CreateShipmentAsync(
                 orderId: data.CorrelationId,
                 deliveryAddress: data.DeliveryAddress,
                 items: data.Items,
                 cancellationToken);
 
-
             context.ShipmentId = shipmentId;
-
-
-            var trackingNumber = await shippingGateway.GetTrackingNumberAsync(
-                shipmentId, cancellationToken);
-
-
             context.TrackingNumber = trackingNumber;
 
             logger.LogInformation(
@@ -71,7 +63,6 @@ public sealed class CreateShipmentStep(
                     return Task.CompletedTask;
                 },
                 cancellationToken);
-            
 
             logger.LogInformation(
                 "Successfully created shipment {ShipmentId} with tracking {TrackingNumber} for order {OrderId}",
@@ -156,7 +147,6 @@ public sealed class CreateShipmentStep(
                     return Task.CompletedTask;
                 },
                 cancellationToken);
-            
             
             logger.LogInformation(
                 "Successfully compensated shipment step for order {OrderId}",

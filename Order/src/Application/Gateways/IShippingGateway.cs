@@ -2,19 +2,19 @@ using Application.DTOs;
 
 namespace Application.Gateways;
 
+public record ShipmentResultDto(
+    string shipmentId,
+    string trackingNumber);
+
 // @todo: create document with xiaoping express public api
 public interface IShippingGateway
 {
-    Task<string> CreateShipmentAsync(
+    Task<ShipmentResultDto> CreateShipmentAsync(
         Guid orderId,
         AddressDto deliveryAddress,
         List<OrderItemDto> items,
         CancellationToken cancellationToken
         );
-
-    Task<string> GetTrackingNumberAsync(
-        string shipmentId,
-        CancellationToken cancellationToken);
     
     Task CancelShipmentAsync(
         string shipmentId,

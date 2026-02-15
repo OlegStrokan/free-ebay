@@ -41,9 +41,8 @@ public class EventStoreRepository(
                 }
             }
 
-            catch (ReflectionTypeLoadException)
+            catch (ReflectionTypeLoadException ex)
             {
-                // @think: should i delete this?
                 // skip assemblies that can't be loaded
                 continue;
             }

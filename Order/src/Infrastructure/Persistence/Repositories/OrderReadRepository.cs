@@ -75,7 +75,6 @@ public class OrderReadRepository(AppDbContext dbContext) : IOrderReadRepository
             new AddressResponse(
                 model.DeliveryStreet,
                 model.DeliveryCity,
-                model.DeliveryState,
                 model.DeliveryCountry,
                 model.DeliveryPostalCode
             ),

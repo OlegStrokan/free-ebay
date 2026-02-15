@@ -4,6 +4,7 @@ using Domain.ValueObjects;
 namespace Domain.Interfaces;
 
 
+//@todo: should be deleted and overwritten in all saga steps by persistence service
     public interface IOrderRepository
     {
         // Loads the Aggregate by replaying events via Order.FromEvents()

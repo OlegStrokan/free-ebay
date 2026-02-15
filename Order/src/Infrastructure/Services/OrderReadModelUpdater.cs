@@ -12,6 +12,15 @@ public class OrderReadModelUpdater(AppDbContext dbContext, ILogger<OrderReadMode
 {
     public async Task HandleAsync(OrderCreatedEvent evt, CancellationToken ct = default)
     {
+
+        var exists = await dbContext.OrderReadModels.AnyAsync(o => o.Id == evt.OrderId.Value, ct);
+
+        if (exists)
+        {
+            logger.LogInformation("OrderReadModel {OrderId} already exists. Skipping.", evt.OrderId.Value);
+            return;
+        }
+        
         var itemsJson = JsonSerializer.Serialize(evt.Items.Select(item =>
             new
             {
@@ -29,6 +38,7 @@ public class OrderReadModelUpdater(AppDbContext dbContext, ILogger<OrderReadMode
             TotalAmount = evt.TotalPrice.Amount,
             Currency = evt.TotalPrice.Currency,
             DeliveryStreet = evt.DeliveryAddress.Street,
+            DeliveryCountry = evt.DeliveryAddress.Country,
             DeliveryCity = evt.DeliveryAddress.City,
             DeliveryPostalCode = evt.DeliveryAddress.PostalCode,
             ItemsJson = itemsJson,
@@ -81,7 +91,7 @@ public class OrderReadModelUpdater(AppDbContext dbContext, ILogger<OrderReadMode
             evt.OrderId.Value);
     }
 
-    private async Task HandleAsync(OrderCompletedEvent evt, CancellationToken ct = default)
+    public async Task HandleAsync(OrderCompletedEvent evt, CancellationToken ct = default)
     {
         var readModel = await GetReadModelAsync(evt.OrderId.Value, ct);
         if (readModel == null) return;
@@ -98,12 +108,12 @@ public class OrderReadModelUpdater(AppDbContext dbContext, ILogger<OrderReadMode
     }
 
 
-    private async Task HandleAsync(OrderCancelledEvent evt, CancellationToken ct = default)
+    public async Task HandleAsync(OrderCancelledEvent evt, CancellationToken ct = default)
     {
         var readModel = await GetReadModelAsync(evt.OrderId.Value, ct);
         if (readModel == null) return;
 
-        readModel.Status = "Completed";
+        readModel.Status = "Cancelled";
         readModel.UpdatedAt = evt.CancelledAt;
         readModel.LastSyncedAt = DateTime.UtcNow;
         readModel.Version++;

@@ -6,8 +6,10 @@ public sealed class OrderSagaContext : SagaContext
     public string? ReservationId { get; set; }
     public string? PaymentId { get; set; }
     public string? ShipmentId { get; set; }
+    public string? TrackingNumber { get; set; }
     
     // internal flags - for idempotency
     public bool OrderStatusUpdated { get; set; }
+    // @think: should be either deleted or used with TrackingNumber assigning
     public bool TrackingAssigned { get; set; }
 }
