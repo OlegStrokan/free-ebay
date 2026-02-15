@@ -22,17 +22,28 @@ public sealed class AwaitReturnShipmentStep(
             logger.LogInformation(
                 "Initiating return shipment for order {OrderId}",
                 data.CorrelationId);
-            
-            // @think: check idempotency?
-            // create return shipment label
-            var returnShipmentId = await shippingGateway.CreateReturnShipmentAsync(
-                orderId: data.CorrelationId,
-                customerId: data.CustomerId,
-                items: data.ReturnedItems,
-                cancellationToken
-            );
 
-            context.ReturnShipmentId = returnShipmentId;
+            var returnShipmentId = context.ReturnShipmentId;
+            
+            if (string.IsNullOrEmpty(returnShipmentId))
+            {
+            
+                returnShipmentId = await shippingGateway.CreateReturnShipmentAsync(
+                    orderId: data.CorrelationId,
+                    customerId: data.CustomerId,
+                    items: data.ReturnedItems,
+                    cancellationToken
+                );
+                
+                context.ReturnShipmentId = returnShipmentId;
+                logger.LogInformation("Created return shipment {Id}", context.ReturnShipmentId);
+
+            }
+            else
+            {
+                logger.LogInformation("Shipment {Id} already exists. Skipping creation.", context.ReturnShipmentId);
+            }
+            
             
             logger.LogInformation(
                 "Return shipment created {ShipmentId} for order {OrderId}. Awaiting delivery...",
