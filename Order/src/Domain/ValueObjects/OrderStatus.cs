@@ -82,8 +82,15 @@ public sealed class OrderStatus
     }
 
     public override string ToString() => Name;
+    
+    
 
     public bool CanAssignTracking() => this == Paid || this == Approved;
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
 
     public override bool Equals(object? obj)
     {

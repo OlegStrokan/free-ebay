@@ -113,8 +113,8 @@ public class MoneyTests
         var zero = Money.Default("USD");
         
         
-        Assert.True(positive.IsGreaterThenZero());
-        Assert.False(zero.IsGreaterThenZero());
+        Assert.True(positive.IsGreaterThanZero());
+        Assert.False(zero.IsGreaterThanZero());
         
     }
  

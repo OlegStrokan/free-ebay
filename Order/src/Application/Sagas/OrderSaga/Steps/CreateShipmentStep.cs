@@ -56,8 +56,7 @@ public sealed class CreateShipmentStep(
                 shipmentId, cancellationToken);
 
 
-            // @think: should we? we just need trackingNumber for assigning tracking in order aggregate
-            // context.TrackingNumber = trackingNumber
+            context.TrackingNumber = trackingNumber;
 
             logger.LogInformation(
                 "Tracking number retrieved: {TrackingNumber}",

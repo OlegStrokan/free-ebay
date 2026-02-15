@@ -21,7 +21,7 @@ public class ProcessedEventConfiguration : IEntityTypeConfiguration<ProcessedEve
         // explicit define for eventId
         builder.HasIndex(e => e.EventId).IsUnique().HasDatabaseName("IX_ProcessedEvents_EventId");
 
-        builder.HasIndex(e => e.EventType).HasDatabaseName("IX_ProcessedEvents_ProcessedAt");
-        builder.HasIndex(e => e.ProcessedAt).HasDatabaseName("IX_ProcessedEvents_EventType_ProcessedAt");
+        builder.HasIndex(e => e.ProcessedAt).HasDatabaseName("IX_ProcessedEvents_ProcessedAt");
+        builder.HasIndex(e => e.EventType).HasDatabaseName("IX_ProcessedEvents_EventType");
     }
 }

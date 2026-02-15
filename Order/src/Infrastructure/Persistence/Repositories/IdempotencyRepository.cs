@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
 
+// used by handlers and persistence services
 public sealed class IdempotencyRepository(AppDbContext dbContext) : IIdempotencyRepository
 {
     public async Task<IdempotencyRecord?> GetByKeyAsync(string idempotencyKey, CancellationToken ct)

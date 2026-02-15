@@ -7,6 +7,7 @@ using Infrastructure.Services.EventIdempotencyChecker;
 
 namespace Infrastructure.BackgroundServices;
 
+// @todo: rewrite eventTypes discovery with type-safe mediatR style
 // @think: sometimes i smell too much voodoo here. check how netflix handler this stuff
 
 public sealed class KafkaReadModelSynchronizer : BackgroundService

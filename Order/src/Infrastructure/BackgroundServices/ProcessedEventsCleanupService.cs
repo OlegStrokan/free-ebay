@@ -40,7 +40,7 @@ public class ProcessedEventsCleanupService : BackgroundService
         {
             try
             {
-
+                await CleanupOldEventAsync(stoppingToken);
             }
             catch (Exception ex)
             {

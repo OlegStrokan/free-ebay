@@ -11,7 +11,6 @@ public interface IOrderReadRepository
 public sealed record OrderResponse(
     Guid Id,
     Guid CustomerId,
-    //@think: should it be non required or should we have default value?
     string? TrackingId,
     string Status,
     decimal TotalAmount,

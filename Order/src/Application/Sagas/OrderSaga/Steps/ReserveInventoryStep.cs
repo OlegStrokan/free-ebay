@@ -18,6 +18,7 @@ public sealed class ReserveInventoryStep(
     {
         try
         {
+            // @think: is this reliable way to check idempotency? what if app crushes? use db type shit?
             if (!string.IsNullOrEmpty(context.ReservationId))
             {
                 logger.LogInformation(
@@ -34,8 +35,6 @@ public sealed class ReserveInventoryStep(
                 "Reserving inventory for order {OrderId} with {ItemCount} items",
                 data.CorrelationId,
                 data.Items.Count);
-
-            // have you ever heard about idempotency type shit? @todo
             
             var reservationId = await inventoryGateway.ReserveAsync(
                 orderId: data.CorrelationId,

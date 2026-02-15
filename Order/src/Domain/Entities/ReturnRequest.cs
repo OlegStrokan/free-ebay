@@ -48,7 +48,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         if (itemsToReturn == null || !itemsToReturn.Any())
             throw new DomainException("Must specify at least one item to return");
 
-        if (!refundAmount.IsGreaterThenZero())
+        if (!refundAmount.IsGreaterThanZero())
             throw new DomainException("Refund amount must be greater than zero");
 
         var orderAge = DateTime.UtcNow - orderCompletedAt;

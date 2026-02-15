@@ -9,4 +9,4 @@ public record RequestReturnCommand(
     string Reason,
     List<OrderItemDto> ItemsToReturn,
     string IdempotencyKey
-    ) : IRequest<Result<Guid>>;
+    ) : ICommand<Result<Guid>>;

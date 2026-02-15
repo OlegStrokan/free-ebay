@@ -7,6 +7,7 @@ namespace Infrastructure.Persistence.Repositories;
 
 public class OutboxRepository(AppDbContext dbContext) : IOutboxRepository
 {
+    //@think: probably obsolete. try to move this "logic" to persistence service
     public async Task AddAsync(Guid messageId, string type, string content, DateTime occurredOn, CancellationToken ct)
     {
         var outboxMessage = new OutboxMessage(messageId, type, content, occurredOn);

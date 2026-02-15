@@ -82,36 +82,4 @@ public class CreateOrderCommandHandler
             return Result<Guid>.Failure($"Failed to create order: {ex.Message}");
         }
     }
-
-    private string SerializeEvent(IDomainEvent domainEvent)
-    {
-        return domainEvent switch
-        {
-            OrderCreatedEvent e => JsonSerializer.Serialize(new OrderCreatedEventDto
-            {
-                OrderId = e.OrderId.Value,
-                CustomerId = e.CustomerId.Value,
-                TotalAmount = e.TotalPrice.Amount,
-                Currency = e.TotalPrice.Currency,
-                DeliveryAddress = new AddressDto(
-                    e.DeliveryAddress.Street,
-                    e.DeliveryAddress.City,
-                    e.DeliveryAddress.Country,
-                    e.DeliveryAddress.PostalCode
-                ),
-                Items = e.Items.Select(i => new OrderItemDto(
-                    i.ProductId.Value,
-                    i.Quantity,
-                    i.PriceAtPurchase.Amount,
-                    i.PriceAtPurchase.Currency)).ToList(),
-                CreatedAt = e.CreatedAt
-            }),
-            _ => JsonSerializer.Serialize(domainEvent)
-        };
-    }
 }
-// trigger gprc method
-// call command handler => create entity, save to db, save to outbox table
-// background worker async monitor outbox table => send to kafka
-// background consumer worker saga receive message, start saga and do shit ton of stuff
-// return all

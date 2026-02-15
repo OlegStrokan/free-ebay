@@ -69,12 +69,12 @@ public sealed class OrderItem : Entity<OrderItemId>
 
     public bool IsPriceValid()
     {
-        return PriceAtPurchase.IsGreaterThenZero();
+        return PriceAtPurchase.IsGreaterThanZero();
     }
         
     private static void ValidatePrice(Money price)
     {
-        if (!price.IsGreaterThenZero())
+        if (!price.IsGreaterThanZero())
             throw new DomainException($"Order item price should be greater then zero. Got {price}");
     }
 

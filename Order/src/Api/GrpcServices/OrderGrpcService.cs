@@ -141,7 +141,7 @@ public class OrderGrpcService(
     }
     
 
-    private CreateOrderCommand MapToCreateCommand(CreateOrderRequest request) => new(
+    private static CreateOrderCommand MapToCreateCommand(CreateOrderRequest request) => new(
         CustomerId: Guid.Parse(request.CustomerId),
         Items: request.Items.Select(i =>
             new OrderItemDto(Guid.Parse(i.ProductId), i.Quantity, (decimal)i.Price, i.Currency)).ToList(),

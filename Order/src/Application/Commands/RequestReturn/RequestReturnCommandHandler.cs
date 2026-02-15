@@ -79,8 +79,6 @@ public class RequestReturnCommandHandler(
                     order.CompletedAt!.Value, // already not null
                     order.Items.ToList(),
                     returnWindow);
-                
-                
 
                 logger.LogInformation(
                     "ReturnRequest created with ID  {ReturnRequestId} for order {OrderId}",
@@ -97,7 +95,7 @@ public class RequestReturnCommandHandler(
                     returnRequest.UncommitedEvents.Count,
                     resultOrderId);
 
-                return Result<Guid>.Success(order.Id.Value);
+                return Result<Guid>.Success(returnRequest.Id.Value);
         }
 
         catch (Exception ex)
@@ -105,28 +103,5 @@ public class RequestReturnCommandHandler(
             logger.LogError(ex, "Failed to process for return request for order {OrderId}", request.OrderId);
             return Result<Guid>.Failure($"Failed to request return: {ex.Message}");
         }
-    }
-
-    private string SerializeEvent(IDomainEvent domainEvent)
-    {
-        return domainEvent switch
-        {
-            ReturnRequestCreatedEvent e => JsonSerializer.Serialize(new ReturnRequestCreatedEventDto
-            {
-                OrderId = e.OrderId.Value,
-                CustomerId = e.CustomerId.Value,
-                Reason = e.Reason,
-                ItemsToReturn = e.ItemsToReturn.Select(i => new OrderItemDto(
-                    i.ProductId.Value,
-                    i.Quantity,
-                    i.PriceAtPurchase.Amount,
-                    i.PriceAtPurchase.Currency
-                )).ToList(),
-                RefundAmount = e.RefundAmount.Amount,
-                Currency = e.RefundAmount.Currency,
-                RequestedAt = e.RequestedAt
-            }),
-            _ => JsonSerializer.Serialize(domainEvent)
-        };
     }
 }

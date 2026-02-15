@@ -65,7 +65,7 @@ public class OrderPersistenceService(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Transaction failed for Order {OrderId}", orderId);
-                // @think: DELETE? rollback is automatic on Dispose, but fuck it's cleaner
+                // rollback is automatic on Dispose, but fuck it's cleaner
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
@@ -87,6 +87,9 @@ public class OrderPersistenceService(
 
             try
             {
+                
+                // @todo: check if order already exists. or we dont care about it?
+
                 await eventStore.SaveEventsAsync(
                     order.Id.Value.ToString(),
                     "Order",

@@ -24,12 +24,11 @@ public sealed record Money
     public static Money Create(decimal amount, string currency) => new Money(amount, currency);
     public static Money Default(string currency = "USD") => new(0, currency);
     
-    // business logic, @think: should I remove this basic shit?
-    public bool IsGreaterThenZero() => Amount > 0;
+    public bool IsGreaterThanZero() => Amount > 0;
     public bool IsGreaterThen(Money other) => Amount > other.Amount;
     public bool IsLessThen(Money other) => Amount < other.Amount;
     
-    // Arithmetic methods 
+    // Arithmetic methods type shit
     public Money Add(Money other)
     {
         CheckCurrency(other);

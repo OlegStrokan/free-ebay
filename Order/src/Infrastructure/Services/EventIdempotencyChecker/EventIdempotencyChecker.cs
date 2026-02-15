@@ -30,7 +30,7 @@ public class EventIdempotencyChecker(
             var processedEvent = ProcessedEvent.Create(
                 eventId,
                 eventType,
-                "KafkaConsumer"); // @think: should i use real consumer name?
+                "KafkaConsumer"); // @todo: pass the consumer group ID or service name
 
             dbContext.ProcessedEvents.Add(processedEvent);
             await dbContext.SaveChangesAsync(ct);

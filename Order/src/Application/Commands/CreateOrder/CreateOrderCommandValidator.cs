@@ -2,6 +2,7 @@ namespace Application.Commands.CreateOrder;
 
 using FluentValidation;
 
+// @think: should be removed? 
 public sealed class CreateOrderCommandValidator : AbstractValidator<CreateOrderCommand>
 {
     public CreateOrderCommandValidator()
