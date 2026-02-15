@@ -66,8 +66,6 @@ public sealed class CompleteReturnStep(
         CancellationToken cancellationToken)
     {
        // final step compensation
-       // @think: revert ReturnRequest from Completed back to Refunded status
-       
        
        logger.LogWarning(
            "Compensation triggered on CompleteReturn step for order {OrderId}. " +

@@ -35,15 +35,17 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
         timespan = 5 min
         use createLinkedTokenSource
         pass to all call instead of cancellationToken
+        -----------
+        DO IT!
         
         */
         
-        /* @think: what if we will add like 400 lines of divined code to create event
-         driven stuff + adding 30-40 lines to sagaBase class?
-         now we have logs, but if Berezovsky will lose money because of us?
+        /* @todo: we will add like 400 lines of divined code to create event
+         driven stuff type shit yes we have basic logs we have logs,
+        but if Berezovsky will lose money because of us?
          
          
-         UPD: it's too complex so we use SagaWatchdogService for pooling data
+         current implementation: it's too complex so we use SagaWatchdogService for pooling data
       */
         
         
@@ -222,8 +224,8 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
         CancellationToken cancellationToken)
     {
         // @think: right now we have boilerplate retries
-        // maybe we can use retry decorator which used by external systems (gateway calls)
-
+        // UPD: all retry is very different so copy-paste approach is ok
+        
         const int maxRetries = 3;
         int retryCount = 0;
 

@@ -28,7 +28,10 @@ public sealed class UpdateAccountingRecordsStep(
                 data.CorrelationId,
                 context.RefundId);
 
-            //@think is this possible to merge 2 requests into one to not call external system 2 times?
+            /* @todo:
+             * as soon as faggots from accounting team update public api
+             * we will use only one external call to prevent second of waiting
+            */
             
             // step 1: record the refund transaction
             var journalEntryId = await accountingGateway.RecordRefundAsync(

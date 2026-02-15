@@ -37,6 +37,14 @@ public class ReturnRequestPersistenceService(
                     throw new ReturnRequestNotFoundException(orderId);
 
                 await action(returnRequest);
+                
+                await eventStore.SaveEventsAsync(
+                    returnRequest.Id.Value.ToString(),
+                    "ReturnRequest",
+                    returnRequest.UncommitedEvents,
+                    returnRequest.Version,
+                    cancellationToken);
+                    
 
                 foreach (var domainEvent in returnRequest.UncommitedEvents)
                 {

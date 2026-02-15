@@ -23,6 +23,7 @@ public sealed class AwaitReturnShipmentStep(
                 "Initiating return shipment for order {OrderId}",
                 data.CorrelationId);
             
+            // @think: check idempotency?
             // create return shipment label
             var returnShipmentId = await shippingGateway.CreateReturnShipmentAsync(
                 orderId: data.CorrelationId,

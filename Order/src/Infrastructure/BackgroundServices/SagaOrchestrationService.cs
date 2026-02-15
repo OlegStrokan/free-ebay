@@ -8,6 +8,7 @@ using Infrastructure.Messaging;
 
 namespace Infrastructure.BackgroundServices;
 
+// process events from kafka and send it to specific saga handler (like OrderCreatedEventHandler)
 public class SagaOrchestrationService(
     IServiceProvider serviceProvider,
     ILogger<SagaOrchestrationService> logger,

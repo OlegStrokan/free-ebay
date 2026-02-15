@@ -19,6 +19,7 @@ public class ReturnRequestReadModelUpdater(AppDbContext dbContext, ILogger<Retur
             logger.LogInformation(
                 "ReturnRequest {ReturnRequestId} already exists in read model. Skipping duplicate event.",
                 evt.ReturnRequestId.Value);
+            return;
         }
 
         var itemsJson = JsonSerializer.Serialize(evt.ItemsToReturn.Select(item =>
@@ -35,7 +36,7 @@ public class ReturnRequestReadModelUpdater(AppDbContext dbContext, ILogger<Retur
         {
             Id = evt.ReturnRequestId.Value,
             OrderId = evt.OrderId.Value,
-            CustomerId = evt.OrderId.Value,
+            CustomerId = evt.CustomerId.Value,
             Status = "Pending",
             Reason = evt.Reason,
             RefundAmount = evt.RefundAmount.Amount,
@@ -83,8 +84,7 @@ public class ReturnRequestReadModelUpdater(AppDbContext dbContext, ILogger<Retur
         if (readModel == null) return;
 
         readModel.Status = "RefundProcessed";
-        // @think: it's probably should be evt.ProcessedAt instead of utcNow;
-        readModel.UpdatedAt = DateTime.UtcNow;
+        readModel.UpdatedAt = evt.RefundedAt;
         readModel.Version++;
         readModel.LastSyncedAt = DateTime.UtcNow;
 

@@ -134,10 +134,6 @@ public sealed class ValidateReturnRequestStep(
         ReturnSagaContext context,
         CancellationToken cancellationToken)
     {
-        // @think: If validation succeeds, a ReturnRequest is created. If later saga steps fail,
-        // the ReturnRequest remains as a record of the return attempt.
-        // No automatic cleanup is performed as this represents a valid business state.
-        
         logger.LogInformation(
             "No compensation needed for ValidateReturnRequest step (order {OrderId}). " +
             "ReturnRequest created successfully.",
