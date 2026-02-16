@@ -4,7 +4,6 @@ using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
-using Domain.ValueObjects;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Gateways;

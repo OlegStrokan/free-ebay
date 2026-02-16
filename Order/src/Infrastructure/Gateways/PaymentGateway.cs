@@ -6,7 +6,7 @@ using Grpc.Core;
 namespace Infrastructure.Gateways;
 
 public sealed class PaymentGateway(
-    PaymentApi.PaymentApiClient client,
+    PaymentService.PaymentServiceClient  client,
     ILogger<PaymentGateway> logger) : IPaymentGateway
 {
     public async Task<string> ProcessPaymentAsync(
