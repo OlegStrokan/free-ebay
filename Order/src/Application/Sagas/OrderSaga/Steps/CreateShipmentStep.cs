@@ -123,7 +123,6 @@ public sealed class CreateShipmentStep(
                 
                 await shippingGateway.CancelShipmentAsync(
                     shipmentId: context.ShipmentId,
-                    reason: "Order cancelled - saga compensation",
                     cancellationToken);
 
                 logger.LogInformation(

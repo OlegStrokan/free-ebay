@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option csharp_namespace = "Protos.Orders";
+option csharp_namespace = "Protos.Order";
 
-package orders;
+package order;
 
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns(CreateOrderResponse);

@@ -1,10 +1,7 @@
 using Application.DTOs;
+using Application.DTOs.ShipmentGateway;
 
 namespace Application.Gateways;
-
-public record ShipmentResultDto(
-    string shipmentId,
-    string trackingNumber);
 
 // @todo: create document with xiaoping express public api
 public interface IShippingGateway
@@ -12,35 +9,34 @@ public interface IShippingGateway
     Task<ShipmentResultDto> CreateShipmentAsync(
         Guid orderId,
         AddressDto deliveryAddress,
-        List<OrderItemDto> items,
+        IReadOnlyCollection<OrderItemDto> items,
         CancellationToken cancellationToken
         );
     
     Task CancelShipmentAsync(
         string shipmentId,
-        string reason,
         CancellationToken cancellationToken
     );
-
-    Task RegisterWebhookAsync(
-        string shipmentId,
-        string callbackUrl,
-        string[] events,
+    
+    Task<ShipmentStatusDto> GetShipmentStatusAsync(
+        string trackingNumber,
         CancellationToken cancellationToken
         );
     
-    Task<string> CreateReturnShipmentAsync(
-        Guid orderId,
-        Guid customerId,
-        List<OrderItemDto> items,
-        CancellationToken cancellationToken);
 
-    Task CancelReturnShipmentAsync(
-        string returnShipmentId,
-        string reason,
+    Task RegisterWebhookAsync(
+        string callbackUrl,
+        CancellationToken cancellationToken
+        );
+    
+    Task<ReturnShipmentResultDto> CreateReturnShipmentAsync(
+        Guid returnRequestId,
+        Guid orderId,
+        string originalTrackingNumber,
+        AddressDto pickupAddress,
         CancellationToken cancellationToken);
 
     Task<ReturnShipmentStatusDto> GetReturnShipmentStatusAsync(
-        string returnShipmentId,
+        string returnTrackingNumber,
         CancellationToken cancellationToken);
 }
