@@ -28,6 +28,7 @@ public sealed class ReserveInventoryStep(
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["ReservationId"] = context.ReservationId,
+                    // @think: should i remove this? we haven't used this field
                     ["Idempotent"] = true
                 });
             }

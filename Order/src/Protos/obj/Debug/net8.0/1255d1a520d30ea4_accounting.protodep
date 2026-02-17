@@ -1,0 +1,2 @@
+obj/Debug/net8.0/Protos/Accounting.cs \
+obj/Debug/net8.0/Protos/AccountingGrpc.cs: Protos/accounting.proto
