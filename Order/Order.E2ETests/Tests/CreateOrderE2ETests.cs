@@ -1,12 +1,16 @@
 using Application.Sagas;
+using Application.Sagas.Persistence;
 using Confluent.Kafka;
+using Domain.ValueObjects;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 using Order.E2ETests.Infrastructure;
 using Org.BouncyCastle.Asn1.Ocsp;
 using Protos.Order;
 using WireMock.ResponseBuilders;
 using Xunit;
 using Xunit.Abstractions;
+using Address = Protos.Order.Address;
 using Request = WireMock.RequestBuilders.Request;
 
 namespace Order.E2ETests.Tests;
@@ -169,6 +173,68 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
             "payment changed exactly once");
         
         _output.WriteLine("PASSED: Idempotency works!");
+    }
+
+
+    [Fact]
+    public async Task CreateOrder_PaymentDeclined_SagaCompensatesAndCancelsOrder()
+    {
+        _output.WriteLine("Payment declined => compensation");
+
+        _server.InventoryService.ReserveShouldSucceed = true;
+        _server.InventoryService.ReservationIdToReturn = "ReservationId";
+        _server.InventoryService.ReleaseShouldSucceed = true;
+
+        _server.PaymentService.ProcessShouldSucceed = false;
+        _server.PaymentService.ErrorCode = "PAYMENT_DECLINED";
+        _server.PaymentService.ErrorMessage = "Card declined by issuer";
+
+        var request = BuildCreateOrderRequest(Guid.NewGuid());
+        var response = await _client.CreateOrderAsync(request);
+
+        response.Success.Should().BeTrue("gRPC accepts the order; payment is async");
+        var orderId = Guid.Parse(response.OrderId);
+        _output.WriteLine("Order accepted: {orderId}. Waiting for compensation...");
+
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        
+        // saga should be Compensated
+        var saga = await _server.WaitForSagaStatusAsync(
+            orderId, "OrderSaga", SagaStatus.Compensated, timeoutSeconds: 30);
+
+        saga.Should().NotBeNull();
+        saga!.Status.Should().Be(SagaStatus.Compensated);
+        _output.WriteLine($"Saga: {saga.Status}");
+
+        var sagaRepo = _server.GetService<ISagaRepository>();
+        var steps = await sagaRepo.GetStepLogsAsync(saga.Id, CancellationToken.None);
+
+        steps.Single(s => s.StepName == "ProcessPayment")
+            .Status.Should().Be(StepStatus.Failed);
+
+        steps.Single(s => s.StepName == "ReserveInventory")
+            .Status.Should().Be(StepStatus.Compensated,
+                "inventory must be released when payment fails");
+        
+        _output.WriteLine("ProcessPayment=Failed, ReserveInventory=Compensated");
+
+        _server.InventoryService.ReleaseCalls.Should().HaveCountGreaterOrEqualTo(1);
+        _server.InventoryService.ReleaseCalls[0].ReservationId.Should().Be("ReservationId");
+
+        var events = await _server.GetEventsAsync(orderId, "Order");
+        var eventTypes = events.Select(e => e.EventType).ToList();
+
+        eventTypes.Should().Contain("OrderCreatedEvent");
+        eventTypes.Should().Contain("OrderCancelledEvent");
+        eventTypes.Should().NotContain("OrderPaidEvent");
+
+        //@todo: check stuff with IDomainEvent vs DomainEvent
+        var order = Domain.Entities.Order.FromHistory(events);
+        order.Status.Should().Be(OrderStatus.Cancelled);
+        
+        _output.WriteLine($"Order status: {order.Status}");
+        _output.WriteLine("PASSED: Compensation worked!");
+
     }
 
     private static CreateOrderRequest BuildCreateOrderRequest(
