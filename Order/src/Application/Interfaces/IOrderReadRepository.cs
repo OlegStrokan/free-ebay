@@ -12,6 +12,7 @@ public sealed record OrderResponse(
     Guid Id,
     Guid CustomerId,
     string? TrackingId,
+    string? PaymentId,
     string Status,
     decimal TotalAmount,
     string Currency,

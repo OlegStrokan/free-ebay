@@ -69,6 +69,7 @@ public class OrderReadRepository(AppDbContext dbContext) : IOrderReadRepository
             model.Id,
             model.CustomerId,
             model.TrackingId,
+            model.PaymentId,
             model.Status,
             model.TotalAmount,
             model.Currency,

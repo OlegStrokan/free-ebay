@@ -28,13 +28,16 @@ public sealed class AwaitReturnShipmentStep(
             if (string.IsNullOrEmpty(returnShipmentId))
             {
             
-                returnShipmentId = await shippingGateway.CreateReturnShipmentAsync(
+                var shipmentResult = await shippingGateway.CreateReturnShipmentAsync(
                     orderId: data.CorrelationId,
                     customerId: data.CustomerId,
                     items: data.ReturnedItems,
                     cancellationToken
                 );
+
                 
+                // @todo: clean up this mess
+                returnShipmentId = shipmentResult.ReturnShipmentId;
                 context.ReturnShipmentId = returnShipmentId;
                 logger.LogInformation("Created return shipment {Id}", context.ReturnShipmentId);
 

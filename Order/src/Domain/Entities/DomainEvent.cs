@@ -9,12 +9,7 @@ public class DomainEvent
     public string EventData { get; private set; } = null!;
     public int Version { get; private set; }
     public DateTime OccuredOn { get; private set; }
-
-    private DomainEvent()
-    {
-        
-    }
-
+    
     private DomainEvent(
         Guid eventId,
         string aggregateId,
