@@ -1,7 +1,6 @@
 using Application.Interfaces;
 using Application.Sagas;
 using Application.Sagas.Persistence;
-using Domain.Common;
 using Domain.Entities;
 using Infrastructure.Persistence.DbContext;
 using Infrastructure.ReadModels;
@@ -45,6 +44,17 @@ public static class E2ETestServerExtensions
         return await repo.GetByIdAsync(orderId, CancellationToken.None);
     }
 
+    public static async Task<ReturnRequestReadModel?> GetReturnReadModelAsync(
+        this E2ETestServer server,
+        Guid returnRequestId)
+    {
+        using var scope = server.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        return await db.ReturnRequestReadModels
+            .FirstOrDefaultAsync(r => r.Id == returnRequestId);
+    }
+
     public static async Task<SagaState?> WaitForSagaStatusAsync(
         this E2ETestServer server,
         Guid correlationId,
@@ -73,6 +83,24 @@ public static class E2ETestServerExtensions
         for (var i = 0; i < timeoutSeconds; i++)
         {
             var model = await server.GetOrderReadModelAsync(orderId);
+            if (model?.Status == expectedStatus)
+                return model;
+
+            await Task.Delay(1000);
+        }
+
+        return null;
+    }
+
+    public static async Task<ReturnRequestReadModel?> WaitForReturnReadModelStaticAsync(
+        this E2ETestServer server,
+        Guid returnRequestId,
+        string expectedStatus,
+        int timeoutSeconds = 30)
+    {
+        for (var i = 0; i < timeoutSeconds; i++)
+        {
+            var model = await server.GetReturnReadModelAsync(returnRequestId);
             if (model?.Status == expectedStatus)
                 return model;
 

@@ -218,7 +218,7 @@ public class WireMockShippingGateway : IShippingGateway
 
     public async Task<ShipmentResultDto> CreateShipmentAsync(
         Guid orderId,
-        AddressDto deliveryAddress, 
+        AddressDto deliveryAddress,
         IReadOnlyCollection<OrderItemDto> items,
         CancellationToken cancellationToken)
     {
@@ -249,17 +249,61 @@ public class WireMockShippingGateway : IShippingGateway
     public Task<ShipmentStatusDto> GetShipmentStatusAsync(string trackingNumber, CancellationToken ct)
         => throw new NotImplementedException();
 
-    public Task RegisterWebhookAsync(string callbackUrl, CancellationToken ct)
-        => Task.CompletedTask;
+    public async Task<ReturnShipmentResultDto> CreateReturnShipmentAsync(
+        Guid orderId,
+        Guid customerId,
+        List<OrderItemDto> items,
+        CancellationToken cancellationToken)
+    {
+        var resp = await _http.PostAsJsonAsync(
+            "/api/shipping/return/create",
+            new { orderId, customerId, items },
+            cancellationToken);
 
-    public Task<ReturnShipmentResultDto> CreateReturnShipmentAsync(
-        Guid returnRequestId, Guid orderId, string originalTrackingNumber,
-        AddressDto pickupAddress, CancellationToken ct)
-        => throw new NotImplementedException();
+        resp.EnsureSuccessStatusCode();
+
+        var body = await resp.Content.ReadFromJsonAsync<ReturnShipmentResponse>(cancellationToken)
+                   ?? throw new Exception("Empty return shipment response");
+
+        return new ReturnShipmentResultDto(
+            body.ReturnShipmentId,
+            body.ReturnTrackingNumber,
+            body.ExpectedPickupDate);
+    }
+
+    public async Task RegisterWebhookAsync(
+        string shipmentId,
+        string callbackUrl,
+        string[] events,
+        CancellationToken cancellationToken)
+    {
+        var resp = await _http.PostAsJsonAsync(
+            "/api/shipping/webhook/register",
+            new { shipmentId, callbackUrl, events }, cancellationToken);
+
+        resp.EnsureSuccessStatusCode();
+    }
+
+    public async Task CancelReturnShipmentAsync(
+        string returnShipmentId,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var resp = await _http.PostAsJsonAsync(
+            "/api/shipping/return/cancel",
+            new { returnShipmentId, reason }, cancellationToken);
+
+        resp.EnsureSuccessStatusCode();
+    }
 
     public Task<ReturnShipmentStatusDto> GetReturnShipmentStatusAsync(
         string returnTrackingNumber, CancellationToken ct)
         => throw new NotImplementedException();
 
     private record ShipmentResponse(string ShipmentId, string TrackingNumber);
+
+    private record ReturnShipmentResponse(
+        string ReturnShipmentId,
+        string ReturnTrackingNumber,
+        DateTime ExpectedPickupDate);
 }
