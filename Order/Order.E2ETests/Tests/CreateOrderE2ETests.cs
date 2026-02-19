@@ -129,6 +129,47 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
 
     }
 
+    [Fact]
+    public async Task CreateOrder_Idempotency_DuplicateRequestSameOrderId()
+    {
+        _output.WriteLine("Idempotency - Duplicate request");
+
+        _server.PaymentService.ProcessShouldSucceed = true;
+        _server.InventoryService.ReserveShouldSucceed = true;
+
+        _server.Shipping
+            .Given(Request.Create().WithBodyAsJson("/api/shipping/create").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200)
+                .WithBodyAsJson(new { shipmentId = "ShipmentId", trackingNumber = "TrackingNumber " });
+        
+        // same key on both request - simulated client retry after network issue
+
+        var idempotencyKey = $"idem-{Guid.NewGuid()}";
+        var request = BuildCreateOrderRequest(Guid.NewGuid(), idempotencyKey: idempotencyKey);
+        
+        _output.WriteLine("Request #1...");
+        var response1 = await _client.CreateOrderAsync(request);
+
+        _output.WriteLine("Request #2 (same idempotency key)...");
+        var response2 = await _client.CreateOrderAsync(request);
+
+        response1.Success.Should().BeTrue();
+        response2.Success.Should().BeTrue();
+        response1.OrderId.Should().Be(response2.OrderId, "same key must return same order ID");
+        
+        _output.WriteLine($"Both returned: {response1.OrderId}");
+
+        var orderId = Guid.Parse(response1.OrderId);
+        var events = await _server.GetEventsAsync(orderId, "Order");
+
+        events.Count(e => e.EventType == "OrderCreatedEvent")
+            .Should().Be(1, "only ONE order must be created");
+
+        _server.PaymentService.ProcessCalls.Should().HaveCount(1,
+            "payment changed exactly once");
+        
+        _output.WriteLine("PASSED: Idempotency works!");
+    }
 
     private static CreateOrderRequest BuildCreateOrderRequest(
         Guid customerId,
