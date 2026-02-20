@@ -1,8 +1,0 @@
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/Order.E2ETests.csproj.AssemblyReference.cache
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/MvcTestingAppManifest.json
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/Order.E2ETests.GeneratedMSBuildEditorConfig.editorconfig
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/Order.E2ETests.AssemblyInfoInputs.cache
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/Order.E2ETests.AssemblyInfo.cs
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/Order.E2ETests.csproj.CoreCompileInputs.cache
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/Order.E2ETests.MvcApplicationPartsAssemblyInfo.cache
-/Users/stroka01/Development/free-ebay/Order/Order.E2ETests/obj/Debug/net8.0/Order.E2ETests.sourcelink.json
