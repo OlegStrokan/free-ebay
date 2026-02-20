@@ -267,6 +267,107 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine("PASSED: Idempotency work");
     }
 
+    // return fails => saga compensates
+    [Fact]
+    public async Task RequestReturn_RefundFails_SagaCompensatesAndCancelsReturn()
+    {
+        _output.WriteLine("Return Rainy Day - Refund failure => compensation");
+
+        var orderId = await CreateCompletedOrderAsync();
+
+        var returnShipmentId = "returnShipmentId";
+        
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/return/create").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200)
+                .WithBodyAsJson(new { returnShipmentId, returnTrackingNumber = "RTRK-FAIL" }));
+
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/webhook/register").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        // shipmentServer: CancelReturnShipment (for compensation)
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/return/cancel").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+        
+        // refund fails
+        _server.PaymentService.RefundShouldSucceed = false;
+        _server.PaymentService.ErrorMessage = "Payment gateway timeout";
+
+        var request = new RequestReturnRequest
+        {
+            OrderId = orderId.ToString(),
+            Reason = "Product damaged",
+            IdempotencyKey = $"return-fail-{Guid.NewGuid()}"
+        };
+        
+        request.ItemsToReturn.Add(new OrderItem
+        {
+            ProductId = Guid.NewGuid().ToString(),
+            Quantity = 1, 
+            Price = 75.00,
+            Currency = "USD"
+        });
+        
+        _output.WriteLine("Requesting return...");
+        var response = await _client.RequestReturnAsync(request);
+        response.Success.Should().BeTrue();
+
+        var returnRequestId = Guid.Parse(response.OrderId);
+        _output.WriteLine($"Return request accepted: {returnRequestId}");
+
+        await Task.Delay(TimeSpan.FromSeconds(5));
+        
+        // trigger webhook to resume saga (it will fail at processRefund)
+        _output.WriteLine("Simulating webhook...");
+
+        await PublishReturnShipmentDeliveredEventToKafkaAsync(
+            orderId, returnShipmentId, "TrackingNumber", DateTime.UtcNow);
+
+        await Task.Delay(TimeSpan.FromSeconds(10));
+
+        var saga = await _server.WaitForSagaStatusAsync(
+            orderId, "ReturnSaga", SagaStatus.Compensated, timeoutSeconds: 30);
+
+        saga.Should().NotBeNull();
+        saga!.Status.Should().Be(SagaStatus.Compensated);
+        
+        _output.WriteLine($"Saga compensated: {saga.Status}");
+        
+        
+        // check steps: processRefund failed, earlier steps Compensated
+
+        var sagaRepo = _server.GetService<ISagaRepository>();
+        var steps = await sagaRepo.GetStepLogsAsync(saga.Id, CancellationToken.None);
+
+        steps.Single(s => s.StepName == "ProcessRefund")
+            .Status.Should().Be(StepStatus.Failed);
+        steps.Single(s => s.StepName == "ConfirmReturnReceived")
+            .Status.Should().Be(StepStatus.Compensated);
+        steps.Single(s => s.StepName == "AwaitReturnShipment")
+            .Status.Should().Be(StepStatus.Compensated);
+        
+        _output.WriteLine("ProcessRefund=Failed, earlier steps=Compensated");
+
+        _server.ShipmentServer.LogEntries.Should()
+            .ContainSingle(e => e.RequestMessage.Path = "/api/shipping/return/cancel",
+                "return shipment must be cancelled during compensation");
+        
+        _output.WriteLine("Return shipment cancelled via REST");
+
+        var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
+        var eventTypes = events.Select(e => e.EventType).ToList();
+
+        eventTypes.Should().Contain("ReturnRequestCreatedEvent");
+        eventTypes.Should().Contain("ReturnItemsReceivedEvents");
+        eventTypes.Should().NotContain("ReturnRefundProessedEvent");
+        eventTypes.Should().NotContain("RefundCompletedEvents");
+        
+        _output.WriteLine("ReturnRequest did not complete (no refund events)");
+        _output.WriteLine("Passed: Refund failure compensation worked!");
+    }
+    
     // starting point
     private async Task<Guid> CreateCompletedOrderAsync()
     {
