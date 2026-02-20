@@ -1,4 +1,5 @@
 using Application.DTOs;
+using Application.Gateways;
 using Grpc.Core;
 using Protos.Accounting;
 
@@ -6,7 +7,7 @@ namespace Infrastructure.Gateways;
 
 public class AccountingGateway(
     AccountingService.AccountingServiceClient client,
-    ILogger<AccountingGateway> logger) 
+    ILogger<AccountingGateway> logger) : IAccountingGateway
 {
     public async Task<string> RecordRefundAsync(
         Guid orderId,
@@ -17,18 +18,22 @@ public class AccountingGateway(
         CancellationToken cancellationToken)
     {
 
-        var request = new RecordRefundRequest(
-            OrderId: orderId.ToString(),
-            RefundId: refundId,
-            Amount: (double)amount,
-            Currency: currency,
-            Reason: reason);
+
+
+        var request = new RecordRefundRequest
+        {
+            OrderId = orderId.ToString(),
+            RefundId = refundId,
+            Amount = (double)amount,
+            Currency = currency,
+            Reason = reason
+        };
 
         try
         {
             var response = await client.RecordRefundAsync(request, cancellationToken: cancellationToken);
 
-            if (response.Success)
+            if (!response.Success)
                 throw new InvalidOperationException(
                     $"Recording refund failed. OrderId={orderId}, RefundId={refundId}, Error={response.ErrorMessage}");
 
@@ -48,24 +53,27 @@ public class AccountingGateway(
         
     }
 
-    public async Task<string> ReserveRevenueAsync(
+    public async Task<string> ReverseRevenueAsync(
         Guid orderId,
         decimal amount,
         string currency,
         List<OrderItemDto> returnedItems,
         CancellationToken cancellationToken)
     {
-        var request = new ReverseRevenueRequest(
-            OrderId: orderId.ToString(),
-            Amount: (double)amount,
-            Currency: currency);
+        var request = new ReverseRevenueRequest
+        {
+            OrderId = orderId.ToString(),
+            Amount = (double)amount,
+            Currency = currency
+        };
 
-        request.ReturnedItems.AddRange(returnedItems.Select(i => new AccountingItem(
-            ProductId: i.ProductId.ToString(),
-            Quantity: i.Quantity,
-            Price: (double)i.Price,
-            Currency: i.Currency
-        )));
+        request.ReturnedItems.AddRange(returnedItems.Select(i => new AccountingItem
+        {
+            ProductId = i.ProductId.ToString(),
+            Quantity = i.Quantity,
+            Price = (double)i.Price,
+            Currency = i.Currency
+        }));
 
         try
         {
@@ -73,7 +81,7 @@ public class AccountingGateway(
 
             if (!response.Success)
                 throw new InvalidOperationException(
-                    $"Revenue reversal failed. OrderId={orderId}, Amount={amount} {currency}, Error={response.ErroMessage}");
+                    $"Revenue reversal failed. OrderId={orderId}, Amount={amount} {currency}, Error={response.ErrorMessage}");
 
             logger.LogInformation(
                 "Revenue reversed in accounting. OrderId={OrderId}, ReversalId={ReversalId}, Amount={Amount} {Currency}",
@@ -96,14 +104,15 @@ public class AccountingGateway(
         string reason,
         CancellationToken cancellationToken)
     {
-        var request = new CancelReversalRequest(
-            ReversalId: reversalId,
-            Reason: reason
-        );
+        var request = new CancelReversalRequest
+        {
+            ReversalId = reversalId,
+            Reason = reason
+        };
 
         try
         {
-            var response = await client.CancelReversalRequest(request, cancellationToken: cancellationToken);
+            var response = await client.CancelReversalAsync(request, cancellationToken: cancellationToken);
 
             if (!response.Success)
             {
@@ -115,36 +124,15 @@ public class AccountingGateway(
                 "Revenue reversal cancelling in accounting. ReversalId={ReversalId}",
                 reversalId);
         }
-        catch (RpcException ex) when (ex.StatusCode != StatusCode.NotFound)
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
         {
             // idempotent: already cancelled/not found
             logger.LogWarning(
-                "CancelRevenueReversal: reversal not found (treated as idempontent success). ReversalId={ReversalId}",
+                "CancelRevenueReversal: reversal not found (treated as idempotent success). ReversalId={ReversalId}",
                 reversalId);
         }
     }
     
 
 
-    private sealed record RecordRefundRequest(
-        string OrderId,
-        string RefundId,
-        double Amount,
-        string Currency,
-        string Reason);
-
-    private sealed record ReverseRevenueRequest(
-        string OrderId,
-        double Amount,
-        string Currency);
-
-    private sealed record AccountingItem(
-        string ProductId,
-        int Quantity,
-        double Price,
-        string Currency);
-
-    private sealed record CancelReversalRequest(
-        string ReversalId,
-        string Reason);
 }

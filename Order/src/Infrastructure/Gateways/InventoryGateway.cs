@@ -23,7 +23,7 @@ public sealed class InventoryGateway(
         request.Items.AddRange(items.Select(i => new InventoryItem
         {
             ProductId = i.ProductId.ToString(),
-            Quality = i.Quantity
+            Quantity = i.Quantity
         }));
 
         try
@@ -31,7 +31,7 @@ public sealed class InventoryGateway(
             var response = await client.ReserveInventoryAsync(request, cancellationToken: cancellationToken);
 
             if (!response.Success)
-                throw new InsufficientExecutionStackException(
+                throw new InsufficientInventoryException(
                     $"Inventory reservation failed for OrderId={orderId}. Reason={response.ErrorMessage}");
 
             logger.LogInformation(

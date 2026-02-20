@@ -1,6 +1,8 @@
+using Domain.Common;
+
 namespace Domain.Entities;
 
-public class DomainEvent
+public class DomainEvent : IDomainEvent
 {
     public Guid EventId { get; private set; }
     public string AggregateId { get; private set; } = null!;
@@ -9,6 +11,9 @@ public class DomainEvent
     public string EventData { get; private set; } = null!;
     public int Version { get; private set; }
     public DateTime OccuredOn { get; private set; }
+
+    // explicit implementation to bridge the OccuredOn typo with the interface contract
+    DateTime IDomainEvent.OccurredOn => OccuredOn;
     
     private DomainEvent(
         Guid eventId,

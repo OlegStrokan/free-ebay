@@ -18,12 +18,14 @@ public sealed class PaymentGateway(
         string paymentMethod,
         CancellationToken cancellationToken)
     {
-        var request = new ProcessPaymentRequest(
-            OrderId: orderId.ToString(),
-            CustomerId: customerId.ToString(),
-            Amount: (double)amount,
-            Currency: currency,
-            PaymentMethod: paymentMethod);
+        var request = new ProcessPaymentRequest
+        {
+            OrderId = orderId.ToString(),
+            CustomerId = customerId.ToString(),
+            Amount = (double)amount,
+            Currency = currency,
+            PaymentMethod = paymentMethod
+        };
 
         try
         {
@@ -70,11 +72,12 @@ public sealed class PaymentGateway(
         string reason, 
         CancellationToken cancellationToken)
     {
-        var request = new RefundPaymentRequest(
-            PaymentId: paymentId,
-            Amount: (double)amount,
-            Reason: reason
-        );
+        var request = new RefundPaymentRequest
+        {
+            PaymentId = paymentId,
+            Amount = (double)amount,
+            Reason = reason
+        };
 
         try
         {
@@ -102,15 +105,4 @@ public sealed class PaymentGateway(
     }
 
 
-    private sealed record ProcessPaymentRequest(
-        string OrderId,
-        string CustomerId,
-        double Amount,
-        string Currency,
-        string PaymentMethod);
-
-    private sealed record RefundPaymentRequest(
-        string PaymentId,
-        double Amount,
-        string Reason);
 }

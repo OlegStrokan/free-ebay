@@ -351,7 +351,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine("ProcessRefund=Failed, earlier steps=Compensated");
 
         _server.ShipmentServer.LogEntries.Should()
-            .ContainSingle(e => e.RequestMessage.Path = "/api/shipping/return/cancel",
+            .ContainSingle(e => e.RequestMessage.Path == "/api/shipping/return/cancel",
                 "return shipment must be cancelled during compensation");
         
         _output.WriteLine("Return shipment cancelled via REST");
@@ -440,7 +440,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine($"Watchdog recovered: {saga.Status}");
 
         _server.ShipmentServer.LogEntries.Should()
-            .ContainSingle(e => e.RequestMessage.Path = "/api/shipping/return/cancel");
+            .ContainSingle(e => e.RequestMessage.Path == "/api/shipping/return/cancel");
         
         _output.WriteLine("PASSED: Watchdog recovered stuck saga");
         

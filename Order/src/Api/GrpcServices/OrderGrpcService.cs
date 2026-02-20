@@ -5,7 +5,7 @@ using FluentValidation;
 using Grpc.Core;
 using MediatR;
 using Microsoft.IdentityModel.Tokens.Experimental;
-using Protos.Orders;
+using Protos.Order;
 
 namespace Api.GrpcServices;
 

@@ -116,7 +116,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReserveCalls[0].Items.Should().HaveCount(1);
 
         // assert shipping rest calls
-        _server.ShipmentServer.LogEntries.Should().ContainSingle(e => e.RequestMessage.Path = "/api/shipping/create");
+        _server.ShipmentServer.LogEntries.Should().ContainSingle(e => e.RequestMessage.Path == "/api/shipping/create");
         
         // assert email event on kafka. Email is not mocked - we only verify
         // OrderCompletedEvent reached Kafka. external system consumes from this same topic

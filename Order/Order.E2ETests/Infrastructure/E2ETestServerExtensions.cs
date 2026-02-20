@@ -5,6 +5,7 @@ using Domain.Entities;
 using Infrastructure.Persistence.DbContext;
 using Infrastructure.ReadModels;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Order.E2ETests.Infrastructure;
 

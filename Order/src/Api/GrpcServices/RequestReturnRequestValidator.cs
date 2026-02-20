@@ -1,5 +1,5 @@
 using FluentValidation;
-using Protos.Orders;
+using Protos.Order;
 
 namespace Api.GrpcServices;
 
