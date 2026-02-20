@@ -367,6 +367,85 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine("ReturnRequest did not complete (no refund events)");
         _output.WriteLine("Passed: Refund failure compensation worked!");
     }
+
+    [Fact]
+    public async Task RequestReturn_WebhookNeverArrives_WatchdogFailsAndCompensatesSaga()
+    {
+        _output.WriteLine("Return Disaster - Webhook timeout, watchdog compensates");
+
+        var orderId = await CreateCompletedOrderAsync();
+        
+        // shipping success, but webhook never arrives
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/return/create").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200)
+                .WithBodyAsJson(new { returnShipmentId = "ShipmentId", returnTrackingNumber = "TrackingNumber" }));
+
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/webhook/register").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/return/cancel").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        var request = new RequestReturnRequest
+        {
+            OrderId = orderId.ToString(),
+            Reason = "Wrong size",
+            IdempotencyKey = $"return-timeout-{Guid.NewGuid()}"
+        };
+
+        request.ItemsToReturn.Add(new OrderItem
+        {
+            ProductId = Guid.NewGuid().ToString(),
+            Quantity = 1,
+            Price = 100.00,
+            Currency = "USD"
+        });
+        
+        _output.WriteLine("Requesting return...");
+        var response = await _client.RequestReturnAsync(request);
+        response.Success.Should().BeTrue();
+
+        _output.WriteLine("Return request accepted");
+        await Task.Delay(TimeSpan.FromSeconds(5));
+        
+        // saga stuck in waitingForEvent
+        var saga = await _server.GetSagaStateAsync(orderId, "ReturnSaga");
+        saga.Should().NotBeNull();
+        saga!.Status.Should().Be(SagaStatus.WaitingForEvent);
+        
+        _output.WriteLine($"Saga waiting for webhook: {saga.Status}");
+        
+        // wait for sagaWatchdogService to detect and compensate ( runs every minute, mark stuck saga after 5 minutes)
+        // for testing, we manually trigger watchdog logic (update updatedAt field)
+        
+        _output.WriteLine("Simulating watchdog timeout (normally 5+ minutes");
+        _output.WriteLine("In real scenario: SagaWatchdogService detects saga stuck > 10 minutes");
+        _output.WriteLine("For test we will manually mark UpdatedAt as old");
+
+        saga.UpdatedAt = DateTime.UtcNow.AddMinutes(-11);
+        var sagaRepo = _server.GetService<ISagaRepository>();
+        await sagaRepo.SaveAsync(saga, CancellationToken.None);
+
+        await Task.Delay(TimeSpan.FromSeconds(70)); // wait 1 full watchdog cycle
+        
+        // watchdog marked saga as failed and compensated
+        saga = await _server.GetSagaStateAsync(orderId, "ReturnSaga");
+        saga.Should().NotBeNull();
+        (saga!.Status == SagaStatus.Compensated || saga.Status == SagaStatus.Failed)
+            .Should().BeTrue("watchdog should fail and compensate stuck saga");
+        
+        _output.WriteLine($"Watchdog recovered: {saga.Status}");
+
+        _server.ShipmentServer.LogEntries.Should()
+            .ContainSingle(e => e.RequestMessage.Path = "/api/shipping/return/cancel");
+        
+        _output.WriteLine("PASSED: Watchdog recovered stuck saga");
+        
+
+    }
     
     // starting point
     private async Task<Guid> CreateCompletedOrderAsync()
