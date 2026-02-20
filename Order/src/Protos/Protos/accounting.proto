@@ -7,6 +7,7 @@ package accounting;
 service AccountingService {
   rpc RecordRefund (RecordRefundRequest) returns (RecordRefundResponse);
   rpc ReverseRevenue (ReverseRevenueRequest) returns (ReverseRevenueResponse);
+  rpc CancelReversal (CancelReversalRequest) returns (CancelReversalResponse);
 }
 
 message RecordRefundRequest {
@@ -45,7 +46,7 @@ message ReverseRevenueResponse {
 
 message CancelReversalRequest {
   string reversal_id = 1;
-  string error_message = 2;
+  string reason = 2;
 }
 
 message CancelReversalResponse {

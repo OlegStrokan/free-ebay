@@ -6,7 +6,7 @@ package payment;
 
 service PaymentService {
   rpc ProcessPayment (ProcessPaymentRequest) returns (ProcessPaymentResponse);
-  rpc RefundPayment (RefundPaymentRequest) returns (ProcessPaymentResponse);
+  rpc RefundPayment (RefundPaymentRequest) returns (RefundPaymentResponse);
 }
 
 message ProcessPaymentRequest {
