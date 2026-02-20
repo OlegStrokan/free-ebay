@@ -212,6 +212,62 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine("🎉 PASSED: Full return flow with webhook continuation!");
     }
 
+    [Fact]
+    public async Task ReqeustReturn_Idempotency_DuplicateRequestReturnsSameReturnRequestId()
+    {
+        _output.WriteLine("Return Idempotency - Duplicate request");
+        
+        var orderId = await CreateCompletedOrderAsync();
+        
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/return/create").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200)
+                .WithBodyAsJson(new { returnShipmentId = "returnShipmentId", returnTrackingNumber = "returnTrackingNumber" }));
+
+        _server.ShipmentServer
+            .Given(Request.Create().WithPath("/api/shipping/webhook/register").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+        
+        // same idempotency key on both request
+        var idempotencyKey = $"return-item-{Guid.NewGuid()}";
+        
+        var request = new RequestReturnRequest
+        {
+            OrderId = orderId.ToString(),
+            Reason = "Change my mind",
+            IdempotencyKey = idempotencyKey
+        };
+        
+        request.ItemsToReturn.Add(new OrderItem
+        {
+            ProductId = Guid.NewGuid().ToString(),
+            Quantity = 1,
+            Price = 50.00,
+            Currency = "USD"
+        });
+        
+        _output.WriteLine("Request #1");
+        var response1 = await _client.RequestReturnAsync(request);
+        
+        _output.WriteLine("Request #2");
+        var response2 = await _client.RequestReturnAsync(request);
+
+        response1.Success.Should().BeTrue();
+        response2.Success.Should().BeTrue();
+        response1.OrderId.Should().Be(response2.OrderId, "duplicate request must return same returnRequestId");
+        
+        _output.WriteLine("Both returned: {response1.OrderId}");
+
+        var returnRequestId = Guid.Parse(response1.OrderId);
+        var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
+
+        events.Count(e => e.EventType == "ReturnRequestCreatedEvent")
+            .Should().Be(1, "only ONE ReturnRequestCreatedEvent must exists");
+        
+        _output.WriteLine("PASSED: Idempotency work");
+    }
+
+    // starting point
     private async Task<Guid> CreateCompletedOrderAsync()
     {
         // Configure mocks for order creation
@@ -259,10 +315,8 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         return orderId;
     }
 
-    /// <summary>
-    /// Publishes ReturnShipmentDeliveredEvent to Kafka to simulate webhook.
-    /// This triggers SagaContinuationEventHandler to resume the paused ReturnSaga.
-    /// </summary>
+
+    // publishes event to Kafka to simulate webhook, triggers continuation to resume the paused ReturnSaga
     private async Task PublishReturnShipmentDeliveredEventToKafkaAsync(
         Guid orderId,
         string shipmentId,
