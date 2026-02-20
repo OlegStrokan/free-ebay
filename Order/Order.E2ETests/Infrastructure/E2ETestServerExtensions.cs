@@ -92,7 +92,7 @@ public static class E2ETestServerExtensions
         return null;
     }
 
-    public static async Task<ReturnRequestReadModel?> WaitForReturnReadModelStaticAsync(
+    public static async Task<ReturnRequestReadModel?> WaitForReturnReadModelStatusAsync(
         this E2ETestServer server,
         Guid returnRequestId,
         string expectedStatus,

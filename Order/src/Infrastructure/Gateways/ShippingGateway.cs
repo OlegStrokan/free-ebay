@@ -114,7 +114,7 @@ public sealed class ShippingGateway : IShippingGateway
 
         logger.LogInformation("Shipment cancelled. ShipmentId={ShipmentId}", shipmentId);
     }
-
+    
     public async Task<ShipmentStatusDto> GetShipmentStatusAsync(
         string trackingNumber,
         CancellationToken cancellationToken)
@@ -144,6 +144,22 @@ public sealed class ShippingGateway : IShippingGateway
             EstimatedDeliveryDate: apiResponse.EstimatedDeliveryDate,
             ActualDeliveryDate: apiResponse.ActualDeliveryDate,
             CurrentLocation: apiResponse.CurrentLocation);
+    }
+
+    //@todo: clean up this mess
+    public Task CancelReturnShipmentAsync(string returnShipmentId, string reason, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task RegisterWebhookAsync(string shipmentId, string callbackUrl, string[] events, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<ReturnShipmentResultDto> CreateReturnShipmentAsync(Guid orderId, Guid customerId, List<OrderItemDto> items, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
     }
 
     public async Task RegisterWebhookAsync(string callbackUrl, CancellationToken cancellationToken)

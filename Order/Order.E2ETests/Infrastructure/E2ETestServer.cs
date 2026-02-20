@@ -37,8 +37,8 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
 
     public FakePaymentGrpcServer PaymentService => _paymentService;
     public FakeInventoryGrpcServer InventoryService => _inventoryService;
-    public FakeAccountingGrpcServer Acccounting => _accountingService;
-    public WireMockServer Shipping => _wireMockServer;
+    public FakeAccountingGrpcServer AccountingServer => _accountingService;
+    public WireMockServer ShipmentServer => _wireMockServer;
 
     public string KafkaBootstrapServers { get; private set; } = string.Empty;
     

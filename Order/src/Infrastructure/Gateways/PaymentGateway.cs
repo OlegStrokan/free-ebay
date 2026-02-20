@@ -2,6 +2,7 @@ using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Domain.ValueObjects;
 using Grpc.Core;
+using Protos.Payment;
 
 namespace Infrastructure.Gateways;
 

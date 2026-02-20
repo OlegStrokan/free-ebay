@@ -1,5 +1,6 @@
 using Application.DTOs;
 using Grpc.Core;
+using Protos.Accounting;
 
 namespace Infrastructure.Gateways;
 

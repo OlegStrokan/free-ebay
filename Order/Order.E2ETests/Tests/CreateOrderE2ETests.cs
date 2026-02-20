@@ -52,13 +52,13 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.PaymentService.PaymentIdToReturn = paymentId;
         _server.InventoryService.ReserveShouldSucceed = true;
         _server.InventoryService.ReservationIdToReturn = reservationId;
-        _server.Acccounting.ShouldSucceed = true;
+        _server.AccountingServer.ShouldSucceed = true;
 
         // arrange shipping wire mock - rest
         var shipmentId = "shipmentId";
         var trackingNumber = "trackingNumber";
 
-        _server.Shipping
+        _server.ShipmentServer
             .Given(Request.Create().WithPath("/api/shipping/create").UsingPost())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
@@ -116,7 +116,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReserveCalls[0].Items.Should().HaveCount(1);
 
         // assert shipping rest calls
-        _server.Shipping.LogEntries.Should().ContainSingle(e => e.RequestMessage.Path = "/api/shipping/create");
+        _server.ShipmentServer.LogEntries.Should().ContainSingle(e => e.RequestMessage.Path = "/api/shipping/create");
         
         // assert email event on kafka. Email is not mocked - we only verify
         // OrderCompletedEvent reached Kafka. external system consumes from this same topic
@@ -141,10 +141,10 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.PaymentService.ProcessShouldSucceed = true;
         _server.InventoryService.ReserveShouldSucceed = true;
 
-        _server.Shipping
+        _server.ShipmentServer
             .Given(Request.Create().WithBodyAsJson("/api/shipping/create").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200)
-                .WithBodyAsJson(new { shipmentId = "ShipmentId", trackingNumber = "TrackingNumber " });
+                .WithBodyAsJson(new { shipmentId = "ShipmentId", trackingNumber = "TrackingNumber " }));
         
         // same key on both request - simulated client retry after network issue
 
@@ -234,7 +234,43 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         
         _output.WriteLine($"Order status: {order.Status}");
         _output.WriteLine("PASSED: Compensation worked!");
+    }
 
+    [Fact(Skip = "Manual: kill SagaOrchestrationService mid-run then restart to trigger recovery")]
+    public async Task CreateOrder_SagaCrash_ResumesWithoutDuplicateSteps()
+    {
+        _output.WriteLine("Disaster Recovery");
+
+        _server.PaymentService.ProcessShouldSucceed = true;
+        _server.InventoryService.ReserveShouldSucceed = true;
+
+        _server.ShipmentServer
+            .Given(Request.Create().WithBodyAsJson("/api/shipping/create").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200)
+                .WithBodyAsJson(new { shipmentId = "ShipmentId", trackingNumber = "TrackingNumber " }));
+
+        var response = await _client.CreateOrderAsync(BuildCreateOrderRequest(Guid.NewGuid()));
+        var orderId = Guid.Parse(response.OrderId);
+        
+        _output.WriteLine($"Order {orderId} created. Saga is runnin...");
+        _output.WriteLine("Kill SagaOrchestrationService container NOW, restart after 5s");
+
+        await Task.Delay(TimeSpan.FromSeconds(20));
+
+        var saga = await _server.WaitForSagaStatusAsync(
+            orderId, "OrderSaga", SagaStatus.Completed, timeoutSeconds: 60);
+
+        saga.Should().NotBeNull();
+
+        saga!.Status.Should().Be(SagaStatus.Completed);
+
+        var sagaRepo = _server.GetService<ISagaRepository>();
+        var steps = await sagaRepo.GetStepLogsAsync(saga.Id, CancellationToken.None);
+
+        steps.Select(s => s.StepName).Should().OnlyHaveUniqueItems(
+            "each step must run exactly once - no duplicates after crash + resume");
+        
+        _output.WriteLine("Passed: saga resumed without duplicates");
     }
 
     private static CreateOrderRequest BuildCreateOrderRequest(
