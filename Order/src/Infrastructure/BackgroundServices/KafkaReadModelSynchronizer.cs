@@ -227,8 +227,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             updater = scope.ServiceProvider.GetService<OrderReadModelUpdater>();
         } else if (eventType.FullName?.Contains("Return") == true)
         {   
-            // @todo: change to returnRequest updater
-            updater = scope.ServiceProvider.GetService<OrderReadModelUpdater>();
+            updater = scope.ServiceProvider.GetService<ReturnRequestReadModelUpdater>();
         }
 
         if (updater == null)

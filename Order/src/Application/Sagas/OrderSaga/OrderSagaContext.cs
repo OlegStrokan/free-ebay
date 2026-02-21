@@ -10,6 +10,4 @@ public sealed class OrderSagaContext : SagaContext
     
     // internal flags - for idempotency
     public bool OrderStatusUpdated { get; set; }
-    // @think: should be either deleted or used with TrackingNumber assigning
-    public bool TrackingAssigned { get; set; }
 }
