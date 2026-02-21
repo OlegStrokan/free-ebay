@@ -69,7 +69,7 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
         if (!response.Success)
             throw new Exception($"Refund failed: {response.ErrorMessage}");
 
-        return response.PaymentId;
+        return response.RefundId;
     }
 }
 
@@ -100,7 +100,7 @@ public class FakeGrpcInventoryGateway : IInventoryGateway
             request.Items.Add(new InventoryItem
             {
                 ProductId = item.ProductId.ToString(),
-                Quality = item.Quantity
+                Quantity = item.Quantity
             });
         }
 

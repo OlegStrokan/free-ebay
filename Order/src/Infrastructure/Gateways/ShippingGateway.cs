@@ -77,7 +77,7 @@ public sealed class ShippingGateway : IShippingGateway
                       ?? throw new InvalidOperationException("Shipping create response is empty.");
 
             logger.LogInformation(
-                "Shipment created for OrderId={OrderId}. Shipment{ShipmentId}, TrackingNumber={TrackingNumber}",
+                "Shipment created for OrderId={OrderId}. ShipmentId={ShipmentId}, TrackingNumber={TrackingNumber}",
                 orderId,
                 dto.ShipmentId,
                 dto.TrackingNumber);
@@ -90,7 +90,6 @@ public sealed class ShippingGateway : IShippingGateway
             $"Shipping create failed. Status={(int)response.StatusCode}, Body={error}");
     }
     
-
     public async Task CancelShipmentAsync(string shipmentId, CancellationToken cancellationToken)
     {
         using var response = await httpClient.PostAsync(
@@ -100,7 +99,6 @@ public sealed class ShippingGateway : IShippingGateway
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            // @think: should we throw error?
             logger.LogWarning("CancelShipment: shipment not found. ShipmentId={ShipmentId}", shipmentId);
             return;
         }
@@ -130,8 +128,8 @@ public sealed class ShippingGateway : IShippingGateway
         {
             var err = await SafeReadAsync(response, cancellationToken);
             throw new HttpRequestException(
-                $"Get shipment status failed. TrackingNumber={trackingNumber}," +
-                $"Status={(int)response.StatusCode}, Body{err}");
+                $"Get shipment status failed. TrackingNumber={trackingNumber}, " +
+                $"Status={(int)response.StatusCode}, Body={err}");
         }
 
         var apiResponse =
@@ -145,10 +143,17 @@ public sealed class ShippingGateway : IShippingGateway
             ActualDeliveryDate: apiResponse.ActualDeliveryDate,
             CurrentLocation: apiResponse.CurrentLocation);
     }
-
-    public async Task RegisterWebhookAsync(string callbackUrl, CancellationToken cancellationToken)
+    
+    public async Task RegisterWebhookAsync(
+        string shipmentId,
+        string callbackUrl,
+        string[] events,
+        CancellationToken cancellationToken)
     {
-        var request = new RegisterWebhookRequest(callbackUrl);
+        var request = new RegisterWebhookRequest(
+            ShipmentId: shipmentId,
+            CallbackUrl: callbackUrl,
+            Events: events);
 
         using var response = await httpClient.PostAsJsonAsync(
             "api/v1/webhooks/register",
@@ -160,31 +165,30 @@ public sealed class ShippingGateway : IShippingGateway
         {
             var err = await SafeReadAsync(response, cancellationToken);
             throw new HttpRequestException(
-                $"Webhook registration failed. CallbackUrl={callbackUrl}, Status={(int)response.StatusCode}, Body{err}");
+                $"Webhook registration failed. ShipmentId={shipmentId}, CallbackUrl={callbackUrl}, " +
+                $"Status={(int)response.StatusCode}, Body={err}");
         }
 
-        logger.LogInformation("Webhook registered successfully. CallbackUrl={CallbackUrl}", callbackUrl);
+        logger.LogInformation(
+            "Webhook registered. ShipmentId={ShipmentId}, CallbackUrl={CallbackUrl}, Events={Events}",
+            shipmentId,
+            callbackUrl,
+            string.Join(", ", events));
     }
-
+    
     public async Task<ReturnShipmentResultDto> CreateReturnShipmentAsync(
-        Guid returnRequestId,
         Guid orderId,
-        string originalTrackingNumber,
-        AddressDto pickupAddress,
+        Guid customerId,
+        List<OrderItemDto> items,
         CancellationToken cancellationToken)
     {
         var request = new CreateReturnShipmentRequest(
-            ReturnRequestId: returnRequestId,
             OrderId: orderId,
-            OriginalTrackingNumber: originalTrackingNumber,
-            PickupAddress: new AddressPayload(
-                pickupAddress.Street,
-                pickupAddress.City,
-                pickupAddress.Country,
-                pickupAddress.PostalCode));
+            CustomerId: customerId,
+            Items: items.Select(i => new ItemPayload(i.ProductId, i.Quantity)).ToList());
 
         using var response = await httpClient.PostAsJsonAsync(
-            "api/v1/shipment/returns",
+            "api/v1/shipments/returns",
             request,
             JsonOptions,
             cancellationToken);
@@ -194,22 +198,26 @@ public sealed class ShippingGateway : IShippingGateway
         {
             var err = await SafeReadAsync(response, cancellationToken);
             throw new InvalidAddressException($"Return shipment rejected. Details: {err}");
-
         }
 
         if (!response.IsSuccessStatusCode)
         {
             var err = await SafeReadAsync(response, cancellationToken);
             throw new HttpRequestException(
-                $"Return shipment create failed. ReturnRequestId={returnRequestId}, Status{(int)response.StatusCode}, Body={err}");
+                $"Return shipment create failed. OrderId={orderId}, CustomerId={customerId}, " +
+                $"Status={(int)response.StatusCode}, Body={err}");
         }
 
-        var dto = await response.Content.ReadFromJsonAsync<CreateReturnShipmentResponse>(JsonOptions, cancellationToken)
+        var dto = await response.Content.ReadFromJsonAsync<CreateReturnShipmentResponse>(
+                      JsonOptions, cancellationToken)
                   ?? throw new InvalidOperationException("Return shipment create response is empty.");
         
         logger.LogInformation(
-            "Return shipment created. ReturnRequestId={ReturnRequestId}, ReturnTrackingNumber={ReturnTrackingNumber}",
-            returnRequestId,
+            "Return shipment created. OrderId={OrderId}, CustomerId={CustomerId}, " +
+            "ReturnShipmentId={ReturnShipmentId}, ReturnTrackingNumber={ReturnTrackingNumber}",
+            orderId,
+            customerId,
+            dto.ReturnShipmentId,
             dto.ReturnTrackingNumber);
 
         return new ReturnShipmentResultDto(
@@ -218,9 +226,12 @@ public sealed class ShippingGateway : IShippingGateway
             dto.ExpectedPickupDate);
     }
 
-    public async Task CancelReturnShipmentAsync(string returnShipmentId, string reason, CancellationToken cancellationToken)
+    public async Task CancelReturnShipmentAsync(
+        string returnShipmentId,
+        string reason,
+        CancellationToken cancellationToken)
     {
-        var request = new CancelReturnShipmentRequest(reason);
+        var request = new CancelReturnShipmentRequest(Reason: reason);
 
         using var response = await httpClient.PostAsJsonAsync(
             $"api/v1/shipments/returns/{returnShipmentId}/cancel",
@@ -230,7 +241,10 @@ public sealed class ShippingGateway : IShippingGateway
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            logger.LogWarning("CancelReturnShipment: return shipment not found (treated as idempotent success). ReturnShipmentId={ReturnShipmentId}", returnShipmentId);
+            logger.LogWarning(
+                "CancelReturnShipment: return shipment not found (idempotent success). " +
+                "ReturnShipmentId={ReturnShipmentId}",
+                returnShipmentId);
             return;
         }
 
@@ -238,10 +252,13 @@ public sealed class ShippingGateway : IShippingGateway
         {
             var err = await SafeReadAsync(response, cancellationToken);
             throw new HttpRequestException(
-                $"Return shipment cancel failed. ReturnShipmentId={returnShipmentId}, Status={(int)response.StatusCode}, Body={err}");
+                $"Return shipment cancel failed. ReturnShipmentId={returnShipmentId}, " +
+                $"Status={(int)response.StatusCode}, Body={err}");
         }
 
-        logger.LogInformation("Return shipment cancelled. ReturnShipmentId={ReturnShipmentId}", returnShipmentId);
+        logger.LogInformation(
+            "Return shipment cancelled. ReturnShipmentId={ReturnShipmentId}",
+            returnShipmentId);
     }
 
     public async Task<ReturnShipmentStatusDto> GetReturnShipmentStatusAsync(
@@ -254,19 +271,21 @@ public sealed class ShippingGateway : IShippingGateway
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            throw new InvalidOperationException($"Return tracking number not found: {returnTrackingNumber}");
+            throw new InvalidOperationException(
+                $"Return tracking number not found: {returnTrackingNumber}");
         }
 
         if (!response.IsSuccessStatusCode)
         {
             var err = await SafeReadAsync(response, cancellationToken);
             throw new HttpRequestException(
-                $"Get return shipment status failed. ReturnTrackingNumber={returnTrackingNumber}," +
+                $"Get return shipment status failed. ReturnTrackingNumber={returnTrackingNumber}, " +
                 $"Status={(int)response.StatusCode}, Body={err}");
         }
 
         var apiResponse =
-            await response.Content.ReadFromJsonAsync<ReturnShipmentStatusResponse>(JsonOptions, cancellationToken)
+            await response.Content.ReadFromJsonAsync<ReturnShipmentStatusResponse>(
+                JsonOptions, cancellationToken)
             ?? throw new HttpRequestException("Return shipment status response is empty.");
 
         return new ReturnShipmentStatusDto(
@@ -284,16 +303,18 @@ public sealed class ShippingGateway : IShippingGateway
         }
         catch
         {
-            // @think: should we move it to the constant?
             return "<unreadable-body>";
         }
     }
 
-    private sealed record CreateShipmentRequest(
+     private sealed record CreateShipmentRequest(
         Guid OrderId,
         AddressPayload Address,
         IReadOnlyCollection<ItemPayload> Items);
-    private sealed record CreateShipmentResponse(string ShipmentId, string TrackingNumber);
+    
+    private sealed record CreateShipmentResponse(
+        string ShipmentId,
+        string TrackingNumber);
 
     private sealed record ShipmentStatusResponse(
         string TrackingNumber,
@@ -302,18 +323,21 @@ public sealed class ShippingGateway : IShippingGateway
         DateTime? ActualDeliveryDate,
         string? CurrentLocation);
 
-    private sealed record RegisterWebhookRequest(string CallbackUrl);
+    private sealed record RegisterWebhookRequest(
+        string ShipmentId,
+        string CallbackUrl,
+        string[] Events);
+
     private sealed record CancelReturnShipmentRequest(string Reason);
 
     private sealed record CreateReturnShipmentRequest(
-        Guid ReturnRequestId,
         Guid OrderId,
-        string OriginalTrackingNumber,
-        AddressPayload PickupAddress);
+        Guid CustomerId,
+        IReadOnlyCollection<ItemPayload> Items);
 
     private sealed record CreateReturnShipmentResponse(
         string ReturnShipmentId,
-        string ReturnTrackingNumber,
+        string ReturnTrackingNumber, 
         DateTime ExpectedPickupDate);
 
     private sealed record ReturnShipmentStatusResponse(
@@ -322,7 +346,11 @@ public sealed class ShippingGateway : IShippingGateway
         DateTime? PickedUpAt,
         DateTime? DeliveredAt);
     
-    private sealed record AddressPayload(string Street, string City, string Country, string PostalCode);
-    private sealed record ItemPayload(Guid ProductId, int Quantity);
+    private sealed record AddressPayload(
+        string Street,
+        string City,
+        string Country,
+        string PostalCode);
     
+    private sealed record ItemPayload(Guid ProductId, int Quantity);
 }
