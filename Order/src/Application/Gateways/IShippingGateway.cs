@@ -30,15 +30,16 @@ public interface IShippingGateway
     
 
     Task RegisterWebhookAsync(
+        string shipmentId,
         string callbackUrl,
+        string[] events,
         CancellationToken cancellationToken
         );
     
     Task<ReturnShipmentResultDto> CreateReturnShipmentAsync(
-        Guid returnRequestId,
         Guid orderId,
-        string originalTrackingNumber,
-        AddressDto pickupAddress,
+        Guid customerId,
+        List<OrderItemDto> items,
         CancellationToken cancellationToken);
 
     Task<ReturnShipmentStatusDto> GetReturnShipmentStatusAsync(

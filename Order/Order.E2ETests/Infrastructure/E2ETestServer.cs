@@ -54,7 +54,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
             .Build();
         
         _kafkaContainer = new KafkaBuilder()
-            .WithImage("confluentic/cp-kafka:7.6.0")
+            .WithImage("confluentinc/cp-kafka:7.7.7")
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(9092))
             .Build();
 

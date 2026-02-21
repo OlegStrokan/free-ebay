@@ -19,7 +19,7 @@
         <PackageReference Include="Testcontainers.Kafka" Version="3.7.0" />
 
         <!-- gRPC Testing -->
-        <PackageReference Include="Grpc.Net.Client" Version="2.62.0" />
+        <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
         <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.62.0" />
 
         <!-- Mocking -->
@@ -31,10 +31,10 @@
         <PackageReference Include="Polly" Version="8.3.1" />
 
         <!-- Kafka -->
-        <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
+        <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
 
         <!-- EF Core -->
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.2" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.2" />
     </ItemGroup>
 
