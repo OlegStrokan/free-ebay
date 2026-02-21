@@ -5,6 +5,7 @@ using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Persistence.DbContext;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Infrastructure.Persistence.Repositories;
 
@@ -73,27 +74,30 @@ public class EventStoreRepository(
 
         foreach (var domainEvent in eventsList)
         {
-            var eventType = domainEvent.GetType().Name;
-            var eventData = JsonSerializer.Serialize(domainEvent, domainEvent.GetType());
-
-            var storedEvent = DomainEvent.Create(
-                aggregateId,
-                aggregateType,
-                eventType,
-                eventData,
-                nextVersion);
-
-            dbContext.DomainEvents.Add(storedEvent);
-            nextVersion++;
+            dbContext.DomainEvents.Add(DomainEvent.Create(
+                aggregateId, aggregateType,
+                domainEvent.GetType().Name,
+                JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                nextVersion++));
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
 
-        logger.LogInformation(
-            "Saved {Count} events for {AggregateType} {AggregateId}",
-            eventsList.Count,
-            aggregateType,
-            aggregateId);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Saved {Count} events for {AggregateType} {AggregateId}",
+                eventsList.Count,
+                aggregateType,
+                aggregateId);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstrainViolation(ex))
+        {
+            throw new InvalidOperationException(
+                $"Concurrency conflict (Db constraint) for {aggregateType} {aggregateId}. " +
+                $"Another writer commited version {expectedVersion + 1} first. ", ex);
+        }
     }
     
     public async Task<IEnumerable<IDomainEvent>> GetEventsAsync(
@@ -153,5 +157,10 @@ public class EventStoreRepository(
             .MaxAsync(e => (int?)e.Version, cancellationToken);
 
         return maxVersion ?? -1;
+    }
+
+    private static bool IsUniqueConstrainViolation(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException pg && pg.SqlState == "23505";
     }
 }

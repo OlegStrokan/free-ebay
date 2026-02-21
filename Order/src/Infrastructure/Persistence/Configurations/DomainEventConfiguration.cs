@@ -18,7 +18,7 @@ public class DomainEventConfiguration : IEntityTypeConfiguration<DomainEvent>
         builder.Property(e => e.Version).IsRequired();
         builder.Property(e => e.OccuredOn).IsRequired().HasColumnName("OccuredOn");
         
-        // composite unique index for optimicstic concurrency
+        // composite unique index for optimistic concurrency
 
         builder.HasIndex(e => new { e.AggregateId, e.AggregateType, e.Version })
             .IsUnique().HasDatabaseName("DomainEvents_Aggregate_Version");

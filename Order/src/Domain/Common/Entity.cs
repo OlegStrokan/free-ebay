@@ -1,7 +1,5 @@
 namespace Domain.Common;
 
-//@think: why it's not a record?
-
 public abstract class Entity<TId>
 {
     public TId Id { get; protected set; }

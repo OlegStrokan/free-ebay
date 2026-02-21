@@ -10,8 +10,8 @@ public sealed record OrderItemId
     private OrderItemId(long value)
     {
 
-        if (value <= 0)
-            throw new ArgumentException("OrderItemId must be greater then 0", nameof(value));
+        if (value < 0)
+            throw new ArgumentException("OrderItemId must be greater or equal 0", nameof(value));
         
         Value = value;
     }

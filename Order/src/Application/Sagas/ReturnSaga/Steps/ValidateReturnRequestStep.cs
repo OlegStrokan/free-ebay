@@ -72,7 +72,7 @@ public sealed class ValidateReturnRequestStep(
                 });
             }
 
-            if (!order.isEligibleForReturn())
+            if (!order.IsEligibleForReturn())
             {
                 return StepResult.Failure($"Order {data.CorrelationId} id not eligible for return.");
             }

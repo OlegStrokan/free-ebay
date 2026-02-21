@@ -1,6 +1,6 @@
 namespace Domain.ValueObjects;
 
-public class ReturnStatus
+public sealed class ReturnStatus
 {
     public static readonly ReturnStatus Pending = new("Pending", 0);
     public static readonly ReturnStatus Received = new("Received", 1);

@@ -7,7 +7,7 @@ public class DeadLetterMessage
     public Guid Id { get; private set; }
     public string Type { get; private set; } = null!;
     public string Content { get; private set; } = null!;
-    public DateTime OccuredOn { get; private set; }
+    public DateTime OccurredOn { get; private set; }
     public string FailureReason { get; private set; }
     public int RetryCount { get; private set; }
     public DateTime MovedToDeadLetterAt { get; private set; }
@@ -25,14 +25,14 @@ public class DeadLetterMessage
         Guid id,
         string type,
         string content,
-        DateTime occuredOn,
+        DateTime occurredOn,
         string failureReason,
         int retryCount)
     {
         Id = id;
         Type = type;
         Content = content;
-        OccuredOn = occuredOn;
+        OccurredOn = occurredOn;
         FailureReason = failureReason;
         RetryCount = retryCount;
         MovedToDeadLetterAt = DateTime.UtcNow;

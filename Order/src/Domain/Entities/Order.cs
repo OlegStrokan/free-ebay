@@ -153,7 +153,7 @@ public sealed class Order : AggregateRoot<OrderId>
         RaiseEvent(evt);
     }
 
-    public bool isEligibleForReturn()
+    public bool IsEligibleForReturn()
     {
         return Status == OrderStatus.Completed &&
                CompletedAt.HasValue &&

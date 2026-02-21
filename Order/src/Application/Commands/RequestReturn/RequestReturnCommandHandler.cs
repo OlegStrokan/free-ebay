@@ -68,6 +68,7 @@ public class RequestReturnCommandHandler(
 
                 var refundAmount = Order.CalculateTotalPrice(itemsToReturn);
 
+                //@todo: use ReturnPolicyService class
                 var returnWindow = TimeSpan.FromDays(14);
 
                 var returnRequest = ReturnRequest.Create(

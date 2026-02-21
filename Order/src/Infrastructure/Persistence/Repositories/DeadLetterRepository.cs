@@ -86,7 +86,7 @@ public class DeadLetterRepository(AppDbContext dbContext, ILogger<DeadLetterRepo
             Guid.NewGuid(),
             deadLetterMessage.Type,
             deadLetterMessage.Content,
-            deadLetterMessage.OccuredOn);
+            deadLetterMessage.OccurredOn);
 
         dbContext.OutboxMessages.Add(outboxMessage);
         await dbContext.SaveChangesAsync(ct);
