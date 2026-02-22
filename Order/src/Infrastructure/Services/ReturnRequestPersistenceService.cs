@@ -32,7 +32,7 @@ public class ReturnRequestPersistenceService(
 
             try
             {
-                var returnRequest = await LoadThisNastyBitch(orderId, cancellationToken);
+                var returnRequest = await LoadReturnRequestByOrderIdAsync(orderId, cancellationToken);
                 if (returnRequest is null)
                     throw new ReturnRequestNotFoundException(orderId);
 
@@ -138,6 +138,7 @@ public class ReturnRequestPersistenceService(
         @todo: for better performance maybe maintain an index in read model type shit
         DONT USE THIS PEACE OF GARBAGE!
         DONT!
+        @think: should we delete it?
     */
     private async Task<ReturnRequest?> LoadThisNastyBitch(
         Guid orderId,
@@ -170,8 +171,6 @@ public class ReturnRequestPersistenceService(
         return null;
         
     }
-    
-    // this is preferred method to load returnRequests
     private async Task<ReturnRequest?> LoadReturnRequestAsync(
         Guid returnRequestId,
         CancellationToken cancellationToken)
@@ -187,6 +186,19 @@ public class ReturnRequestPersistenceService(
         return ReturnRequest.FromHistory(events);
         
     }
-    
+
+    private async Task<ReturnRequest?> LoadReturnRequestByOrderIdAsync(
+        Guid orderId, CancellationToken cancellationToken)
+    {
+        var readModel = await dbContext.ReturnRequestReadModels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.OrderId == orderId, cancellationToken);
+
+        if (readModel == null)
+            return null;
+
+        return await LoadReturnRequestAsync(readModel.Id, cancellationToken);
+    }
+     
     
 }
