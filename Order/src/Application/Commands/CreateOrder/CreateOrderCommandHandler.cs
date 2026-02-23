@@ -4,6 +4,7 @@ using Application.DTOs;
 using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
+using Domain.Entities.Order;
 using Domain.Events.CreateOrder;
 using Domain.Interfaces;
 using Domain.ValueObjects;

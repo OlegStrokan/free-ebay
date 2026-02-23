@@ -229,7 +229,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         eventTypes.Should().NotContain("OrderPaidEvent");
 
         //@todo: check stuff with IDomainEvent vs DomainEvent
-        var order = Domain.Entities.Order.FromHistory(events);
+        var order = Domain.Entities.Order.Order.FromHistory(events);
         order.Status.Should().Be(OrderStatus.Cancelled);
         
         _output.WriteLine($"Order status: {order.Status}");

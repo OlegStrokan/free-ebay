@@ -4,7 +4,6 @@ using Application.Common.Enums;
 using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas.Steps;
-using Domain.Interfaces;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +11,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 
 public class ProcessRefundStep(
     IPaymentGateway paymentGateway,
-    IOrderRepository orderRepository,
+    IOrderPersistenceService orderPersistenceService,
     IReturnRequestPersistenceService returnRequestPersistenceService,
     ILogger<ProcessRefundStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
@@ -47,8 +46,8 @@ public class ProcessRefundStep(
                 data.RefundAmount,
                 data.Currency);
             
-            var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId), cancellationToken);
+            var order = await orderPersistenceService.LoadOrderAsync(
+                data.CorrelationId, cancellationToken);
 
             if (order == null)
             {

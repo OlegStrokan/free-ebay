@@ -4,8 +4,8 @@ using Application.DTOs;
 using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
+using Domain.Entities.Order;
 using Domain.Events.OrderReturn;
-using Domain.Interfaces;
 using Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 namespace Application.Commands.RequestReturn;
 
 public class RequestReturnCommandHandler(
-    IOrderRepository orderRepository,
+    IOrderPersistenceService orderPersistenceService,
     IIdempotencyRepository idempotencyRepository,
     IReturnRequestPersistenceService returnRequestPersistenceService,
     ILogger<RequestReturnCommandHandler> logger
@@ -45,8 +45,8 @@ public class RequestReturnCommandHandler(
                 "Processing return request for order {OrderId}",
                 request.OrderId);
             
-                var order = await orderRepository.GetByIdAsync(
-                    OrderId.From(request.OrderId),
+                var order = await orderPersistenceService.LoadOrderAsync(
+                    request.OrderId,
                     cancellationToken);
 
                 if (order == null)

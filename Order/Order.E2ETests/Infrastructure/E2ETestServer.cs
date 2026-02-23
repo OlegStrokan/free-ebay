@@ -94,7 +94,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
 
             services.Configure<KafkaOptions>(options =>
             {
-                options.BootstrapSettings = KafkaBootstrapServers;
+                options.BootstrapServers = KafkaBootstrapServers;
             });
 
             services.RemoveAll<IPaymentGateway>();

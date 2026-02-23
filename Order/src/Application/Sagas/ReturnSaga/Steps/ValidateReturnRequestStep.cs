@@ -2,6 +2,7 @@ using System.Text.Json;
 using Application.Interfaces;
 using Application.Sagas.Steps;
 using Domain.Entities;
+using Domain.Entities.Order;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class ValidateReturnRequestStep(
-    IOrderRepository orderRepository,
+    IOrderPersistenceService orderPersistenceService,
     IReturnRequestPersistenceService returnRequestPersistenceService,
     IReturnRequestRepository returnRequestRepository,
     ILogger<ValidateReturnRequestStep> logger
@@ -44,8 +45,8 @@ public sealed class ValidateReturnRequestStep(
                 "Validation return request for order {OrderId}",
                 data.CorrelationId);
 
-            var order = await orderRepository.GetByIdAsync(
-                OrderId.From(data.CorrelationId), cancellationToken);
+            var order = await orderPersistenceService.LoadOrderAsync(
+                data.CorrelationId, cancellationToken);
 
             if (order == null)
                 return StepResult.Failure($"Order {data.CorrelationId} not found");

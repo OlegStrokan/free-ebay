@@ -102,7 +102,7 @@ public class FakePaymentServiceImpl : PaymentService.PaymentServiceBase
         });
     }
 
-    public override Task<ProcessPaymentResponse> RefundPayment(
+    public override Task<RefundPaymentResponse> RefundPayment(
         RefundPaymentRequest request,
         ServerCallContext context
         )
@@ -110,16 +110,16 @@ public class FakePaymentServiceImpl : PaymentService.PaymentServiceBase
         _cfg.RefundCalls.Add(request);
 
         if (!_cfg.RefundShouldSucceed)
-            return Task.FromResult(new ProcessPaymentResponse
+            return Task.FromResult(new RefundPaymentResponse
             {
                 Success = false,
                 ErrorMessage = "Refund failed"
             });
 
-        return Task.FromResult(new ProcessPaymentResponse
+        return Task.FromResult(new RefundPaymentResponse
         {
             Success = true,
-            PaymentId = _cfg.RefundIdToReturn
+            RefundId = _cfg.RefundIdToReturn
         });
     }
 }
