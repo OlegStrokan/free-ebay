@@ -10,13 +10,13 @@ using Npgsql;
 namespace Infrastructure.Persistence.Repositories;
 
 public class EventStoreRepository(
-    AppDbContext dbContext, 
+    AppDbContext dbContext,
     ILogger<EventStoreRepository> logger
-    ) : IEventStoreRepository
+) : IEventStoreRepository
 {
     // auto-discover all event types at startup
     private static readonly Dictionary<string, Type> EventTypeMap = DiscoverEventTypes();
-    
+
     private static Dictionary<string, Type> DiscoverEventTypes()
     {
         var eventTypes = new Dictionary<string, Type>();
@@ -48,6 +48,7 @@ public class EventStoreRepository(
                 continue;
             }
         }
+
         return eventTypes;
     }
 
@@ -61,7 +62,7 @@ public class EventStoreRepository(
         var eventsList = events.ToList();
         if (!eventsList.Any())
             return;
-        
+
         // optimistic concurrency check
         var currentVersion = await GetCurrentVersionAsync(aggregateId, aggregateType, cancellationToken);
 
@@ -99,10 +100,10 @@ public class EventStoreRepository(
                 $"Another writer commited version {expectedVersion + 1} first. ", ex);
         }
     }
-    
+
     public async Task<IEnumerable<IDomainEvent>> GetEventsAsync(
         string aggregateId,
-        string aggregateType, 
+        string aggregateType,
         CancellationToken cancellationToken = default)
     {
         var storedEvents = await dbContext.DomainEvents
@@ -110,34 +111,12 @@ public class EventStoreRepository(
             .OrderBy(e => e.Version)
             .ToListAsync(cancellationToken);
 
-        var domainEvents = new List<IDomainEvent>();
-
-        foreach (var storedEvent in storedEvents)
-        {
-            if (!EventTypeMap.TryGetValue(storedEvent.EventType, out var eventType))
-            {
-                logger.LogWarning(
-                    "Unkown event type {EventType} for {AggregateType} {AggregateId}",
-                    storedEvent.EventType,
-                    aggregateType,
-                    aggregateId);
-                continue;
-            }
-
-            var domainEvent = (IDomainEvent)JsonSerializer.Deserialize(
-                storedEvent.EventData,
-                eventType)!;
-
-            domainEvents.Add(domainEvent);
-        }
-
-        return domainEvents;
+            return DeserializeEvents(storedEvents,  aggregateId, aggregateType);
     }
-
 
     public async Task<bool> ExistsAsync(
         string aggregateId,
-        string aggregateType, 
+        string aggregateType,
         CancellationToken cancellationToken = default)
     {
         return await dbContext.DomainEvents
@@ -159,8 +138,59 @@ public class EventStoreRepository(
         return maxVersion ?? -1;
     }
 
+    public async Task<IEnumerable<IDomainEvent>> GetEventsAfterVersionAsync(
+        string aggregateId, string aggregateType, int afterVersion, CancellationToken ct = default)
+    {
+        var storedEvents = await dbContext.DomainEvents
+            .Where(e => e.AggregateId == aggregateId
+                        && e.AggregateType == aggregateType
+                        && e.Version > afterVersion)
+            .OrderBy(e => e.Version)
+            .ToListAsync(ct);
+
+        return DeserializeEvents(storedEvents, aggregateId, aggregateType);
+    }
+
     private static bool IsUniqueConstrainViolation(DbUpdateException ex)
     {
         return ex.InnerException is PostgresException pg && pg.SqlState == "23505";
+    }
+
+    private IEnumerable<IDomainEvent> DeserializeEvents(
+        IEnumerable<DomainEvent> storedEvents,
+        string aggregateId,
+        string aggregateType)
+    {
+        var domainEvents = new List<IDomainEvent>();
+
+        foreach (var storedEvent in storedEvents)
+        {
+            if (!EventTypeMap.TryGetValue(storedEvent.EventType, out var eventType))
+            {
+                logger.LogWarning(
+                    "Unknown event type {EventType} for {AggregateType} {AggregateId}. " +
+                    "Event skipped - this usually means a deployment mismatch.",
+                    storedEvent.EventType,
+                    aggregateType,
+                    aggregateId);
+                continue;
+            }
+
+            // @think: is this a good approach to cast type?
+            var domainEvent = (IDomainEvent?)JsonSerializer.Deserialize(
+                storedEvent.EventData, eventType);
+
+            if (domainEvent is null)
+            {
+                logger.LogWarning(
+                    "Deserialize null for event type {EventType} on {AggregateId}. Skipping.",
+                    storedEvent.EventType, aggregateId);
+                continue;
+            }
+
+            domainEvents.Add(domainEvent);
+        }
+
+        return domainEvents;
     }
 }

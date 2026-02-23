@@ -1,3 +1,10 @@
+# [TO fucking DO]
+
+- register all shit
+- create shitty ci/cd
+- finish all tests type shit
+- fix all shit in code (@think, @todo comments)
+
 # Gabriela
 
 2 apps, one extremely complicated ebay with crypto support + public api, and second one is less complicated but also stupidly complex xiaoping-express
@@ -85,7 +92,7 @@ By isolating the state change, you ensure that once an event is written to the s
 
 
 
-quesiton:
+question:
 where idempotency key comes from? form frontend or from gateway layer? 
 what it should be? is this good way to handle idempontecy?
 

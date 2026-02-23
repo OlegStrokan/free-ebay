@@ -20,4 +20,10 @@ public interface IEventStoreRepository
         string aggregateId,
         string aggregateType,
         CancellationToken cancellationToken = default);
+
+    Task<IEnumerable<IDomainEvent>> GetEventsAfterVersionAsync(
+        string aggregateId,
+        string aggregateType,
+        int afterVersion,
+        CancellationToken cancellationToken = default);
 }
