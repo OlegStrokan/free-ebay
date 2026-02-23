@@ -39,4 +39,12 @@ public abstract class AggregateRoot<TId> : Entity<TId>
     {
         _uncommitedEvents.Clear();
     }
+
+
+    protected void RestoreVersion(int version)
+    {
+        Version = version;
+    }
+    
+    
 } 

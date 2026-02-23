@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<ReturnRequestReadModel> ReturnRequestReadModels => Set<ReturnRequestReadModel>();
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
     public DbSet<DeadLetterMessage> DeadLetterMessages => Set<DeadLetterMessage>();
+    public DbSet<AggregateSnapshot> AggregateSnapshots => Set<AggregateSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -32,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
         builder.ApplyConfiguration(new ProcessedEventConfiguration());
         builder.ApplyConfiguration(new ReturnRequestReadModelConfiguration());
         builder.ApplyConfiguration(new DeadLetterMessageConfiguration());
+        builder.ApplyConfiguration(new AggregateSnapshotConfiguration());
     }
     
 }
