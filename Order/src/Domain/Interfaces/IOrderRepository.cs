@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Entities.Order;
 using Domain.ValueObjects;
 
 namespace Domain.Interfaces;

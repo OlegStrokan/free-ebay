@@ -7,7 +7,7 @@ public interface ISnapshotRepository
     Task<AggregateSnapshot?> GetLatestAsync(
         string aggregateId,
         string aggregateType,
-        CancellationToken cancellationToken);
-    
-    Task SaveAsync(AggregateSnapshot snapshot, CancellationToken cancellationToken);
+        CancellationToken cancellationToken = default);
+
+    Task SaveAsync(AggregateSnapshot snapshot, CancellationToken cancellationToken = default);
 }

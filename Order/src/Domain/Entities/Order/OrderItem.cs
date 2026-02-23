@@ -2,7 +2,7 @@ using Domain.Common;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
-namespace Domain.Entities;
+namespace Domain.Entities.Order;
 
 public sealed class OrderItem : Entity<OrderItemId>
 {
@@ -50,6 +50,16 @@ public sealed class OrderItem : Entity<OrderItemId>
         OrderId = orderId;
     }
 
+    internal static OrderItem FromSnapshot(OrderItemSnapshotState state) =>
+        new OrderItem(
+            id: OrderItemId.From(state.ItemId),
+            orderId: OrderId.From(state.OrderId),
+            productId: ProductId.From(state.ProductId),
+            quantity: state.Quantity,
+            price: Money.Create(state.Price, state.Currency)
+        );
+    
+    
     public void UpdateQuantity(int newQuantity)
     {
         ValidateQuantity(newQuantity);
