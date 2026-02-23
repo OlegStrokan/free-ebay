@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Entities.Order;
 
 namespace Application.Interfaces;
 
@@ -15,4 +16,5 @@ public interface IOrderPersistenceService
         Func<Order, Task> action,
         CancellationToken ct);
 
+    Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken ct);
 }

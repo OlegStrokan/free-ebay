@@ -1,7 +1,9 @@
 using System.Data;
 using System.Text.Json;
+using Application.DTOs;
 using Application.Interfaces;
 using Domain.Entities;
+using Domain.Entities.Order;
 using Domain.Exceptions;
 using Domain.Interfaces;
 using Infrastructure.Persistence.DbContext;
@@ -13,9 +15,12 @@ public class OrderPersistenceService(
     IEventStoreRepository eventStore,
     IOutboxRepository outboxRepository,
     IIdempotencyRepository idempotencyRepository,
+    ISnapshotRepository  snapshotRepository,
     AppDbContext dbContext,
     ILogger<OrderPersistenceService> logger) : IOrderPersistenceService
 {
+    private const int SnapshotThreshold = 50;
+
     public async Task UpdateOrderAsync(
         Guid orderId,
         Func<Order, Task> action,
@@ -45,7 +50,6 @@ public class OrderPersistenceService(
                     expectedVersion,
                     cancellationToken);
                 
-                
                 foreach (var domainEvent in order.UncommitedEvents)
                 {
                     await outboxRepository.AddAsync(
@@ -61,7 +65,35 @@ public class OrderPersistenceService(
                 await dbContext.SaveChangesAsync(cancellationToken);
 
                 await transaction.CommitAsync(cancellationToken);
+
+                if (order.Version > 0 && order.Version % SnapshotThreshold == 0)
+                {
+                    try
+                    {
+                        var snapshotState = order.ToSnapshotState();
+                        var snapshot = AggregateSnapshot.Create(
+                            order.Id.Value.ToString(),
+                            "Order",
+                            order.Version,
+                            JsonSerializer.Serialize(snapshotState));
+
+                        await snapshotRepository.SaveAsync(snapshot, cancellationToken);
+
+                        logger.LogInformation(
+                            "Took snapshot for Order {OrderId} at version {Version}. " +
+                            "Will replay from full event history on next load.",
+                            orderId, order.Version);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex,
+                            "Failed to take snapshot for Order {OrderId} at version {Version}. " +
+                            "Will replay from full event history on next load.",
+                            orderId, order.Version);
+                    }
+                }
             }
+            
             catch (Exception ex)
             {
                 logger.LogError(ex, "Transaction failed for Order {OrderId}", orderId);
@@ -132,8 +164,42 @@ public class OrderPersistenceService(
         });
     }
     
-      private async Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
-    {
+      public async Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
+      {
+
+          var snapshot = await snapshotRepository.GetLatestAsync(
+              orderId.ToString(), "Order", cancellationToken);
+
+          if (snapshot != null)
+          {
+            // restore from snapshot
+            var snapshotState = JsonSerializer.Deserialize<OrderSnapshotState>(snapshot.StateJson)!;
+
+            if (snapshotState is null)
+            {
+                logger.LogWarning(
+                    "Failed to deserialize snapshot for Order {OrderId}. Falling back to full replay.",
+                    orderId);
+                // @think: are we in fucking 70s writing vb code?
+                goto fullReplay;
+            }
+            
+            var order = Order.FromSnapshot(snapshotState);
+            
+            // load only events that happens after the snapshot version
+            var deltaEvents = await eventStore.GetEventsAfterVersionAsync(
+                orderId.ToString(), "Order", snapshot.Version + 1, cancellationToken);
+
+            order.LoadFromHistory(deltaEvents);
+            
+            logger.LogDebug(
+                "Loader Order {OrderId} with snapshot v{SnapshotVersion} + {DeltaCount} delta events",
+                orderId, snapshot.Version, deltaEvents.Count());
+
+            return order; 
+          }
+          
+          fullReplay:
         var events = await eventStore.GetEventsAsync(
             orderId.ToString(),
             "Order",
