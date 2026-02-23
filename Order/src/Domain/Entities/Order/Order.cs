@@ -3,7 +3,7 @@ using Domain.Events.CreateOrder;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
-namespace Domain.Entities;
+namespace Domain.Entities.Order;
 
 // clean separation between command methods (Cancel, Pay) and Apply methods to prevent shit in the future
 
@@ -34,6 +34,54 @@ public sealed class Order : AggregateRoot<OrderId>
 
     private Order() { }
 
+    private Order(OrderSnapshotState state)
+    {
+        Id = OrderId.From(state.Id);
+        _customerId = CustomerId.From(state.CustomerId);
+        _status = OrderStatus.FromName(state.Status);
+        _totalPrice = Money.Create(state.TotalAmount, state.Currency);
+        _deliveryAddress = Address.Create(state.Street, state.City, state.Country, state.PostalCode);
+        _trackingId = state.TrackingId is not null ? TrackingId.From(state.TrackingId) : null;
+        _paymentId = state.PaymentId is not null ? PaymentId.From(state.PaymentId) : null;
+        _createdAt = state.CreatedAt;
+        _completedAt = state.CompletedAt;
+        _updatedAt = state.UpdatedAt;
+        _failedMessages = state.FailedMessages.ToList();
+        _items = state.Items
+            .Select(OrderItem.FromSnapshot)
+            .ToList();
+
+        RestoreVersion(state.Version);
+    }
+    
+    public OrderSnapshotState ToSnapshotState() => new(
+        Id: Id.Value,
+        CustomerId: _customerId.Value,
+        Status: _status.Name,
+        TotalAmount: _totalPrice.Amount,
+        Currency: _totalPrice.Currency,
+        Street: _deliveryAddress.Street,
+        City: _deliveryAddress.City,
+        Country: _deliveryAddress.Country,
+        PostalCode: _deliveryAddress.PostalCode,
+        TrackingId: _trackingId?.Value,
+        PaymentId: _paymentId?.Value,
+        Version: Version,
+        CreatedAt: _createdAt,
+        CompletedAt: _completedAt,
+        UpdatedAt: _updatedAt,
+        FailedMessages: _failedMessages.ToList(),
+        Items: _items.Select(i => new OrderItemSnapshotState(
+            ItemId: i.Id.Value,
+            OrderId: i.OrderId!.Value,
+            ProductId: i.ProductId.Value,
+            Quantity: i.Quantity,
+            Price: i.PriceAtPurchase.Amount,
+            Currency: i.PriceAtPurchase.Currency
+        )).ToList());
+
+    public static Order FromSnapshot(OrderSnapshotState state) => new(state);
+    
     public static Order Create(
         CustomerId customerId,
         Address deliveryAddress,
