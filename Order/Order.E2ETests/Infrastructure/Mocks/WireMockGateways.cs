@@ -199,13 +199,14 @@ public class FakeGrpcAccountingGateway : IAccountingGateway
 
     public async Task CancelRevenueReversalAsync(string reversalId, string reason, CancellationToken cancellationToken)
     {
-        // @todo
-        // this method exists in th eproto but there is no rpc defined for it
-        await Task.CompletedTask;
+        var response = await _client.CancelReversalAsync(
+            new CancelReversalRequest { ReversalId = reversalId, Reason = reason },
+            cancellationToken: cancellationToken);
+
+        if (!response.Success)
+            throw new Exception($"CancelRevenueReversal failed: {response.ErrorMessage}");
     }
 }
-
-//---------Shipping Gateway---------//
 
 public class WireMockShippingGateway : IShippingGateway
 {

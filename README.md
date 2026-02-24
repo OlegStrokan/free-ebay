@@ -300,3 +300,13 @@ it's still one method for everything, but we don't use dispatchProxy via reflect
 which is more voodoo than Reagan economic type shit
 
 saga handler it's just listen for kafka and run executeASync for specific saga (sagaBase method which is already part of every saga because it's abstract class)
+
+Integration tests only (don't mock EF)
+File	Why
+OrderPersistenceService	EF transactions + ExecutionStrategy + snapshot/event store interactions. Mocking all of this gives zero confidence. Needs a real Postgres (Testcontainers).
+ReturnRequestPersistenceService	Same reason as above.
+OrderReadModelUpdater	AnyAsync, SaveChangesAsync, dbContext.OrderReadModels.Add — the value of the test is in verifying the SQL side. Use Testcontainers + real EF migrations.
+ReturnRequestReadModelUpdater	Same as above.
+EventIdempotencyChecker	The main interesting case is the duplicate key race condition path — that's a DB-level concern. Unit test with EF in-memory could be faked but misses the real uniqueness constraint.
+ProcessedEventsCleanupService	ExecuteDeleteAsync batch loop — this is entirely about DB behavior.
+KafkaReadModelSynchronizer	Builds its own Kafka consumer in the constructor (hardcoded new ConsumerBuilder), reflection-based event type discovery. Can't be unit tested meaningfully without a testable constructor. Needs an integration test with Testcontainers Kafka. This is also the file with your own @think: too much voodoo here comment — agreed.

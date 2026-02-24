@@ -23,9 +23,9 @@ public sealed class AwaitReturnShipmentStep(
                 "Initiating return shipment for order {OrderId}",
                 data.CorrelationId);
 
-            var returnShipmentId = context.ReturnShipmentId;
+            string returnShipmentId;
             
-            if (string.IsNullOrEmpty(returnShipmentId))
+            if (string.IsNullOrEmpty(context.ReturnShipmentId))
             {
             
                 var shipmentResult = await shippingGateway.CreateReturnShipmentAsync(
@@ -35,16 +35,15 @@ public sealed class AwaitReturnShipmentStep(
                     cancellationToken
                 );
 
-                
-                // @todo: clean up this mess
                 returnShipmentId = shipmentResult.ReturnShipmentId;
                 context.ReturnShipmentId = returnShipmentId;
-                logger.LogInformation("Created return shipment {Id}", context.ReturnShipmentId);
+                logger.LogInformation("Created return shipment {Id}", returnShipmentId);
 
             }
             else
             {
-                logger.LogInformation("Shipment {Id} already exists. Skipping creation.", context.ReturnShipmentId);
+                returnShipmentId = context.ReturnShipmentId;
+                logger.LogInformation("Shipment {Id} already exists. Skipping creation.", returnShipmentId);
             }
             
             

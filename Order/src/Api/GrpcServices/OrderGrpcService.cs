@@ -114,8 +114,7 @@ public class OrderGrpcService(
             return new RequestReturnResponse
             {
                 Success = result.IsSuccess,
-                // @think: you do can better!
-                OrderId = result.IsSuccess ? result.Value.ToString() : string.Empty,
+                ReturnRequestId = result.IsSuccess ? result.Value.ToString() : string.Empty,
                 ErrorMessage = result.Error,
 
             };

@@ -105,8 +105,8 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var returnResponse = await _client.RequestReturnAsync(returnRequest);
 
         returnResponse.Success.Should().BeTrue("gRPC call must succeed");
-        // @think: shipment or requestId? 
-        var returnRequestId = Guid.Parse(returnResponse.OrderId); // returns returnRequestId, not orderId
+
+        var returnRequestId = Guid.Parse(returnResponse.ReturnRequestId);
         _output.WriteLine($"✅ Return request accepted: {returnRequestId}");
 
         // Wait for: Outbox → Kafka → ReturnSaga starts
@@ -182,7 +182,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
         // check if aggregate in correct state 
         var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
-        var eventTypes = events.Select(e => e.EventType).ToList();
+        var eventTypes = events.Select(e => e.GetType().Name).ToList();
 
         eventTypes.Should().Contain("ReturnRequestCreatedEvent");
         eventTypes.Should().Contain("ReturnItemsReceivedEvent");
@@ -254,14 +254,14 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
         response1.Success.Should().BeTrue();
         response2.Success.Should().BeTrue();
-        response1.OrderId.Should().Be(response2.OrderId, "duplicate request must return same returnRequestId");
+        response1.ReturnRequestId.Should().Be(response2.ReturnRequestId, "duplicate request must return same returnRequestId");
         
-        _output.WriteLine("Both returned: {response1.OrderId}");
+        _output.WriteLine("Both returned: {response1.ReturnRequestId}");
 
-        var returnRequestId = Guid.Parse(response1.OrderId);
+        var returnRequestId = Guid.Parse(response1.ReturnRequestId);
         var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
 
-        events.Count(e => e.EventType == "ReturnRequestCreatedEvent")
+        events.Count(e => e.GetType().Name == "ReturnRequestCreatedEvent")
             .Should().Be(1, "only ONE ReturnRequestCreatedEvent must exists");
         
         _output.WriteLine("PASSED: Idempotency work");
@@ -314,7 +314,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var response = await _client.RequestReturnAsync(request);
         response.Success.Should().BeTrue();
 
-        var returnRequestId = Guid.Parse(response.OrderId);
+        var returnRequestId = Guid.Parse(response.ReturnRequestId);
         _output.WriteLine($"Return request accepted: {returnRequestId}");
 
         await Task.Delay(TimeSpan.FromSeconds(5));
@@ -357,7 +357,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine("Return shipment cancelled via REST");
 
         var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
-        var eventTypes = events.Select(e => e.EventType).ToList();
+        var eventTypes = events.Select(e => e.GetType().Name).ToList();
 
         eventTypes.Should().Contain("ReturnRequestCreatedEvent");
         eventTypes.Should().Contain("ReturnItemsReceivedEvents");

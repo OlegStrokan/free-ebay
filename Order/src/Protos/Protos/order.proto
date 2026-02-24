@@ -32,7 +32,7 @@ message CreateOrderResponse {
 
 message RequestReturnResponse {
   bool success = 1;
-  string order_id = 2;
+  string return_request_id = 2;
   string error_message = 3;
 }
 

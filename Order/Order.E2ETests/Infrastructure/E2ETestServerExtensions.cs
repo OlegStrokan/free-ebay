@@ -1,29 +1,30 @@
 using Application.Interfaces;
 using Application.Sagas;
 using Application.Sagas.Persistence;
+using Domain.Common;
 using Domain.Entities;
 using Infrastructure.Persistence.DbContext;
 using Infrastructure.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Domain.Interfaces;
 
 namespace Order.E2ETests.Infrastructure;
 
 public static class E2ETestServerExtensions
 {
-    public static async Task<List<DomainEvent>> GetEventsAsync(
+    public static async Task<List<IDomainEvent>> GetEventsAsync(
         this E2ETestServer server,
         Guid aggregateId,
         string aggregateType)
     {
         using var scope = server.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStoreRepository>();
 
-        return await db.DomainEvents
-            .Where(e => e.AggregateId == aggregateId.ToString()
-                        && e.AggregateType == aggregateType)
-            .OrderBy(e => e.Version)
-            .ToListAsync();
+        var events = await eventStore.GetEventsAsync(
+            aggregateId.ToString(), aggregateType, CancellationToken.None);
+
+        return events.ToList();
     }
 
     public static async Task<SagaState?> GetSagaStateAsync(

@@ -3,9 +3,7 @@ using Application.Sagas.Persistence;
 using Confluent.Kafka;
 using Domain.ValueObjects;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc;
 using Order.E2ETests.Infrastructure;
-using Org.BouncyCastle.Asn1.Ocsp;
 using Protos.Order;
 using WireMock.ResponseBuilders;
 using Xunit;
@@ -78,7 +76,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         
         // assert event store
         var events = await _server.GetEventsAsync(orderId, "Order");
-        var eventTypes = events.Select(e => e.EventType).ToList();
+        var eventTypes = events.Select(e => e.GetType().Name).ToList();
         _output.WriteLine($"Events: {string.Join(", ", eventTypes)}");
 
         eventTypes.Should().Contain("OrderCreatedEvent");
@@ -166,7 +164,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         var orderId = Guid.Parse(response1.OrderId);
         var events = await _server.GetEventsAsync(orderId, "Order");
 
-        events.Count(e => e.EventType == "OrderCreatedEvent")
+        events.Count(e => e.GetType().Name == "OrderCreatedEvent")
             .Should().Be(1, "only ONE order must be created");
 
         _server.PaymentService.ProcessCalls.Should().HaveCount(1,
@@ -222,13 +220,12 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReleaseCalls[0].ReservationId.Should().Be("ReservationId");
 
         var events = await _server.GetEventsAsync(orderId, "Order");
-        var eventTypes = events.Select(e => e.EventType).ToList();
+        var eventTypes = events.Select(e => e.GetType().Name).ToList();
 
         eventTypes.Should().Contain("OrderCreatedEvent");
         eventTypes.Should().Contain("OrderCancelledEvent");
         eventTypes.Should().NotContain("OrderPaidEvent");
 
-        //@todo: check stuff with IDomainEvent vs DomainEvent
         var order = Domain.Entities.Order.Order.FromHistory(events);
         order.Status.Should().Be(OrderStatus.Cancelled);
         
