@@ -2,9 +2,7 @@ using Application.Commands.CreateOrder;
 using Application.DTOs;
 using Application.Interfaces;
 using Domain.Entities;
-using Domain.Events;
-using Domain.Events.CreateOrder;
-using Domain.Interfaces;
+using Domain.Entities.Order;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -13,69 +11,80 @@ namespace Application.Tests.Commands;
 
 public class CreateOrderCommandHandlerTests
 {
-    private readonly IOrderRepository _orderRepository = Substitute.For<IOrderRepository>();
-    private readonly IOutboxRepository _outboxRepository = Substitute.For<IOutboxRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly IDbContextTransaction _transaction = Substitute.For<IDbContextTransaction>();
-    private readonly ILogger<CreateOrderCommandHandler> _logger = Substitute.For<ILogger<CreateOrderCommandHandler>>();
+    private readonly IOrderPersistenceService _orderPersistenceService =
+        Substitute.For<IOrderPersistenceService>();
 
-    public CreateOrderCommandHandlerTests()
-    {
-        _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
-            .Returns(_transaction);
-    }
-    
+    private readonly IIdempotencyRepository _idempotencyRepository =
+        Substitute.For<IIdempotencyRepository>();
+
+    private readonly ILogger<CreateOrderCommandHandler> _logger =
+        Substitute.For<ILogger<CreateOrderCommandHandler>>();
+
+    private CreateOrderCommandHandler BuildHandler() =>
+        new(_orderPersistenceService, _idempotencyRepository, _logger);
+
     [Fact]
-    public async Task Handle_ShouldReturnSuccess_WhenOrderIsCreated()
+    public async Task Handle_ShouldReturnSuccess_AndCallPersistence_WhenOrderIsCreated()
     {
-        var handler = new CreateOrderCommandHandler(_orderRepository, _outboxRepository, _unitOfWork, _logger);
-        var command = CreateValidCommand();
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
 
-        var result = await handler.Handle(command, CancellationToken.None);
-        
+        var result = await BuildHandler().Handle(CreateValidCommand(), CancellationToken.None);
+
         Assert.True(result.IsSuccess);
+        Assert.NotEqual(Guid.Empty, result.Value);
 
-        await _orderRepository.Received(1).AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>());
-        
-        await _outboxRepository.Received(1).AddAsync(
-            Arg.Any<Guid>(),
-            nameof(OrderCreatedEvent),
-            Arg.Any<string>(),
-            Arg.Any<DateTime>(),
+        await _orderPersistenceService.Received(1).CreateOrderAsync(
+            Arg.Any<Order>(),
+            Arg.Is<string>(k => k == "idempotency-key"),
             Arg.Any<CancellationToken>());
-
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-
-        await _transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnFailure_WhenRepositoryThrows()
+    public async Task Handle_ShouldReturnExistingOrderId_WhenDuplicateIdempotencyKey()
     {
-        var handler = new CreateOrderCommandHandler(_orderRepository, _outboxRepository, _unitOfWork, _logger);
-        var command = CreateValidCommand();
+        var existingOrderId = Guid.NewGuid();
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new IdempotencyRecord("idempotency-key", existingOrderId, DateTime.UtcNow));
 
-        _orderRepository.AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>())
-            .Throws(new Exception("Database crash"));
+        var result = await BuildHandler().Handle(CreateValidCommand(), CancellationToken.None);
 
-        var result = await handler.Handle(command, CancellationToken.None);
-        
-        Assert.False(result.IsSuccess);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(existingOrderId, result.Value);
 
-        await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
-
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        // persistence must NOT be called — idempotency short-circuits
+        await _orderPersistenceService.DidNotReceive().CreateOrderAsync(
+            Arg.Any<Order>(),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
-    private CreateOrderCommand CreateValidCommand() => 
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenPersistenceThrows()
+    {
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        _orderPersistenceService
+            .CreateOrderAsync(Arg.Any<Order>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new Exception("DB is on fire"));
+
+        var result = await BuildHandler().Handle(CreateValidCommand(), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("DB is on fire", result.Error);
+    }
+
+    // -------------------------------------------------------------------------
+
+    private static CreateOrderCommand CreateValidCommand() =>
         new(
             Guid.NewGuid(),
-            new List<OrderItemDto>
-            {
-               new(Guid.NewGuid(),2, 200, "USD")
-                
-            },
-            new AddressDto("Address", "City", "Nazi Germany", "1939"),
+            new List<OrderItemDto> { new(Guid.NewGuid(), 2, 200, "USD") },
+            new AddressDto("Baker St", "London", "UK", "NW1"),
             "Cart",
-            "key");
+            "idempotency-key");
 }

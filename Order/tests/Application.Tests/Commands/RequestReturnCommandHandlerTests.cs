@@ -2,8 +2,7 @@ using Application.Commands.RequestReturn;
 using Application.DTOs;
 using Application.Interfaces;
 using Domain.Entities;
-using Domain.Events.OrderReturn;
-using Domain.Interfaces;
+using Domain.Entities.Order;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -11,116 +10,184 @@ using NSubstitute.ExceptionExtensions;
 
 namespace Application.Tests.Commands;
 
-public class RequestReturnCommandHandlerTests
+public class RequestReturnCommandHandlerTest
 {
-    private readonly IOrderRepository _orderRepository = Substitute.For<IOrderRepository>();
-    private readonly IOutboxRepository _outboxRepository = Substitute.For <IOutboxRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly IDbContextTransaction _transaction = Substitute.For<IDbContextTransaction>();
-    private readonly ILogger<RequestReturnCommandHandler> _logger = Substitute.For<ILogger<RequestReturnCommandHandler>>();
 
-    public RequestReturnCommandHandlerTests()
-    {
-        _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
-            .Returns(_transaction);
-    }
+    private readonly IOrderPersistenceService _orderPersistenceService =
+        Substitute.For<IOrderPersistenceService>();
 
-    private Order CreateCompletedOrder()
+    private readonly IIdempotencyRepository _idempotencyRepository =
+        Substitute.For<IIdempotencyRepository>();
+
+    private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
+        Substitute.For<IReturnRequestPersistenceService>();
+
+    private readonly ILogger<RequestReturnCommandHandler> _logger =
+        Substitute.For<ILogger<RequestReturnCommandHandler>>();
+
+    private RequestReturnCommandHandler BuildHandler() =>
+        new(_orderPersistenceService, _idempotencyRepository, _returnRequestPersistenceService, _logger);
+
+    // -------------------------------------------------------------------------
+
+    private static Order CreateCompletedOrder()
     {
-        var items = new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) };
-        var order = Order.Create(CustomerId.CreateUnique(), Address.Create("S", "C", "C", "P"), items);
-        order.Pay(PaymentId.From("PaymentId"));
+        var items = new List<OrderItem>
+        {
+            OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD"))
+        };
+        var order = Order.Create(
+            CustomerId.CreateUnique(),
+            Address.Create("Baker St", "London", "UK", "NW1"),
+            items);
+        order.Pay(PaymentId.From("pay_123"));
         order.Approve();
         order.Complete();
-        order.MarkEventsAsCommited();
+        order.ClearUncommittedEvents();
         return order;
     }
 
     [Fact]
     public async Task Handle_ShouldReturnSuccess_WhenReturnIsRequestedSuccessfully()
     {
-        var handler = new RequestReturnCommandHandler(_orderRepository, _outboxRepository, _unitOfWork, _logger);
         var order = CreateCompletedOrder();
-        var command = CreateValidCommand(order.Id.Value, order.Items.First().ProductId.Value);
+        var returnRequestId = Guid.NewGuid();
 
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
 
-        var result = await handler.Handle(command, CancellationToken.None);
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        _returnRequestPersistenceService
+            .CreateReturnRequestAsync(
+                Arg.Any<ReturnRequest>(),
+                Arg.Any<string?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(returnRequestId);
+
+        var result = await BuildHandler().Handle(
+            CreateValidCommand(order.Id.Value, order.Items.First().ProductId.Value),
+            CancellationToken.None);
 
         Assert.True(result.IsSuccess);
 
-        await _orderRepository.Received(1).AddAsync(
-            Arg.Is<Order>(o => o.Status == OrderStatus.ReturnRequested),
+        await _returnRequestPersistenceService.Received(1).CreateReturnRequestAsync(
+            Arg.Any<ReturnRequest>(),
+            Arg.Is<string?>(k => k == "idempotency-key"),
+            Arg.Is<Guid?>(id => id == order.Id.Value),
             Arg.Any<CancellationToken>());
-
-        await _outboxRepository.Received(1).AddAsync(
-            Arg.Any<Guid>(),
-            nameof(OrderReturnRequestedEvent),
-            Arg.Any<string>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<CancellationToken>());
-
-        await _transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnFailure_WhenOrderDoesNotExists()
+    public async Task Handle_ShouldReturnExistingId_WhenDuplicateIdempotencyKey()
     {
-        var handler = new RequestReturnCommandHandler(_orderRepository, _outboxRepository, _unitOfWork, _logger);
-        var command = CreateValidCommand(Guid.NewGuid(), Guid.NewGuid());
-        
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>()).Returns((Order?)null);
+        var existingId = Guid.NewGuid();
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new IdempotencyRecord("idempotency-key", existingId, DateTime.UtcNow));
 
-        var result = await handler.Handle(command, CancellationToken.None);
-        
+        var result = await BuildHandler().Handle(
+            CreateValidCommand(Guid.NewGuid(), Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(existingId, result.Value);
+
+        // persistence must NOT be called
+        await _returnRequestPersistenceService.DidNotReceive().CreateReturnRequestAsync(
+            Arg.Any<ReturnRequest>(),
+            Arg.Any<string?>(),
+            Arg.Any<Guid?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenOrderNotFound()
+    {
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((Order?)null);
+
+        var result = await BuildHandler().Handle(
+            CreateValidCommand(Guid.NewGuid(), Guid.NewGuid()),
+            CancellationToken.None);
+
         Assert.False(result.IsSuccess);
         Assert.Contains("not found", result.Error);
-        await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnFailure_WhenDomainLogicFails()
+    public async Task Handle_ShouldReturnFailure_WhenOrderIsNotCompleted()
     {
-        // create an order that is NOT completed (just pending)
-        var handler = new RequestReturnCommandHandler(_orderRepository, _outboxRepository, _unitOfWork, _logger);
-        var items = new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) };
-        var order = Order.Create(CustomerId.CreateUnique(), Address.Create("S", "C", "C", "P"), items);
+        // Order is Pending — not eligible for return
+        var items = new List<OrderItem>
+        {
+            OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD"))
+        };
+        var pendingOrder = Order.Create(
+            CustomerId.CreateUnique(),
+            Address.Create("S", "C", "C", "P"),
+            items);
 
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>()).Returns(order);
-        var command = CreateValidCommand(order.Id.Value, items.First().ProductId.Value);
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
 
-        var result = await handler.Handle(command, CancellationToken.None);
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(pendingOrder);
+
+        var result = await BuildHandler().Handle(
+            CreateValidCommand(pendingOrder.Id.Value, items.First().ProductId.Value),
+            CancellationToken.None);
 
         Assert.False(result.IsSuccess);
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        Assert.Contains("must be completed", result.Error);
     }
 
     [Fact]
-    public async Task Handle_ShouldRollbackAndReturnFailure_WhenOutboxFails()
+    public async Task Handle_ShouldReturnFailure_WhenPersistenceThrows()
     {
-        var handler = new RequestReturnCommandHandler(_orderRepository, _outboxRepository, _unitOfWork, _logger);
         var order = CreateCompletedOrder();
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
 
-        _outboxRepository.AddAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(),
-            Arg.Any<CancellationToken>()).Throws(new Exception("Outbox DB connection lost"));
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
 
-        var command = CreateValidCommand(order.Id.Value, order.Items.First().ProductId.Value);
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(order);
 
-        var result = await handler.Handle(command, CancellationToken.None);
-        
+        _returnRequestPersistenceService
+            .CreateReturnRequestAsync(
+                Arg.Any<ReturnRequest>(),
+                Arg.Any<string?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<CancellationToken>())
+            .Throws(new Exception("Persistence failure"));
+
+        var result = await BuildHandler().Handle(
+            CreateValidCommand(order.Id.Value, order.Items.First().ProductId.Value),
+            CancellationToken.None);
+
         Assert.False(result.IsSuccess);
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
-        await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
-
+        Assert.Contains("Persistence failure", result.Error);
     }
 
-    private RequestReturnCommand CreateValidCommand(Guid orderId, Guid productId) =>
+    // -------------------------------------------------------------------------
+
+    private static RequestReturnCommand CreateValidCommand(Guid orderId, Guid productId) =>
         new(
             orderId,
             "Item arrived broken",
-            new List<OrderItemDto>
-            {
-                new(productId, 1, 100, "USD")
-            });
+            new List<OrderItemDto> { new(productId, 1, 100, "USD") },
+            "idempotency-key");
 }
