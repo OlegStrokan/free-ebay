@@ -1,39 +1,44 @@
 using System.Text.Json;
+using Application.Interfaces;
 using Application.Sagas;
 using Application.Sagas.Persistence;
 using Application.Sagas.Steps;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace Application.Tests.Sagas;
 
 public class SagaBaseTests
 {
-    public readonly ISagaRepository _repository = Substitute.For<ISagaRepository>();
-    public readonly ILogger _logger = Substitute.For<ILogger>();
-    
-    // mock the steps
-    public readonly ISagaStep<TestSagaData, TestSagaContext> _step1 =
-        Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
+    private readonly ISagaRepository _repository = Substitute.For<ISagaRepository>();
+    private readonly ILogger _logger = Substitute.For<ILogger>();
+    private readonly ISagaErrorClassifier _errorClassifier = Substitute.For<ISagaErrorClassifier>();
 
-    public readonly ISagaStep<TestSagaData, TestSagaContext> _step2 =
+    private readonly ISagaStep<TestSagaData, TestSagaContext> _step1 =
         Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
-
-    public readonly ISagaStep<TestSagaData, TestSagaContext> _step3 =
+    private readonly ISagaStep<TestSagaData, TestSagaContext> _step2 =
+        Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
+    private readonly ISagaStep<TestSagaData, TestSagaContext> _step3 =
         Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
 
     public class TestSaga : SagaBase<TestSagaData, TestSagaContext>
     {
-        public TestSaga(ISagaRepository repo, IEnumerable<ISagaStep<TestSagaData, TestSagaContext>> steps,
+        public TestSaga(
+            ISagaRepository repo,
+            IEnumerable<ISagaStep<TestSagaData, TestSagaContext>> steps,
+            ISagaErrorClassifier errorClassifier,
             ILogger logger)
-            : base(repo, steps, logger) {}
+            : base(repo, steps, errorClassifier, logger) {}
 
         protected override string SagaType => "TestSaga";
     }
-    
-    public class TestSagaData : SagaData {}
 
+    public class TestSagaData : SagaData {}
     public class TestSagaContext : SagaContext {}
+
+    private TestSaga Build(params ISagaStep<TestSagaData, TestSagaContext>[] steps)
+        => new(_repository, steps, _errorClassifier, _logger);
 
     [Fact]
     public async Task ExecuteAsync_ShouldRunAllSteps_AndComplete_WhenAllStepsSucceed()
@@ -48,28 +53,51 @@ public class SagaBaseTests
         _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
             .Returns(StepResult.SuccessResult());
 
-        var saga = new TestSaga(_repository, [_step1, _step2], _logger);
-        var data = new TestSagaData { CorrelationId = Guid.NewGuid() };
+        var result = await Build(_step1, _step2)
+            .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
 
-        var result = await saga.ExecuteAsync(data, CancellationToken.None);
-        
         Assert.True(result.IsSuccess);
+        Assert.Equal(SagaStatus.Completed, result.Status);
 
-        await _step1.Received(1).ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
+        await _step1.Received(1).ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
+        await _step2.Received(1).ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
 
-        await _step2.Received(1).ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
-
+        // final save must be Completed
         await _repository.Received().SaveAsync(
             Arg.Is<SagaState>(s => s.Status == SagaStatus.Completed && s.CurrentStep == "Step2"),
             Arg.Any<CancellationToken>());
-
     }
 
+    [Fact]
+    public async Task ExecuteAsync_ShouldPauseSaga_WhenStepReturnsWaitingForEventMetadata()
+    {
+        _step1.Order.Returns(1);
+        _step1.StepName.Returns("Step1");
+        _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
+            .Returns(StepResult.SuccessResult(new Dictionary<string, object> { ["SagaState"] = "WaitingForEvent" }));
+
+        _step2.Order.Returns(2);
+        _step2.StepName.Returns("Step2");
+
+        var result = await Build(_step1, _step2)
+            .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
+
+        // SagaResult.Success always sets status=completed (it signals the handler "we are done for now type shit")
+        Assert.True(result.IsSuccess);
+        Assert.Equal(SagaStatus.Completed, result.Status);
+
+        // saga state persisted as WaitingForEvent
+        await _repository.Received().SaveAsync(
+            Arg.Is<SagaState>(s => s.Status == SagaStatus.WaitingForEvent && s.CurrentStep == "Step1"),
+            Arg.Any<CancellationToken>());
+
+        // step2 must never run
+        await _step2.DidNotReceive().ExecuteAsync(
+            Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
+    }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldPauseSaga_WhenStepReturnWaitingForEventMetadata()
+    public async Task ExecuteAsync_ShouldCompensate_WhenStepFails()
     {
         _step1.Order.Returns(1);
         _step1.StepName.Returns("Step1");
@@ -79,81 +107,38 @@ public class SagaBaseTests
         _step2.Order.Returns(2);
         _step2.StepName.Returns("Step2");
         _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult(new Dictionary<string, object>
-            {
-                ["SagaState"] = "WaitingForEvent"
-            }));
-
-        var saga = new TestSaga(_repository, new[] { _step2, _step2 }, _logger);
-        var data = new TestSagaData { CorrelationId = Guid.NewGuid() };
-
-        var result = await saga.ExecuteAsync(data, CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(SagaStatus.Completed, result.Status);
-
-        await _repository.Received().SaveAsync(
-            Arg.Is<SagaState>(s =>
-                s.Status == SagaStatus.WaitingForEvent &&
-                s.CurrentStep == "Step2"),
-            Arg.Any<CancellationToken>());
-
-        await _step3.DidNotReceive().ExecuteAsync(
-            Arg.Any<TestSagaData>(),
-            Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
-    }
-
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldCompensate_WhenStepFails()
-    {
-        _step1.Order.Returns(1);
-        _step1.StepName.Returns("Step1");
-        _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult());
-
-        _step2.Order.Returns(2);
-        _step2.StepName.Returns("Step2");
-        _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
             .Returns(StepResult.Failure("Step2 failed"));
 
-        var sagaId = Guid.NewGuid();
-        var sagaState = new SagaState
-        {
-            Id = sagaId,
-            Status = SagaStatus.Running,
-            Payload = JsonSerializer.Serialize(new TestSagaData()),
-            Context = JsonSerializer.Serialize(new TestSagaContext()),
-            Steps = new List<SagaStepLog>
+        // compensateAsync loads saga state by the internal sagaId via GetByIdAsync
+        // we need Steps to contain Step1 as Completed so compensation runs it
+        _repository
+            .GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(args => new SagaState
             {
-                new() { StepName = "Step1", Status = StepStatus.Completed }
-            }
-        };
+                Id = (Guid)args[0],
+                Status = SagaStatus.Failed,
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext()),
+                Steps = new List<SagaStepLog>
+                {
+                    new() { StepName = "Step1", Status = StepStatus.Completed }
+                }
+            });
 
-        _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(sagaState);
-
-        var saga = new TestSaga(_repository, new[] { _step1, _step2 }, _logger);
-        var data = new TestSagaData { CorrelationId = Guid.NewGuid() };
-
-        var result = await saga.ExecuteAsync(data, CancellationToken.None);
+        var result = await Build(_step1, _step2)
+            .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(SagaStatus.Failed, result.Status);
         Assert.Equal("Step2 failed", result.ErrorMessage);
 
-        // step1 should be compensated
+        // Step1 was completed → must be compensated
         await _step1.Received(1).CompensateAsync(
-            Arg.Any<TestSagaData>(),
-            Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
-        
-        // step2 shouldn't be compensated
+            Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
+
+        // Step2 failed → must NOT be compensated
         await _step2.DidNotReceive().CompensateAsync(
-            Arg.Any<TestSagaData>(),
-            Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -169,80 +154,79 @@ public class SagaBaseTests
         _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
             .Returns(StepResult.SuccessResult());
 
-        var saga = new TestSaga(_repository, new[] { _step1, _step2 }, _logger);
-        var data = new TestSagaData { CorrelationId = Guid.NewGuid() };
-
-        await saga.ExecuteAsync(data, CancellationToken.None);
-        
-        // verify repo was called multiple times
+        await Build(_step1, _step2)
+            .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
 
         await _repository.Received().SaveAsync(
-            Arg.Is<SagaState>(s => s.CurrentStep == "Step1"),
+            Arg.Is<SagaState>(s => s.CurrentStep == "Step1" && s.Status == SagaStatus.Running),
+            Arg.Any<CancellationToken>());
+
+        //  still Running (final save below sets Completed)
+        await _repository.Received().SaveAsync(
+            Arg.Is<SagaState>(s => s.CurrentStep == "Step2" && s.Status == SagaStatus.Running),
             Arg.Any<CancellationToken>());
 
         await _repository.Received().SaveAsync(
-            Arg.Is<SagaState>(s => s.CurrentStep == "Step2" && s.Status == SagaStatus.Compensated),
+            Arg.Is<SagaState>(s => s.Status == SagaStatus.Completed),
             Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ResumeFromStepAsync_ShouldResumeFromSpecificStep_WhenSagaIsWaiting()
+    public async Task ExecuteAsync_ShouldRetryTransientException_ThenSucceed()
+    {
+        _step1.Order.Returns(1);
+        _step1.StepName.Returns("Step1");
+
+        var callCount = 0;
+        _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                callCount++;
+                if (callCount < 2) throw new Exception("transient");
+                return Task.FromResult(StepResult.SuccessResult());
+            });
+
+        // classifier says the exception is transient
+        _errorClassifier.IsTransient(Arg.Any<Exception>()).Returns(true);
+
+        var result = await Build(_step1)
+            .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, callCount);
+    }
+
+    [Fact]
+    public async Task ResumeFromStepAsync_ShouldResumeFromSpecificStep_SkippingEarlierSteps()
     {
         var correlationId = Guid.NewGuid();
         var sagaId = Guid.NewGuid();
 
-        _step1.Order.Returns(1);
-        _step1.StepName.Returns("Step1");
-
-        _step2.Order.Returns(2);
-        _step2.StepName.Returns("Step2");
-
-        _step3.Order.Returns(3);
-        _step3.StepName.Returns("Step3");
+        _step1.Order.Returns(1); _step1.StepName.Returns("Step1");
+        _step2.Order.Returns(2); _step2.StepName.Returns("Step2");
+        _step3.Order.Returns(3); _step3.StepName.Returns("Step3");
         _step3.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
             .Returns(StepResult.SuccessResult());
 
-        var sagaState = new SagaState
-        {
-            Id = sagaId,
-            CorrelationId = correlationId,
-            Status = SagaStatus.WaitingForEvent,
-            SagaType = "TestSaga",
-            CurrentStep = "Step2",
-            Payload = JsonSerializer.Serialize(new TestSagaData { CorrelationId = correlationId }),
-            Context = JsonSerializer.Serialize(new TestSagaContext()),
-            Steps = new List<SagaStepLog>
-            {
-                new() { StepName = "Step1", Status = StepStatus.Completed },
-                new() { StepName = "Step2", Status = StepStatus.Completed }
-            }
-        };
-
         _repository.GetByCorrelationIdAsync(correlationId, "TestSaga", Arg.Any<CancellationToken>())
-            .Returns(sagaState);
+            .Returns(new SagaState
+            {
+                Id = sagaId,
+                CorrelationId = correlationId,
+                Status = SagaStatus.WaitingForEvent,
+                SagaType = "TestSaga",
+                Payload = JsonSerializer.Serialize(new TestSagaData { CorrelationId = correlationId }),
+                Context = JsonSerializer.Serialize(new TestSagaContext())
+            });
 
-        var saga = new TestSaga(_repository, new[] { _step1, _step2, _step3 }, _logger);
-        var data = new TestSagaData { CorrelationId = correlationId };
-        var context = new TestSagaContext();
-
-        var result = await saga.ResumeFromStepAsync(data, context, "Step3", CancellationToken.None);
+        var result = await Build(_step1, _step2, _step3)
+            .ResumeFromStepAsync(new TestSagaData { CorrelationId = correlationId }, new TestSagaContext(), "Step3", CancellationToken.None);
 
         Assert.True(result.IsSuccess);
 
-        await _step1.DidNotReceive().ExecuteAsync(
-            Arg.Any<TestSagaData>(),
-            Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
-
-        await _step2.DidNotReceive().ExecuteAsync(
-            Arg.Any<TestSagaData>(),
-            Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
-
-        await _step3.Received(1).ExecuteAsync(
-            Arg.Any<TestSagaData>(),
-            Arg.Any<TestSagaContext>(),
-            Arg.Any<CancellationToken>());
+        await _step1.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
+        await _step2.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
+        await _step3.Received(1).ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -253,82 +237,177 @@ public class SagaBaseTests
         _repository.GetByCorrelationIdAsync(correlationId, "TestSaga", Arg.Any<CancellationToken>())
             .Returns((SagaState?)null);
 
-        var saga = new TestSaga(_repository, new[] { _step1, _step2 }, _logger);
-        var data = new TestSagaData { CorrelationId = correlationId };
-        var context = new TestSagaContext();
-
-        var result = await saga.ResumeFromStepAsync(data, context, "Step2", CancellationToken.None);
+        var result = await Build(_step1, _step2)
+            .ResumeFromStepAsync(new TestSagaData { CorrelationId = correlationId }, new TestSagaContext(), "Step2", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Saga state not found", result.ErrorMessage);
     }
-    
-    
+
     [Fact]
     public async Task ResumeFromStepAsync_ShouldReturnSuccess_WhenSagaAlreadyCompleted()
     {
         var correlationId = Guid.NewGuid();
         var sagaId = Guid.NewGuid();
 
-        var sagaState = new SagaState
-        {
-            Id = sagaId,
-            CorrelationId = correlationId,
-            Status = SagaStatus.Completed,
-            SagaType = "TestSaga",
-            Payload = JsonSerializer.Serialize(new TestSagaData()),
-            Context = JsonSerializer.Serialize(new TestSagaData())
-        };
-        
-        
+        _repository.GetByCorrelationIdAsync(correlationId, "TestSaga", Arg.Any<CancellationToken>())
+            .Returns(new SagaState
+            {
+                Id = sagaId,
+                CorrelationId = correlationId,
+                Status = SagaStatus.Completed,
+                SagaType = "TestSaga",
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext())
+            });
+
+        var result = await Build(_step1, _step2)
+            .ResumeFromStepAsync(new TestSagaData { CorrelationId = correlationId }, new TestSagaContext(), "Step1", CancellationToken.None);
+
+        // no steps executed
+        Assert.True(result.IsSuccess);
+        Assert.Equal(sagaId, result.SagaId);
+
+        await _step1.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task CompensateAsync_ShouldOnlyCompensateCompletedSteps_InReverseOrder()
+    public async Task ResumeFromStepAsync_ShouldFail_WhenSagaIsNotWaitingForEvent()
+    {
+        var correlationId = Guid.NewGuid();
+
+        _repository.GetByCorrelationIdAsync(correlationId, "TestSaga", Arg.Any<CancellationToken>())
+            .Returns(new SagaState
+            {
+                Id = Guid.NewGuid(),
+                CorrelationId = correlationId,
+                Status = SagaStatus.Running, // not WaitingForEvent and not Completed
+                SagaType = "TestSaga",
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext())
+            });
+
+        var result = await Build(_step1)
+            .ResumeFromStepAsync(new TestSagaData { CorrelationId = correlationId }, new TestSagaContext(), "Step1", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not in waiting state", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ResumeFromStepAsync_ShouldFail_WhenStepNameNotFound()
+    {
+        var correlationId = Guid.NewGuid();
+
+        _repository.GetByCorrelationIdAsync(correlationId, "TestSaga", Arg.Any<CancellationToken>())
+            .Returns(new SagaState
+            {
+                Id = Guid.NewGuid(),
+                CorrelationId = correlationId,
+                Status = SagaStatus.WaitingForEvent,
+                SagaType = "TestSaga",
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext())
+            });
+
+        _step1.Order.Returns(1); _step1.StepName.Returns("Step1");
+
+        var result = await Build(_step1)
+            .ResumeFromStepAsync(new TestSagaData { CorrelationId = correlationId }, new TestSagaContext(), "NonExistentStep", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("NonExistentStep", result.ErrorMessage);
+    }
+    
+
+    [Fact]
+    public async Task CompensateAsync_ShouldCompensateOnlyCompletedSteps_InReverseOrder()
     {
         var sagaId = Guid.NewGuid();
 
-        var step3 = Substitute.For<ISagaStep<TestSagaData, TestSagaContext>>();
-        
-        _step1.StepName.Returns("Step1");
-        _step2.Order.Returns(1);
-        _step2.StepName.Returns("Step2");
-        _step2.Order.Returns(2);
-        step3.StepName.Returns("Step3");
-        step3.Order.Returns(3);
+        _step1.Order.Returns(1); _step1.StepName.Returns("Step1");
+        _step2.Order.Returns(2); _step2.StepName.Returns("Step2");
+        // Step3 exists in saga state logs but is not registered in the saga - must be ignored type shit
 
-        var sagaState = new SagaState
-        {
-            Id = sagaId,
-            Status = SagaStatus.Running,
-            Payload = JsonSerializer.Serialize(new TestSagaData()),
-            Context = JsonSerializer.Serialize(new TestSagaContext()),
-            Steps = new List<SagaStepLog>
+        _repository.GetByIdAsync(sagaId, Arg.Any<CancellationToken>())
+            .Returns(new SagaState
             {
-                new() { StepName = "Step1", Status = StepStatus.Completed },
-                new() { StepName = "Step2", Status = StepStatus.Completed },
-                new() { StepName = "Step3", Status = StepStatus.Failed }
-                
-            }
-        };
+                Id = sagaId,
+                Status = SagaStatus.Failed,
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext()),
+                Steps = new List<SagaStepLog>
+                {
+                    new() { StepName = "Step1", Status = StepStatus.Completed },
+                    new() { StepName = "Step2", Status = StepStatus.Completed },
+                    new() { StepName = "Step3", Status = StepStatus.Failed } // not registered → ignored
+                }
+            });
 
-        _repository.GetByIdAsync(sagaId, Arg.Any<CancellationToken>()).Returns(sagaState);
-        
-        var saga =  new TestSaga(_repository, [_step1, _step2], _logger);
+        var result = await Build(_step1, _step2).CompensateAsync(sagaId, CancellationToken.None);
 
-        await saga.CompensateAsync(sagaId, CancellationToken.None);
-        
-        Received.InOrder( () =>
+        Assert.Equal(SagaStatus.Compensated, result.Status);
+
+        // Step3 has no matching registered step = never touched
+        // compensation order: Step2 first, then Step1 like reverse you know?
+        Received.InOrder(() =>
         {
-             _step2.CompensateAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(),
-                Arg.Any<CancellationToken>());
-             _step1.CompensateAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(),
-                Arg.Any<CancellationToken>());
+            _step2.CompensateAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
+            _step1.CompensateAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
         });
-        
-        
     }
-        
+
+    [Fact]
+    public async Task CompensateAsync_ShouldSkip_WhenAlreadyCompensated()
+    {
+        var sagaId = Guid.NewGuid();
+
+        _repository.GetByIdAsync(sagaId, Arg.Any<CancellationToken>())
+            .Returns(new SagaState
+            {
+                Id = sagaId,
+                Status = SagaStatus.Compensated,
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext())
+            });
+
+        var result = await Build(_step1).CompensateAsync(sagaId, CancellationToken.None);
+
+        Assert.Equal(SagaStatus.Compensated, result.Status);
+        await _step1.DidNotReceive().CompensateAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompensateAsync_ShouldSetFailedToCompensate_WhenCompensationThrowsPermanently()
+    {
+        var sagaId = Guid.NewGuid();
+
+        _step1.Order.Returns(1); _step1.StepName.Returns("Step1");
+        _step1.CompensateAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new Exception("permanent failure"));
+
+        // non-transient => no retry
+        _errorClassifier.IsTransient(Arg.Any<Exception>()).Returns(false);
+
+        _repository.GetByIdAsync(sagaId, Arg.Any<CancellationToken>())
+            .Returns(new SagaState
+            {
+                Id = sagaId,
+                Status = SagaStatus.Failed,
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext()),
+                Steps = new List<SagaStepLog>
+                {
+                    new() { StepName = "Step1", Status = StepStatus.Completed }
+                }
+            });
+
+        await Assert.ThrowsAsync<Exception>(() => Build(_step1).CompensateAsync(sagaId, CancellationToken.None));
+
+        await _repository.Received().SaveAsync(
+            Arg.Is<SagaState>(s => s.Status == SagaStatus.FailedToCompensate),
+            Arg.Any<CancellationToken>());
+    }
 }
 
 

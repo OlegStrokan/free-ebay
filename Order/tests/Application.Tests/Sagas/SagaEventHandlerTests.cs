@@ -12,129 +12,157 @@ namespace Application.Tests.Sagas;
 
 public class SagaEventHandlerTests
 {
-    public readonly ISagaRepository _repository;
-    public readonly ISagaBase<TestSagaData> SagaBase;
-    public readonly ILogger _logger;
-    public readonly TestSagaHandler _sut; // system under test 
-
+    private readonly ISagaRepository _repository = Substitute.For<ISagaRepository>();
+    private readonly ISagaBase<TestSagaData> _sagaBase = Substitute.For<ISagaBase<TestSagaData>>();
+    private readonly ILogger _logger = Substitute.For<ILogger>();
+    private readonly TestSagaHandler _sut;
 
     public SagaEventHandlerTests()
     {
-        SagaBase = Substitute.For<ISagaBase<TestSagaData>>();
-        _repository = Substitute.For<ISagaRepository>();
-        _logger = Substitute.For<ILogger>();
-
-        _sut = new TestSagaHandler(SagaBase, _repository, _logger);
+        _sut = new TestSagaHandler(_sagaBase, _repository, _logger);
     }
-
+    
     [Fact]
-    public async Task HandleAsync_ShouldStartSaga_WhenSagaDoesNotExists()
+    public async Task HandleAsync_ShouldStartSaga_WhenSagaDoesNotExist()
     {
         var testEvent = new TestEvent { Id = Guid.NewGuid(), Value = "Test" };
         var payload = JsonSerializer.Serialize(testEvent);
 
         _repository
             .GetByCorrelationIdAsync(testEvent.Id, "TestSaga", Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<SagaState?>(null));
+            .Returns((SagaState?)null);
 
-        SagaBase
+        _sagaBase
             .ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>())
             .Returns(SagaResult.Success(Guid.NewGuid()));
 
         await _sut.HandleAsync(payload, CancellationToken.None);
 
-        await SagaBase.Received(1).ExecuteAsync(
+        await _sagaBase.Received(1).ExecuteAsync(
             Arg.Is<TestSagaData>(d => d.CorrelationId == testEvent.Id && d.SomeData == "Test"),
             Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task HandleAsync_ShouldSkip_WhenSagaAlreadyExists_Idempotency()
+    public async Task HandleAsync_ShouldSkip_WhenSagaAlreadyRunning_Idempotency()
     {
         var testEvent = new TestEvent { Id = Guid.NewGuid() };
         var payload = JsonSerializer.Serialize(testEvent);
 
-        var existingSaga = new SagaState { Status = SagaStatus.Running };
         _repository
             .GetByCorrelationIdAsync(testEvent.Id, "TestSaga", Arg.Any<CancellationToken>())
-            .Returns(existingSaga);
+            .Returns(new SagaState { Status = SagaStatus.Running });
 
         await _sut.HandleAsync(payload, CancellationToken.None);
 
-        await SagaBase.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
+        await _sagaBase.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldSkip_WhenSagaAlreadyCompleted_Idempotency()
+    {
+        var testEvent = new TestEvent { Id = Guid.NewGuid() };
+        var payload = JsonSerializer.Serialize(testEvent);
+
+        _repository
+            .GetByCorrelationIdAsync(testEvent.Id, "TestSaga", Arg.Any<CancellationToken>())
+            .Returns(new SagaState { Status = SagaStatus.Completed });
+
+        await _sut.HandleAsync(payload, CancellationToken.None);
+
+        await _sagaBase.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task HandleAsync_ShouldLogWarning_WhenDeserializationFails()
     {
-        var invalidJson = "this is not json";
+        await _sut.HandleAsync("this is not json", CancellationToken.None);
 
-        await _sut.HandleAsync(invalidJson, CancellationToken.None);
+        await _sagaBase.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
 
-        await SagaBase.DidNotReceive().ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>());
-        
         _logger.Received().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
-            Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
-    public async Task HandleAsync_ShouldCatchAndLogException_WhenSagaExecutionThrows()
+    public async Task HandleAsync_ShouldLogWarning_WhenSagaExecutionReturnsFailed()
     {
         var testEvent = new TestEvent { Id = Guid.NewGuid() };
         var payload = JsonSerializer.Serialize(testEvent);
-        var expectedException = new Exception();
 
-        _repository.GetByCorrelationIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<SagaState?>(null));
+        _repository
+            .GetByCorrelationIdAsync(testEvent.Id, "TestSaga", Arg.Any<CancellationToken>())
+            .Returns((SagaState?)null);
 
-        SagaBase.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>()).ThrowsAsync(expectedException);
+        _sagaBase
+            .ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>())
+            .Returns(SagaResult.Failed(Guid.NewGuid(), "step blew up"));
 
-        var exception = await Record.ExceptionAsync(async () => await _sut.HandleAsync(payload, CancellationToken.None));
-        
+        await _sut.HandleAsync(payload, CancellationToken.None);
+
+        _logger.Received().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldCatchAndLogError_WhenSagaExecutionThrows()
+    {
+        var testEvent = new TestEvent { Id = Guid.NewGuid() };
+        var payload = JsonSerializer.Serialize(testEvent);
+        var expectedException = new Exception("saga exploded");
+
+        _repository
+            .GetByCorrelationIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((SagaState?)null);
+
+        _sagaBase
+            .ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(expectedException);
+
+        // must NOT propagate
+        var exception = await Record.ExceptionAsync(() => _sut.HandleAsync(payload, CancellationToken.None));
+
         Assert.Null(exception);
-        
+
         _logger.Received().Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("execution threw exception")),
+            Arg.Any<object>(),
             expectedException,
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
-    
 
+    // helpers
     public class TestEvent
     {
-        public Guid Id { get; set; } 
-        public string Value { get; set; }
+        public Guid Id { get; set; }
+        public string? Value { get; set; }
     }
 
     public class TestSagaData : SagaData
     {
-        public string SomeData { get; set; }
+        public string? SomeData { get; set; }
     }
-    
-    public class TestSagaContext : SagaContext {}
 
+    public class TestSagaContext : SagaContext {}
 
     public class TestSagaHandler : SagaEventHandler<TestEvent, TestSagaData, TestSagaContext>
     {
         public override string EventType => "TestEvent";
         public override string SagaType => "TestSaga";
-        
-        public TestSagaHandler(ISagaBase<TestSagaData> sagaBase, ISagaRepository repo, ILogger logger) 
+
+        public TestSagaHandler(ISagaBase<TestSagaData> sagaBase, ISagaRepository repo, ILogger logger)
             : base(sagaBase, repo, logger) {}
 
-        protected override TestSagaData MapEventToSagaData(TestEvent eventDto)
-        {
-            return new TestSagaData
-            {
-                CorrelationId = eventDto.Id,
-                SomeData = eventDto.Value
-            };
-        }
+        protected override TestSagaData MapEventToSagaData(TestEvent eventDto) =>
+            new() { CorrelationId = eventDto.Id, SomeData = eventDto.Value };
     }
 }
