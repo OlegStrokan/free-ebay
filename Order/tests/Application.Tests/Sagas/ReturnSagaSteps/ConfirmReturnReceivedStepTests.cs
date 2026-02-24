@@ -3,7 +3,7 @@ using Application.Interfaces;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
-using Domain.Interfaces;
+using Domain.Exceptions;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -13,237 +13,96 @@ namespace Application.Tests.Sagas.ReturnSagaSteps;
 
 public class ConfirmReturnReceivedStepTests
 {
-    private readonly IOrderRepository _orderRepository = Substitute.For<IOrderRepository>();
-    private readonly IOutboxRepository _outboxRepository = Substitute.For<IOutboxRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly ILogger<ConfirmReturnReceivedStep> _logger = Substitute.For<ILogger<ConfirmReturnReceivedStep>>();
-    private IDbContextTransaction _transaction = Substitute.For<IDbContextTransaction>();
-    private readonly ConfirmReturnReceivedStep _step;
+    private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
+        Substitute.For<IReturnRequestPersistenceService>();
 
+    private readonly ILogger<ConfirmReturnReceivedStep> _logger =
+        Substitute.For<ILogger<ConfirmReturnReceivedStep>>();
 
-    public ConfirmReturnReceivedStepTests()
-    {
-        _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>()).Returns(_transaction);
-
-        _step = new ConfirmReturnReceivedStep(
-            _orderRepository,
-            _outboxRepository,
-            _unitOfWork,
-            _logger);
-    }
+    private ConfirmReturnReceivedStep BuildStep() =>
+        new(_returnRequestPersistenceService, _logger);
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnSuccess_WhenOrderIsReturnRequested()
+    public async Task ExecuteAsync_ShouldReturnSuccess_WhenReturnRequestUpdatedSuccessfully()
     {
-        var order = CreateReturnRequestedOrder();
-        var data = CreateSampleData(order.Id.Value);
-        var context = new ReturnSagaContext { ReturnShipmentId = "ReturnShipmentId" };
+        var data = CreateSampleData();
+        var context = new ReturnSagaContext { ReturnShipmentId = "RETURN-SHIP-1" };
 
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>())
-            .Returns(order);
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
-        
         Assert.True(result.Success);
         Assert.Equal("ReturnReceived", result.Data?["Status"]);
-        
-        Assert.Equal(OrderStatus.ReturnReceived, order.Status);
+        Assert.NotNull(context.ReturnReceivedAt);
 
-        await _orderRepository.Received(1).AddAsync(order, Arg.Any<CancellationToken>());
-
-        await _outboxRepository.Received(1).AddAsync(
-            Arg.Any<Guid>(),
-            Arg.Is<string>(s => s.Contains("OrderReturnReceivedEvent")),
-            Arg.Any<string>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<CancellationToken>()
-        );
-
-        await _unitOfWork.Received().SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _transaction.Received().CommitAsync(Arg.Any<CancellationToken>());
+        await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
+            data.CorrelationId,
+            Arg.Any<Func<ReturnRequest, Task>>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderNotFound()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenReturnRequestNotFound()
     {
-        var data = CreateSampleData(Guid.NewGuid());
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>()).Returns((Order?)null);
+        var data = CreateSampleData();
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+        _returnRequestPersistenceService
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>())
+            .Throws(new OrderNotFoundException(data.CorrelationId));
+
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
         Assert.False(result.Success);
         Assert.Contains("not found", result.ErrorMessage);
-        await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenStatusIsInvalid()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenUnexpectedExceptionOccurs()
     {
-        // order is completed, but return hasn't been requested yet
+        var data = CreateSampleData();
 
-        var order = CreateCompletedOrder();
-        var data = CreateSampleData(order.Id.Value);
+        _returnRequestPersistenceService
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>())
+            .Throws(new Exception("Database Error"));
 
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
-
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains("unexpected status", result.ErrorMessage);
-
-        await _orderRepository.DidNotReceive().AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>());
-        await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
+        Assert.Contains("Database Error", result.ErrorMessage);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenGeneralExceptionOccurs()
+    public async Task ExecuteAsync_ShouldPassCorrectIdToUpdateReturnRequest()
     {
-        var exceptionMessage = "Database Error";
-        
-        var order = CreateReturnRequestedOrder();
-        var data = CreateSampleData(order.Id.Value);
+        var data = CreateSampleData();
 
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
-            .Throws(new Exception(exceptionMessage));
+        await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
-
-        Assert.False(result.Success);
-        Assert.Contains(exceptionMessage, result.ErrorMessage);
-
-        await _orderRepository.DidNotReceive().AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>());
-        await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldHandleIdempotency_WhenStatusIsAlreadyReceived()
-    {
-        var order = CreateReturnReceivedOrder();
-        var data = CreateSampleData(order.Id.Value);
-
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
-
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
-
-        Assert.True(result.Success);
-        Assert.Equal("AlreadyProcessed", result.Data?["Status"]);
-        await _orderRepository.DidNotReceive().AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>());
-    }
-    
-    // compensation tests
-
-    [Fact]
-    public async Task CompensateAsync_ShouldRevertStatus_WhenOrderIsReturnReceived()
-    {
-        var order = CreateReturnReceivedOrder();
-        var data = CreateSampleData(order.Id.Value);
-
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
-
-        await _step.CompensateAsync(data, new ReturnSagaContext(), CancellationToken.None);
-
-        Assert.Equal(OrderStatus.ReturnRequested, order.Status);
-
-        await _orderRepository.Received(1).AddAsync(order, Arg.Any<CancellationToken>());
-
-        await _outboxRepository.Received(1).AddAsync(
-            Arg.Any<Guid>(),
-            Arg.Is<string>(s => s.Contains("OrderReturnReceiptRevertedEvent")),
-            Arg.Any<string>(),
-            Arg.Any<DateTime>(),
+        await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
+            Arg.Is<Guid>(id => id == data.CorrelationId),
+            Arg.Any<Func<ReturnRequest, Task>>(),
             Arg.Any<CancellationToken>());
-
-        await _transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task CompensateAsync_ShouldDoNothing_WhenStatusIsNotReturnReceived()
+    public async Task CompensateAsync_ShouldNotThrow_AsManualInterventionLogged()
     {
-        // if order is still in "returnRequested" (step failed before updating), we shouldn't rever anything
+        //  items can't be unreceived, needs manual review type shit
+        var exception = await Record.ExceptionAsync(() =>
+            BuildStep().CompensateAsync(CreateSampleData(), new ReturnSagaContext(), CancellationToken.None));
 
-        var order = CreateReturnRequestedOrder();
-        var data = CreateSampleData(order.Id.Value);
+        Assert.Null(exception);
 
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
-
-        await _step.CompensateAsync(data, new ReturnSagaContext(), CancellationToken.None);
-
-        await _orderRepository.DidNotReceive().AddAsync(Arg.Any<Order>(), Arg.Any<CancellationToken>());
-        await _transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
-
+        await _returnRequestPersistenceService.DidNotReceive().UpdateReturnRequestAsync(
+            Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task CompensateAsync_ShouldRollback_WhenException()
+    private static ReturnSagaData CreateSampleData() => new()
     {
-        var data = CreateSampleData(Guid.NewGuid());
-
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
-            .Throws(new Exception("Critical Fail"));
-
-        await _step.CompensateAsync(data, new ReturnSagaContext(), CancellationToken.None);
-        
-        _logger.Received().Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("Failed to compensate")),
-            Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception?, string>>());
-
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
-    }
-    
-    
-    
-    private ReturnSagaData CreateSampleData(Guid correlationId)
-    {
-        return new ReturnSagaData
-        {
-            CorrelationId = correlationId,
-            CustomerId = Guid.NewGuid(),
-            ReturnReason = "Don't like it",
-            RefundAmount = 100,
-            Currency = "USD",
-            ReturnedItems = new List<OrderItemDto>()
-        };
-    }
-    
-    // Helper to get Order to "Completed"
-    private Order CreateCompletedOrder()
-    {
-        var customerId = CustomerId.CreateUnique();
-        var address = Address.Create("Street", "City", "CZ", "11000");
-        var items = new List<OrderItem> 
-        { 
-            OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) 
-        };
-
-        var order = Order.Create(customerId, address, items);
-        order.Pay(PaymentId.From("PAY-1"));
-        order.Approve();
-        order.Complete();
-        order.MarkEventsAsCommited();
-        
-        return order;
-    }
-
-    // Helper to get Order to "ReturnRequested"
-    private Order CreateReturnRequestedOrder()
-    {
-        var order = CreateCompletedOrder();
-        // Request return for all items
-        order.RequestReturn("Wrong size", order.Items.ToList());
-        order.MarkEventsAsCommited();
-        return order;
-    }
-
-    // Helper to get Order to "ReturnReceived"
-    private Order CreateReturnReceivedOrder()
-    {
-        var order = CreateReturnRequestedOrder();
-        order.ConfirmReturnReceived();
-        order.MarkEventsAsCommited();
-        return order;
-    }
-    
+        CorrelationId = Guid.NewGuid(),
+        CustomerId = Guid.NewGuid(),
+        ReturnReason = "Wrong size",
+        RefundAmount = 100m,
+        Currency = "USD",
+        ReturnedItems = new List<OrderItemDto>()
+    };
 }

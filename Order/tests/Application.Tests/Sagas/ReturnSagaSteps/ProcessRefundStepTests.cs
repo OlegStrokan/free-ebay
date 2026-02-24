@@ -4,7 +4,7 @@ using Application.Interfaces;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
-using Domain.Interfaces;
+using Domain.Entities.Order;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -15,229 +15,190 @@ namespace Application.Tests.Sagas.ReturnSagaSteps;
 public class ProcessRefundStepTests
 {
     private readonly IPaymentGateway _paymentGateway = Substitute.For<IPaymentGateway>();
-    private readonly IOrderRepository _orderRepository = Substitute.For<IOrderRepository>();
-    private readonly IOutboxRepository _outboxRepository = Substitute.For<IOutboxRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IOrderPersistenceService _orderPersistenceService = Substitute.For<IOrderPersistenceService>();
+    private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
+        Substitute.For<IReturnRequestPersistenceService>();
     private readonly ILogger<ProcessRefundStep> _logger = Substitute.For<ILogger<ProcessRefundStep>>();
-    private readonly IDbContextTransaction _transaction = Substitute.For<IDbContextTransaction>();
 
-    private readonly ProcessRefundStep _step;
-
-    public ProcessRefundStepTests()
-    {
-        _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
-            .Returns(_transaction);
-
-        _step = new ProcessRefundStep(
-            _paymentGateway,
-            _orderRepository,
-            _outboxRepository,
-            _unitOfWork,
-            _logger);
-    }
-
+    private ProcessRefundStep BuildStep() => new(
+        _paymentGateway,
+        _orderPersistenceService,
+        _returnRequestPersistenceService,
+        _logger);
+    
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnSuccess_WhenPaymentAndPersistenceSucceed()
+    public async Task ExecuteAsync_ShouldReturnSuccess_WhenRefundAndPersistenceSucceed()
     {
-        // paymentId: PAY-1
         var order = CreateReturnReceivedOrder();
-        var data = CreateSampleData(order.Id.Value);
+        var data = CreateSampleData();
         var context = new ReturnSagaContext();
         var expectedRefundId = "REF-999";
 
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
-        
-        _paymentGateway.RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(),
-            Arg.Any<CancellationToken>()).Returns(expectedRefundId);
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
 
-        var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
+        _paymentGateway
+            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(expectedRefundId);
+
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal(expectedRefundId, context.RefundId);
         Assert.Equal(expectedRefundId, result.Data?["RefundId"]);
-        Assert.Equal(OrderStatus.Refunded, order.Status);
 
-        // PAY-1 - paymentId which been used for create creation
+        // original payment id PAY-1 must be used (we used it in CreateReturnReceivedOrder)
         await _paymentGateway.Received(1).RefundAsync(
             "PAY-1",
             data.RefundAmount,
             Arg.Is<string>(s => s.Contains(data.ReturnReason)),
             Arg.Any<CancellationToken>());
-
-        await _outboxRepository.Received(1).AddAsync(
-            Arg.Any<Guid>(),
-           // @todo: should have eventType? Arg.Is<string>(s => s.Contains("OrderRefundedAmount")),
-            Arg.Any<string>(),
-            Arg.Any<string>(),
-            Arg.Any<DateTime>(),
+        
+        await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
+            data.CorrelationId,
+            Arg.Any<Func<ReturnRequest, Task>>(),
             Arg.Any<CancellationToken>());
+    }
 
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    [Fact]
+    public async Task ExecuteAsync_ShouldSkip_WhenRefundIdAlreadyInContext_Idempotency()
+    {
+        var context = new ReturnSagaContext { RefundId = "EXISTING-REF" };
+
+        var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(true, result.Data?["Idempotent"]);
+
+        await _paymentGateway.DidNotReceive().RefundAsync(
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderNotFound()
+    {
+        var data = CreateSampleData();
+
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((Order?)null);
+
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("not found", result.ErrorMessage);
+
+        await _paymentGateway.DidNotReceive().RefundAsync(
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderHasNoPaymentId()
+    {
+        var unpaidOrder = Order.Create(
+            CustomerId.CreateUnique(),
+            Address.Create("A", "B", "C", "D"),
+            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) });
+        // order.Pay() is NOT called
+
+        var data = CreateSampleData();
+
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(unpaidOrder);
+
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("no payment ID", result.ErrorMessage);
+
+        await _paymentGateway.DidNotReceive().RefundAsync(
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenPaymentGatewayFails()
     {
         var order = CreateReturnReceivedOrder();
-        
-        var data = CreateSampleData(order.Id.Value);
-        var errorMessage = "Payment Provider Unavailable";
+        var data = CreateSampleData();
 
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(order);
 
-        _paymentGateway.RefundAsync(
-            Arg.Any<string>(),
-            Arg.Any<decimal>(),
-            Arg.Any<string>(),
-            Arg.Any<CancellationToken>()).Throws(new Exception(errorMessage));
+        _paymentGateway
+            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new Exception("Payment Provider Unavailable"));
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains(errorMessage, result.ErrorMessage);
-
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        Assert.Contains("Payment Provider Unavailable", result.ErrorMessage);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderNotFound()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenPersistenceUpdateFails()
     {
-        var data = CreateSampleData(Guid.NewGuid());
-
-        _paymentGateway.RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(),
-                Arg.Any<CancellationToken>())
-            .Returns("RefOk");
-
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
-            .Returns((Order?)null);
-
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
-
-        Assert.False(result.Success);
-        Assert.Contains("not found", result.ErrorMessage);
-
-        await _paymentGateway.DidNotReceiveWithAnyArgs().RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(),
-            Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
-        await _transaction.DidNotReceive().RollbackAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderHasNoPaymentId()
-    {
-        var unpaidOrder = Order.Create(CustomerId.CreateUnique(), Address.Create("A", "B", "C", "D"),
-            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) });
-        // we don't call order.Pay();
-
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
-            .Returns(unpaidOrder);
-
-        var data = CreateSampleData(unpaidOrder.Id.Value);
-
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
-
-        Assert.False(result.Success);
-        Assert.Contains("no payment ID", result.ErrorMessage);
-
-        await _paymentGateway.DidNotReceiveWithAnyArgs().RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(),
-            Arg.Any<string>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenDbUpdateThrowsException()
-    {
-        var errorMessage = "Deadlock detected";
-        
         var order = CreateReturnReceivedOrder();
-        var data = CreateSampleData(order.Id.Value);
+        var data = CreateSampleData();
 
-        _paymentGateway.RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(),
-                Arg.Any<CancellationToken>())
-            .Returns("RefOk");
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(order);
 
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>()).Returns(order);
+        _paymentGateway
+            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("REF-OK");
 
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Throws(new Exception(errorMessage));
+        _returnRequestPersistenceService
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>())
+            .Throws(new Exception("Deadlock detected"));
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains(errorMessage, result.ErrorMessage);
-
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        Assert.Contains("Deadlock detected", result.ErrorMessage);
     }
-    
-    // compensation tests
 
     [Fact]
-    public async Task CompensateAsync_ShouldLogCriticalWarning_WhenRefundExists()
+    public async Task CompensateAsync_ShouldLogCritical_WhenRefundExists()
     {
-        var data = CreateSampleData(Guid.NewGuid());
-        var context = new ReturnSagaContext { RefundId = "RefToReverse" };
+        var data = CreateSampleData();
+        var context = new ReturnSagaContext { RefundId = "REF-TO-COMPENSATE" };
 
-        await _step.CompensateAsync(data, context, CancellationToken.None);
-        
+        await BuildStep().CompensateAsync(data, context, CancellationToken.None);
+
         _logger.Received().Log(
             LogLevel.Critical,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("CRITICAL: Refund compensation triggered")),
-            null,
-            Arg.Any<Func<object, Exception?, string>>());
-        
-
-        // 2. Verify SendCriticalAlertAsync was "called" 
-        _logger.Received().Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("Sending Critical alert")),
+            Arg.Is<object>(o => o.ToString()!.Contains("CRITICAL")),
             null,
             Arg.Any<Func<object, Exception?, string>>());
 
-        // 3. Verify CreateManualInterventionTicketAsync was "called"
-        _logger.Received().Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("Creating manual intervention ticket")),
-            null,
-            Arg.Any<Func<object, Exception?, string>>());
-
-        await _paymentGateway.DidNotReceiveWithAnyArgs().RefundAsync(
+        // no actual re-charge - just alerts
+        await _paymentGateway.DidNotReceive().RefundAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
-
 
     [Fact]
     public async Task CompensateAsync_ShouldDoNothing_WhenRefundIdIsEmpty()
     {
-        var data = CreateSampleData(Guid.NewGuid());
         var context = new ReturnSagaContext { RefundId = null };
 
-        await _step.CompensateAsync(data, context, CancellationToken.None);
-        
-        _logger.Received().Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("No refund to reverse")),
-            null,
-            Arg.Any<Func<object, Exception?, string>>());
-        
-        
-        // ensure no "critical" logs 
+        await BuildStep().CompensateAsync(CreateSampleData(), context, CancellationToken.None);
+
         _logger.DidNotReceive().Log(
-            LogLevel.Error,
+            LogLevel.Critical,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
-            Arg.Any<Exception>(),
+            Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
-
     }
 
     [Fact]
-    public async Task CompensateAsync_ShouldFail_WhenAlertingFails()
+    public async Task CompensateAsync_ShouldNotThrow_WhenAlertingFails()
     {
-        
-        var data = CreateSampleData(Guid.NewGuid());
         var context = new ReturnSagaContext { RefundId = "REF-123" };
 
         _logger.When(x => x.Log(
@@ -246,51 +207,35 @@ public class ProcessRefundStepTests
                 Arg.Any<object>(),
                 Arg.Any<Exception>(),
                 Arg.Any<Func<object, Exception?, string>>()))
-            .Do(x => throw new Exception("Alerting System Crash"));
-        
-        // Record.Exception here used to prove that the catch block handles it and doesn't crash the saga
-        var exception = await Record.ExceptionAsync(() => 
-            _step.CompensateAsync(data, context, CancellationToken.None));
+            .Do(_ => throw new Exception("Alerting System Crash"));
 
-        // Assert
-        Assert.Null(exception); 
-        
-        _logger.Received().Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("Failed to send alert during refund compensation")),
-            Arg.Is<Exception>(ex => ex.Message == "Alerting System Crash"),
-            Arg.Any<Func<object, Exception?, string>>());
+        var exception = await Record.ExceptionAsync(() =>
+            BuildStep().CompensateAsync(CreateSampleData(), context, CancellationToken.None));
+
+        Assert.Null(exception);
     }
     
-    
-    private ReturnSagaData CreateSampleData(Guid correlationId)
+    private static ReturnSagaData CreateSampleData() => new()
     {
-        return new ReturnSagaData
-        {
-            CorrelationId = correlationId,
-            RefundAmount = 100m,
-            Currency = "USD",
-            ReturnReason = "Defective Product",
-            CustomerId = Guid.NewGuid(),
-            ReturnedItems = new List<OrderItemDto>()
-        };
-    }
+        CorrelationId = Guid.NewGuid(),
+        RefundAmount = 100m,
+        Currency = "USD",
+        ReturnReason = "Defective Product",
+        CustomerId = Guid.NewGuid(),
+        ReturnedItems = new List<OrderItemDto>()
+    };
 
-    private Order CreateReturnReceivedOrder()
+    private static Order CreateReturnReceivedOrder()
     {
-        var order = Order.Create(CustomerId.CreateUnique(),
-            Address.Create("Abrachamovna", "Atlantic City", "United States of China", "1989"),
+        var order = Order.Create(
+            CustomerId.CreateUnique(),
+            Address.Create("Street", "City", "Country", "12345"),
             new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) });
 
         order.Pay(PaymentId.From("PAY-1"));
         order.Approve();
         order.Complete();
-        order.RequestReturn("Bad", order.Items.ToList());
-        order.ConfirmReturnReceived();
-        
-        order.MarkEventsAsCommited();
+        order.ClearUncommittedEvents();
         return order;
     }
-
 }

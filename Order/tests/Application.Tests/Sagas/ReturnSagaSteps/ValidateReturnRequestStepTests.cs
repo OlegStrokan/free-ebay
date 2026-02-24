@@ -3,6 +3,7 @@ using Application.Interfaces;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
+using Domain.Entities.Order;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -13,164 +14,218 @@ namespace Application.Tests.Sagas.ReturnSagaSteps;
 
 public class ValidateReturnRequestStepTests
 {
-    private readonly IOrderRepository _orderRepository = Substitute.For<IOrderRepository>();
-    private readonly IOutboxRepository _outboxRepository = Substitute.For<IOutboxRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly ILogger<ValidateReturnRequestStep> _logger = Substitute.For<ILogger<ValidateReturnRequestStep>>();
-    private readonly ValidateReturnRequestStep _step;
-    private readonly IDbContextTransaction _transaction = Substitute.For<IDbContextTransaction>();
+    private readonly IOrderPersistenceService _orderPersistenceService =
+        Substitute.For<IOrderPersistenceService>();
 
+    private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
+        Substitute.For<IReturnRequestPersistenceService>();
 
-    public ValidateReturnRequestStepTests()
+    private readonly IReturnRequestRepository _returnRequestRepository =
+        Substitute.For<IReturnRequestRepository>();
+
+    private readonly ILogger<ValidateReturnRequestStep> _logger =
+        Substitute.For<ILogger<ValidateReturnRequestStep>>();
+
+    private ValidateReturnRequestStep BuildStep() => new(
+        _orderPersistenceService,
+        _returnRequestPersistenceService,
+        _returnRequestRepository,
+        _logger);
+        
+    [Fact]
+    public async Task ExecuteAsync_ShouldReturnSuccess_WhenOrderIsCompletedAndEligible()
     {
-        _unitOfWork.BeginTransactionAsync(Arg.Any<CancellationToken>())
-            .Returns(_transaction);
-        _step = new ValidateReturnRequestStep(_orderRepository, _outboxRepository, _unitOfWork, _logger);
+        var order = CreateCompleteOrder();
+        var data = CreateSampleData(order.Id.Value);
+
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        _returnRequestRepository
+            .GetByOrderIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
+            .Returns((ReturnRequest?)null);
+
+        var context = new ReturnSagaContext();
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(data.CorrelationId, result.Data?["OrderId"]);
+        Assert.True(context.ReturnRequestValidated);
+
+        await _returnRequestPersistenceService.Received(1).CreateReturnRequestAsync(
+            Arg.Any<ReturnRequest>(),
+            Arg.Any<string?>(),
+            Arg.Any<Guid?>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnSuccess_WhenOrderIsCompletedAndValid()
+    public async Task ExecuteAsync_ShouldSkip_WhenAlreadyValidated_Idempotency()
+    {
+        var context = new ReturnSagaContext { ReturnRequestValidated = true };
+
+        var result = await BuildStep().ExecuteAsync(CreateSampleData(Guid.NewGuid()), context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(true, result.Data?["Idempotent"]);
+
+        await _orderPersistenceService.DidNotReceive()
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldReturnSuccess_WhenReturnRequestAlreadyExists()
     {
         var order = CreateCompleteOrder();
+        
+        // idempotency test
+        var data = CreateSampleData(order.Id.Value);
+        var existingRequest = CreateReturnRequest(order);
 
-        var productToReturn = order.Items.First();
-
-        var data = CreateSampleData(order.Id.Value, productToReturn.ProductId);
-
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>())
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
             .Returns(order);
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
-        
+        _returnRequestRepository
+            .GetByOrderIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
+            .Returns(existingRequest);
+
+        var context = new ReturnSagaContext();
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
+
         Assert.True(result.Success);
-        Assert.Equal(data.CorrelationId, result.Data?["OrderId"]);
-        Assert.Equal(OrderStatus.ReturnRequested, order.Status);
+        Assert.Equal("ExistingRecord", result.Data?["Source"]);
+        Assert.True(context.ReturnRequestValidated);
 
-        await _orderRepository.Received(1).AddAsync(order, Arg.Any<CancellationToken>());
-        await _outboxRepository.Received(1).AddAsync(
-            Arg.Any<Guid>(),
-            Arg.Any<string>(),
-            // @todo: fix eventType checking Arg.Is<string>(n => n.Contains("OrderReturnRequestEvent")),
-            Arg.Any<string>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<CancellationToken>());
-
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _transaction.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+        await _returnRequestPersistenceService.DidNotReceive().CreateReturnRequestAsync(
+            Arg.Any<ReturnRequest>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderNotFound()
     {
-        var data = CreateSampleData(Guid.NewGuid(), ProductId.CreateUnique());
+        var data = CreateSampleData(Guid.NewGuid());
 
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((Order?)null);
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
-        
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+
         Assert.False(result.Success);
         Assert.Contains("not found", result.ErrorMessage);
     }
-    
+
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenItemsDoNotMatchOrder()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderStatusIsNotCompleted()
     {
-        var order = CreateCompleteOrder();
+        var order = CreatePendingOrder();
+        var data = CreateSampleData(order.Id.Value);
 
-        var foreignProductId = ProductId.CreateUnique();
-        var data = CreateSampleData(order.Id.Value, foreignProductId);
-
-        _orderRepository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>())
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
             .Returns(order);
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
-        
-        Assert.False(result.Success);
-        Assert.Contains("not part of this order", result.ErrorMessage);
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        Assert.False(result.Success);
+        Assert.Contains("must be completed", result.ErrorMessage);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldReturnFailure_WhenGeneralExceptionOccurs()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderNotEligibleForReturn()
     {
-        var exceptionMessage = "Db Connection lost";
-        var data = CreateSampleData(Guid.NewGuid(), ProductId.CreateUnique());
+        // order completed, but return window has passed (simulate by creating order with old timestamp)
+        var order = CreateCompleteOrder(DateTime.UtcNow.AddDays(-20));
+        var data = CreateSampleData(order.Id.Value);
 
-        _orderRepository.GetByIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
-            .Throws(new Exception(exceptionMessage));
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
 
-        var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+        _returnRequestRepository
+            .GetByOrderIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
+            .Returns((ReturnRequest?)null);
+
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains(exceptionMessage, result.ErrorMessage);
-        await _transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        Assert.Contains("not eligible", result.ErrorMessage);
     }
-    
-    // compensation tests
 
     [Fact]
-    public async Task CompensateAsync_ShouldDoNothingAndLog()
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenUnexpectedExceptionOccurs()
     {
-        var data = CreateSampleData(Guid.NewGuid(), ProductId.CreateUnique());
+        var data = CreateSampleData(Guid.NewGuid());
 
-        await _step.CompensateAsync(data, new ReturnSagaContext(), CancellationToken.None);
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Throws(new Exception("DB connection lost"));
 
-        await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
-        await _orderRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default!, default);
-        
-        // optional test
-        _logger.Received().Log(
-            LogLevel.Information, 
-            Arg.Any<EventId>(),
-            Arg.Is<object>(v => v.ToString()!.Contains("No compensation needed")),
-            null,
-            Arg.Any<Func<object, Exception?, string>>());
+        var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("DB connection lost", result.ErrorMessage);
     }
-    
-    
-    // helpers
-    
-    private static ReturnSagaData CreateSampleData(Guid correlationId, ProductId productId)
+
+    [Fact]
+    public async Task CompensateAsync_ShouldDoNothing_ValidateIsNotReversible()
     {
-        var items = new List<OrderItemDto>
-        {
-            new OrderItemDto(productId.Value, 1, 100, "USD")
-        };
-        
-        return new ReturnSagaData
-        {
-            CorrelationId = correlationId,
-            Currency = "USD",
-            CustomerId = Guid.NewGuid(),
-            RefundAmount = 200,
-            ReturnedItems = items,
-            ReturnReason = "This product is dogshit"
-            
-        };
+        var data = CreateSampleData(Guid.NewGuid());
+
+        await BuildStep().CompensateAsync(data, new ReturnSagaContext(), CancellationToken.None);
+
+        await _orderPersistenceService.DidNotReceive()
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _returnRequestPersistenceService.DidNotReceive()
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>());
     }
+
+    private static ReturnSagaData CreateSampleData(Guid correlationId) => new()
+    {
+        CorrelationId = correlationId,
+        Currency = "USD",
+        CustomerId = Guid.NewGuid(),
+        RefundAmount = 100m,
+        ReturnedItems = new List<OrderItemDto> { new(Guid.NewGuid(), 1, 100m, "USD") },
+        ReturnReason = "Defective item"
+    };
 
     private static Order CreatePendingOrder()
     {
         var customerId = CustomerId.CreateUnique();
-        var address = Address.Create("Voctarova 3 (ta take na palmovci", "Praha", "Czech Republic", "18000");
-
-        var productId = ProductId.CreateUnique();
-        var price = Money.Create(100, "USD");
-        var items = new List<OrderItem>() { OrderItem.Create(productId, 2, price) };
+        var address = Address.Create("Baker St", "London", "UK", "NW1");
+        var items = new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) };
         return Order.Create(customerId, address, items);
     }
 
-    private static Order CreateCompleteOrder()
+    private static Order CreateCompleteOrder(DateTime? completedAt = null)
     {
         var order = CreatePendingOrder();
-        
         order.Pay(PaymentId.From("PAY-123"));
         order.Approve();
         order.Complete();
-        order.MarkEventsAsCommited();
-
+        
+        if (completedAt.HasValue)
+        {
+            // use reflection to set the private _completedAt field for testing
+            var field = typeof(Order).GetField("_completedAt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            field?.SetValue(order, completedAt.Value);
+        }
+        
+        order.ClearUncommittedEvents();
         return order;
     }
+
+    private static ReturnRequest CreateReturnRequest(Order order) =>
+        ReturnRequest.Create(
+            orderId: order.Id,
+            customerId: CustomerId.CreateUnique(),
+            reason: "Defective",
+            itemsToReturn: order.Items.ToList(),
+            refundAmount: Money.Create(100, "USD"),
+            orderCompletedAt: order.CompletedAt!.Value,
+            orderItems: order.Items.ToList(),
+            returnWindow: TimeSpan.FromDays(14));
 }

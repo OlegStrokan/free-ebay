@@ -1,4 +1,5 @@
 using Application.DTOs;
+using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
@@ -30,7 +31,8 @@ public class AwaitReturnShipmentStepTests
             data.CorrelationId,
             data.CustomerId,
             data.ReturnedItems,
-            Arg.Any<CancellationToken>()).Returns(expectedShipmentId);
+            Arg.Any<CancellationToken>())
+            .Returns(new ReturnShipmentResultDto(expectedShipmentId, "TRACK-1", DateTime.UtcNow.AddDays(2)));
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
         
@@ -46,6 +48,28 @@ public class AwaitReturnShipmentStepTests
 
         await _shippingGateway.Received().RegisterWebhookAsync(
             expectedShipmentId,
+            Arg.Any<string>(),
+            Arg.Is<string[]>(events => events.Contains("return.delivered")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldSkipCreation_WhenShipmentIdAlreadyInContext_Idempotency()
+    {
+        var data = CreateSampleData();
+        var context = new ReturnSagaContext { ReturnShipmentId = "EXISTING-SHIP" };
+
+        // gateway must still register webhook and register saga wait even if shipment existed
+        var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal("EXISTING-SHIP", context.ReturnShipmentId);
+
+        await _shippingGateway.DidNotReceive().CreateReturnShipmentAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<List<OrderItemDto>>(), Arg.Any<CancellationToken>());
+
+        await _shippingGateway.Received(1).RegisterWebhookAsync(
+            "EXISTING-SHIP",
             Arg.Any<string>(),
             Arg.Is<string[]>(events => events.Contains("return.delivered")),
             Arg.Any<CancellationToken>());
@@ -78,31 +102,26 @@ public class AwaitReturnShipmentStepTests
     [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenWebhookRegistrationFails()
     {
-
-        var exceptionMessage = "Webhook failed";
-        
         var data = CreateSampleData();
-        var shipmentId = "SHIP-OK";
 
         _shippingGateway.CreateReturnShipmentAsync(
                 Arg.Any<Guid>(), 
                 Arg.Any<Guid>(), 
                 Arg.Any<List<OrderItemDto>>(), 
                 Arg.Any<CancellationToken>())
-            .Returns(shipmentId);
+            .Returns(new ReturnShipmentResultDto("SHIP-OK", "TRACK-OK", DateTime.UtcNow.AddDays(1)));
 
-        // FIX: Match any arguments for the webhook call
         _shippingGateway.RegisterWebhookAsync(
                 Arg.Any<string>(), 
                 Arg.Any<string>(), 
                 Arg.Any<string[]>(), 
                 Arg.Any<CancellationToken>())
-            .ThrowsAsync(new Exception(exceptionMessage));
+            .ThrowsAsync(new Exception("Webhook failed"));
 
         var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains(exceptionMessage, result.ErrorMessage);
+        Assert.Contains("Webhook failed", result.ErrorMessage);
     }
     
     // compensation tests
@@ -147,7 +166,6 @@ public class AwaitReturnShipmentStepTests
         _shippingGateway.CancelReturnShipmentAsync(Arg.Any<string>(), Arg.Any<string>(), CancellationToken.None)
             .Throws(new Exception("Gateway Timeout"));
         
-        // record.exceptionAsync used to prove that the method does not throw
         var exception = await Record.ExceptionAsync(() =>
             _step.CompensateAsync(data, context, CancellationToken.None));
 
@@ -161,8 +179,6 @@ public class AwaitReturnShipmentStepTests
             Arg.Any<Func<object, Exception?, string>>());
     }
     
-    // helpers
-
     private ReturnSagaData CreateSampleData()
     {
         return new ReturnSagaData
