@@ -10,10 +10,7 @@ public class DomainEvent : IDomainEvent
     public string EventType { get; private set; } = null!;
     public string EventData { get; private set; } = null!;
     public int Version { get; private set; }
-    public DateTime OccuredOn { get; private set; }
-
-    // explicit implementation to bridge the OccuredOn typo with the interface contract
-    DateTime IDomainEvent.OccurredOn => OccuredOn;
+    public DateTime OccurredOn { get; private set; }
     
     private DomainEvent(
         Guid eventId,
@@ -22,7 +19,7 @@ public class DomainEvent : IDomainEvent
         string eventType,
         string eventData,
         int version,
-        DateTime occuredOn)
+        DateTime occurredOn)
     {
         EventId = eventId;
         AggregateId = aggregateId;
@@ -30,7 +27,7 @@ public class DomainEvent : IDomainEvent
         EventType = eventType;
         EventData = eventData;
         Version = version;
-        OccuredOn = occuredOn;
+        OccurredOn = occurredOn;
     }
 
     public static DomainEvent Create(

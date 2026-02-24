@@ -1,0 +1,134 @@
+using Domain.Common;
+using Domain.Entities.Order;
+using Domain.Events.CreateOrder;
+using Domain.ValueObjects;
+
+namespace Domain.Tests.Common;
+
+// this  is abstract class. okay?. so we test its behavior through the concrete Order aggregate
+
+public class AggregateRootTests
+{
+    private readonly CustomerId _customerId = CustomerId.CreateUnique();
+    private readonly Address _address = Address.Create("Baker St", "London", "UK", "NW1");
+    private readonly List<OrderItem> _items;
+
+    public AggregateRootTests()
+    {
+        _items = new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) };
+    }
+
+    [Fact]
+    public void Version_ShouldStartAtMinusOne_BeforeAnyEvent()
+    {
+        // the private default constructor leaves Version = -1 before LoadFromHistory
+        var orderId = OrderId.CreateUnique();
+        var history = new List<IDomainEvent>
+        {
+            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, DateTime.UtcNow)
+        };
+
+        var order = Order.FromHistory(history);
+
+        // after one event applied via LoadFromHistory, Version should be 0
+        Assert.Equal(0, order.Version);
+    }
+
+    [Fact]
+    public void RaiseEvent_ShouldIncrementVersion()
+    {
+        var order = Order.Create(_customerId, _address, _items);
+
+        // create raises one event => version goes from -1 to 0
+        Assert.Equal(0, order.Version);
+    }
+
+    [Fact]
+    public void RaiseEvent_ShouldAddToUncommittedEvents()
+    {
+        var order = Order.Create(_customerId, _address, _items);
+
+        Assert.Single(order.UncommitedEvents);
+        Assert.IsType<OrderCreatedEvent>(order.UncommitedEvents[0]);
+    }
+
+    [Fact]
+    public void RaiseEvent_ShouldBothApplyAndTrackEvent()
+    {
+        var order = Order.Create(_customerId, _address, _items);
+        order.ClearUncommittedEvents();
+
+        order.Pay(PaymentId.From("PAY-1"));
+
+        // state was applied
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        // event is tracked
+        Assert.Single(order.UncommitedEvents);
+        Assert.IsType<OrderPaidEvent>(order.UncommitedEvents[0]);
+    }
+
+    [Fact]
+    public void ClearUncommittedEvents_ShouldEmptyList_WithoutAffectingVersion()
+    {
+        var order = Order.Create(_customerId, _address, _items);
+        var versionBefore = order.Version;
+
+        order.ClearUncommittedEvents();
+
+        Assert.Empty(order.UncommitedEvents);
+        Assert.Equal(versionBefore, order.Version); // version is unaffected
+    }
+
+    [Fact]
+    public void LoadFromHistory_ShouldIncrementVersionPerEvent()
+    {
+        var orderId = OrderId.CreateUnique();
+        var paymentId = PaymentId.From("PAY-10");
+        var now = DateTime.UtcNow;
+
+        var history = new List<IDomainEvent>
+        {
+            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, now),
+            new OrderPaidEvent(orderId, _customerId, paymentId, Money.Create(100, "USD"), now.AddMinutes(1)),
+            new OrderApprovedEvent(orderId, _customerId, now.AddMinutes(2))
+        };
+
+        var order = Order.FromHistory(history);
+
+        Assert.Equal(2, order.Version); // 3 events => versions 0, 1, 2
+    }
+
+    [Fact]
+    public void LoadFromHistory_ShouldNotAddToUncommittedEvents()
+    {
+        var orderId = OrderId.CreateUnique();
+        var history = new List<IDomainEvent>
+        {
+            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, DateTime.UtcNow)
+        };
+
+        var order = Order.FromHistory(history);
+
+        Assert.Empty(order.UncommitedEvents);
+    }
+
+    [Fact]
+    public void MultipleRaisedEvents_ShouldAllAppearInUncommittedList()
+    {
+        var order = Order.Create(_customerId, _address, _items);
+        order.Pay(PaymentId.From("PAY-2"));
+        order.Approve();
+
+        Assert.Equal(3, order.UncommitedEvents.Count);
+    }
+
+    [Fact]
+    public void UncommittedEvents_ShouldBeReadOnly_CannotBeModifiedExternally()
+    {
+        var order = Order.Create(_customerId, _address, _items);
+
+        // cast to prove it's a read-only wrapper, not a mutable list
+        var events = order.UncommitedEvents;
+        Assert.IsAssignableFrom<IReadOnlyList<IDomainEvent>>(events);
+    }
+}
