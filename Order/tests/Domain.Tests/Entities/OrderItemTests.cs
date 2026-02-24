@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Entities.Order;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
@@ -114,15 +115,5 @@ public class OrderItemTests
         var orderItem = OrderItem.Create(_testProductId, ValidQuantity, _validPrice);
         
         Assert.True(orderItem.IsPriceValid());
-    }
-
-
-    [Fact]
-    public void Builder_ShouldCreateValidOrderItem()
-    {
-        var orderItem = OrderItem.Builder.Build(_testProductId, ValidQuantity, _validPrice);
-
-        Assert.NotNull(orderItem);
-        Assert.Equal(_testProductId, orderItem.ProductId);
     }
 }
