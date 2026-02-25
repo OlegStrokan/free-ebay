@@ -8,6 +8,6 @@ public record OrderTrackingRemovedEvent(
     TrackingId RemovedTrackingId,
     DateTime RemovedAt) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredOn { get; } = RemovedAt;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn => RemovedAt;
 }

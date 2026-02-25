@@ -10,6 +10,7 @@ public sealed class OrderItem : Entity<OrderItemId>
     public ProductId ProductId { get; private set; }
     public int Quantity { get; private set; }
     public Money PriceAtPurchase { get; private set; }
+    private bool _isInitialized;
 
     private OrderItem(
         OrderItemId id,
@@ -22,6 +23,7 @@ public sealed class OrderItem : Entity<OrderItemId>
         ProductId = productId;
         Quantity = quantity;
         PriceAtPurchase = price;
+        _isInitialized = orderId is not null;
     }
 
     public OrderItem() : base() {}
@@ -43,11 +45,12 @@ public sealed class OrderItem : Entity<OrderItemId>
 
     internal void InitializeOrderItem(OrderId orderId, OrderItemId orderItemId)
     {
-        if (OrderId != null)
+        if (_isInitialized)
             throw new DomainException("OrderItem is already initialized");
 
         Id = orderItemId;
         OrderId = orderId;
+        _isInitialized = true;
     }
 
     internal static OrderItem FromSnapshot(OrderItemSnapshotState state) =>
@@ -66,6 +69,7 @@ public sealed class OrderItem : Entity<OrderItemId>
         Quantity = newQuantity;
     }
 
+    // @todo: deadcode - should be deleted or used
     public void UpdatePrice(Money newPrice)
     {
         ValidatePrice(newPrice);
@@ -77,6 +81,7 @@ public sealed class OrderItem : Entity<OrderItemId>
         return PriceAtPurchase.Multiply(Quantity);
     }
 
+    // @todo: deadcode - should be deleted or used
     public bool IsPriceValid()
     {
         return PriceAtPurchase.IsGreaterThanZero();

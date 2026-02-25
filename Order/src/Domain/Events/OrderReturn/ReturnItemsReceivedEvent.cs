@@ -10,6 +10,6 @@ public sealed record ReturnItemsReceivedEvent(
     DateTime ReceivedAt) : IDomainEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();
-    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public DateTime OccurredOn => ReceivedAt;
 }
 

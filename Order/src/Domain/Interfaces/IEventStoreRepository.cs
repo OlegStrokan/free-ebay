@@ -16,6 +16,7 @@ public interface IEventStoreRepository
         string aggregateType,
         CancellationToken cancellationToken = default);
 
+// @todo: deadcode - should be deleted or used
     Task<bool> ExistsAsync(
         string aggregateId,
         string aggregateType,

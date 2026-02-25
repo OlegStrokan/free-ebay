@@ -9,9 +9,9 @@ public sealed class ReturnStatus
     
     public string Name { get; }
     public int Value { get;  }
-    public readonly HashSet<ReturnStatus> _allowedTransitions;
+    private readonly HashSet<ReturnStatus> _allowedTransitions;
 
-    public HashSet<ReturnStatus> AllowedTransitions => _allowedTransitions;
+    public IReadOnlyCollection<ReturnStatus> AllowedTransitions => _allowedTransitions;
 
     private ReturnStatus(string name, int value)
     {
@@ -80,8 +80,9 @@ public sealed class ReturnStatus
     public override bool Equals(object? obj)
     {
         return obj is ReturnStatus other && Value == other.Value;
-
     }
+
+    public override int GetHashCode() => Value.GetHashCode();
 
     public static bool operator ==(ReturnStatus? left, ReturnStatus? right)
     {
@@ -90,6 +91,4 @@ public sealed class ReturnStatus
     }
 
     public static bool operator !=(ReturnStatus? left, ReturnStatus? right) => !(left == right);
-
-
 }

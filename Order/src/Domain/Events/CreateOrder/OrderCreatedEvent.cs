@@ -14,5 +14,5 @@ public sealed record OrderCreatedEvent(
     DateTime CreatedAt) : IDomainEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();
-    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public DateTime OccurredOn => CreatedAt;
 }

@@ -12,7 +12,7 @@ public record ReturnPolicyContext(
 
 public class ReturnPolicyService
 {
-    // @think: you can do better
+    // @think: you can do better my boy. Make it more clever before production
     private static readonly HashSet<string> EuCountries = new() { "DE", "FR", "PL", "ES", "IT", "CZ", "NL", "AT" }; 
     public TimeSpan CalculateReturnWindow(ReturnPolicyContext context)
     {
@@ -33,6 +33,6 @@ public class ReturnPolicyService
         return window;
     }
     
-    private static TimeSpan Max(TimeSpan a, TimeSpan b) => a < b ? a : b;
+    private static TimeSpan Max(TimeSpan a, TimeSpan b) => a > b ? a : b;
     private static TimeSpan Add(TimeSpan base_, TimeSpan extra) => base_ + extra;
 }

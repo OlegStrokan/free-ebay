@@ -10,6 +10,6 @@ public sealed record OrderPaidEvent(
     Money Amount,
     DateTime PaidAt) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredOn { get; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn => PaidAt;
 }
