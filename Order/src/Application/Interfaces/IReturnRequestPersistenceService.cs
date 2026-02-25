@@ -9,11 +9,13 @@ public interface IReturnRequestPersistenceService
         Func<ReturnRequest, Task> action,
         CancellationToken cancellationToken);
 
-
     Task<Guid> CreateReturnRequestAsync(
         ReturnRequest returnRequest,
         string? idempotencyKey = null,
         Guid? orderIdForIdempotency = null,
         CancellationToken cancellationToken = default);
 
+    Task<ReturnRequest?> LoadByOrderIdAsync(
+        Guid orderId,
+        CancellationToken cancellationToken);
 }

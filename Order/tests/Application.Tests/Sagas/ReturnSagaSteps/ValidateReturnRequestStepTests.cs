@@ -4,7 +4,6 @@ using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
 using Domain.Entities.Order;
-using Domain.Interfaces;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -20,16 +19,12 @@ public class ValidateReturnRequestStepTests
     private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
         Substitute.For<IReturnRequestPersistenceService>();
 
-    private readonly IReturnRequestRepository _returnRequestRepository =
-        Substitute.For<IReturnRequestRepository>();
-
     private readonly ILogger<ValidateReturnRequestStep> _logger =
         Substitute.For<ILogger<ValidateReturnRequestStep>>();
 
     private ValidateReturnRequestStep BuildStep() => new(
         _orderPersistenceService,
         _returnRequestPersistenceService,
-        _returnRequestRepository,
         _logger);
         
     [Fact]
@@ -42,8 +37,8 @@ public class ValidateReturnRequestStepTests
             .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
             .Returns(order);
 
-        _returnRequestRepository
-            .GetByOrderIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
+        _returnRequestPersistenceService
+            .LoadByOrderIdAsync(data.CorrelationId, Arg.Any<CancellationToken>())
             .Returns((ReturnRequest?)null);
 
         var context = new ReturnSagaContext();
@@ -87,8 +82,8 @@ public class ValidateReturnRequestStepTests
             .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
             .Returns(order);
 
-        _returnRequestRepository
-            .GetByOrderIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
+        _returnRequestPersistenceService
+            .LoadByOrderIdAsync(order.Id.Value, Arg.Any<CancellationToken>())
             .Returns(existingRequest);
 
         var context = new ReturnSagaContext();
@@ -144,8 +139,8 @@ public class ValidateReturnRequestStepTests
             .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
             .Returns(order);
 
-        _returnRequestRepository
-            .GetByOrderIdAsync(Arg.Any<OrderId>(), Arg.Any<CancellationToken>())
+        _returnRequestPersistenceService
+            .LoadByOrderIdAsync(data.CorrelationId, Arg.Any<CancellationToken>())
             .Returns((ReturnRequest?)null);
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);

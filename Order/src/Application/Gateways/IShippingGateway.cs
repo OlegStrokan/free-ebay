@@ -3,7 +3,6 @@ using Application.DTOs.ShipmentGateway;
 
 namespace Application.Gateways;
 
-// @todo: create document with xiaoping express public api
 public interface IShippingGateway
 {
     Task<ShipmentResultDto> CreateShipmentAsync(
@@ -23,6 +22,7 @@ public interface IShippingGateway
         CancellationToken cancellationToken
     );
     
+    // @todo: deadcode - should be deleted or used
     Task<ShipmentStatusDto> GetShipmentStatusAsync(
         string trackingNumber,
         CancellationToken cancellationToken

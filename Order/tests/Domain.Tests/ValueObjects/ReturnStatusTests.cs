@@ -140,4 +140,22 @@ public class ReturnStatusTests
 
         Assert.Equal(ReturnStatus.Received, fromValue);
     }
+
+    [Fact]
+    public void GetHashCode_ShouldBeConsistentWithEquals()
+    {
+        var a = ReturnStatus.FromValue(0);
+        var b = ReturnStatus.Pending;
+
+        Assert.Equal(a.GetHashCode(), b.GetHashCode());
+    }
+
+    [Fact]
+    public void AllowedTransitions_ShouldBeIReadOnlyCollection_NotMutableHashSet()
+    {
+        var transitions = ReturnStatus.Pending.AllowedTransitions;
+
+        Assert.IsAssignableFrom<IReadOnlyCollection<ReturnStatus>>(transitions);
+        Assert.False(transitions is HashSet<ReturnStatus>);
+    }
 }

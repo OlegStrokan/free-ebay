@@ -97,7 +97,7 @@ public sealed class ConfirmReturnReceivedStep(
 
             // Note: In event-sourced systems, you can't easily "unreceive" items.
             // This requires manual intervention.
-            // @todo: so do some stuff here!
+            // @todo: so do some stuff here! like create ticket, or send this shit to help desk
 
             logger.LogWarning(
                 "ReturnRequest {ReturnRequestId} was marked as received but saga failed. " +

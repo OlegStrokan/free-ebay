@@ -9,6 +9,21 @@ namespace Domain.Tests.Common;
 
 public class AggregateRootTests
 {
+       private sealed record UnhandledDomainEvent : IDomainEvent
+    {
+        public Guid EventId { get; init; } = Guid.NewGuid();
+        public DateTime OccurredOn => DateTime.UtcNow;
+    }
+
+    private sealed class StubAggregate : AggregateRoot<OrderId>
+    {
+        private StubAggregate() { }
+
+        public static StubAggregate New() => new();
+
+        public void TriggerUnhandled() => RaiseEvent(new UnhandledDomainEvent());
+    }
+
     private readonly CustomerId _customerId = CustomerId.CreateUnique();
     private readonly Address _address = Address.Create("Baker St", "London", "UK", "NW1");
     private readonly List<OrderItem> _items;
@@ -130,5 +145,17 @@ public class AggregateRootTests
         // cast to prove it's a read-only wrapper, not a mutable list
         var events = order.UncommitedEvents;
         Assert.IsAssignableFrom<IReadOnlyList<IDomainEvent>>(events);
+    }
+
+    [Fact]
+    public void ApplyEvent_ShouldThrow_InvalidOperationException_WhenApplyMethodIsMissing()
+    {
+        var stub = StubAggregate.New();
+
+        // StubAggregate has no Apply(UnhandledDomainEvent) — must throw with a useful message
+        var ex = Assert.Throws<InvalidOperationException>(() => stub.TriggerUnhandled());
+
+        Assert.Contains("Apply", ex.Message);
+        Assert.Contains(nameof(UnhandledDomainEvent), ex.Message);
     }
 }

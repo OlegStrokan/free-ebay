@@ -36,7 +36,6 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
         use createLinkedTokenSource
         pass to all call instead of cancellationToken
         -----------
-        DO IT!
         
         */
         
@@ -46,6 +45,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
          
          
          current implementation: it's too complex so we use SagaWatchdogService for pooling data
+         but when berezovsky will come be fucking prepared
       */
         
         
