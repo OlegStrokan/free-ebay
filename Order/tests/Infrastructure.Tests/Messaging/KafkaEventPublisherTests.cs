@@ -1,13 +1,14 @@
 using System.Text.Json;
 using Application.DTOs;
 using Confluent.Kafka;
-using Domain.Entities;
-using Domain.Events;
 using Domain.Events.CreateOrder;
 using Domain.ValueObjects;
 using Infrastructure.Messaging;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Address = Domain.ValueObjects.Address;
+using OrderItem = Domain.Entities.Order.OrderItem;
 
 namespace Infrastructure.Tests.Messaging;
 
@@ -104,32 +105,76 @@ public class KafkaEventPublisherTests
     {
         var orderId = Guid.NewGuid();
         var domainEvent = CreateOrderCreatedEvent(orderId);
-        
+
         var kafkaException = new ProduceException<string, string>(
             new Error(ErrorCode.Local_Transport), new DeliveryResult<string, string>());
 
-        _producer.When(x => x.ProduceAsync(Arg.Any<string>(), 
-            Arg.Any<Message<string, string>>(), Arg.Any<CancellationToken>()))
-            .Do(_ => throw kafkaException);
+        _producer
+            .ProduceAsync(Arg.Any<string>(), Arg.Any<Message<string, string>>(), Arg.Any<CancellationToken>())
+            .Throws(kafkaException);
 
         await Assert.ThrowsAsync<ProduceException<string, string>>(() =>
             _sut.PublishAsync(domainEvent, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task PublishRawAsync_ShouldLogError_AndRethrow_WhenKafkaFails()
+    {
+        var eventId = Guid.NewGuid();
+        var kafkaException = new ProduceException<string, string>(
+            new Error(ErrorCode.Local_Transport), new DeliveryResult<string, string>());
+
+        _producer
+            .ProduceAsync(Arg.Any<string>(), Arg.Any<Message<string, string>>(), Arg.Any<CancellationToken>())
+            .Throws(kafkaException);
+
+        await Assert.ThrowsAsync<ProduceException<string, string>>(() =>
+            _sut.PublishRawAsync(eventId, "OrderPaidEvent", "{}", DateTime.UtcNow, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldUseGenericSerialization_ForNonOrderCreatedEvent()
+    {
+        // OrderPaidEvent falls through to the default JsonSerializer.Serialize(@event) branch
+        var orderId = Guid.NewGuid();
+        var paymentId = Guid.NewGuid();
+        var evt = new OrderPaidEvent(
+            OrderId.From(orderId),
+            CustomerId.From(Guid.NewGuid()),
+            PaymentId.From(paymentId.ToString()),
+            Money.Create(100, "USD"),
+            DateTime.UtcNow);
+
+        Message<string, string>? captured = null;
+        _producer
+            .ProduceAsync(
+                Arg.Any<string>(),
+                Arg.Do<Message<string, string>>(m => captured = m),
+                Arg.Any<CancellationToken>())
+            .Returns(new DeliveryResult<string, string>());
+
+        await _sut.PublishAsync(evt, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        // key comes from GetEventKey orderId branch
+        Assert.Equal(orderId.ToString(), captured.Key);
+        var wrapper = JsonSerializer.Deserialize<EventWrapper>(captured.Value);
+        Assert.NotNull(wrapper);
+        Assert.Equal(nameof(OrderPaidEvent), wrapper.EventType);
+        // fallback serialises the raw event- payload is not an empty JSON object
+        Assert.NotEmpty(wrapper.Payload);
+    }
+
     private OrderCreatedEvent CreateOrderCreatedEvent(Guid orderId, Guid customerId = default)
     {
         var finalCustomerId = customerId == Guid.Empty ? Guid.NewGuid() : customerId;
-        
+
         return new OrderCreatedEvent(
             OrderId.From(orderId),
             CustomerId.From(finalCustomerId),
             Money.Create(50, "EUR"),
             Address.Create("Street", "City", "Country", "180000"),
             new List<OrderItem>(),
-            DateTime.UtcNow
-        );
+            DateTime.UtcNow);
     }
-    
-    
-    
 }

@@ -175,7 +175,7 @@ public class OrderGrpcServiceTests
         var response = await BuildService().RequestReturn(request, _callContext);
 
         Assert.True(response.Success);
-        Assert.Equal(returnRequestId.ToString(), response.OrderId);
+        Assert.Equal(returnRequestId.ToString(), response.ReturnRequestId);
     }
 
     [Fact]
