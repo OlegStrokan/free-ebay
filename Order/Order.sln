@@ -1,28 +1,28 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "src\Api\Api.csproj", "{585C636D-233D-41C3-B653-711F2F23A478}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "Order\Api\Api.csproj", "{585C636D-233D-41C3-B653-711F2F23A478}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6A85DFAF-38A3-49A2-9C35-FDB21D873788}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Order", "Order", "{6A85DFAF-38A3-49A2-9C35-FDB21D873788}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Application\Application.csproj", "{E0E4830D-D6CD-48E5-8262-FF6C9EC83530}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Order\Application\Application.csproj", "{E0E4830D-D6CD-48E5-8262-FF6C9EC83530}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Domain\Domain.csproj", "{064D4F6F-C49B-40C1-A0F5-3E8AD571F4F4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Order\Domain\Domain.csproj", "{064D4F6F-C49B-40C1-A0F5-3E8AD571F4F4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Infrastructure\Infrastructure.csproj", "{F242FD40-6851-4BB6-9418-EFEA5530C260}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Order\Infrastructure\Infrastructure.csproj", "{F242FD40-6851-4BB6-9418-EFEA5530C260}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4E430B72-9572-4D6A-B26E-1ED8EF6FC5D2}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Order.UnitTests", "Order.UnitTests", "{4E430B72-9572-4D6A-B26E-1ED8EF6FC5D2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Tests", "tests\Api.Tests\Api.Tests.csproj", "{49497EA5-2C8E-442D-8C7F-D24C6F02AA6D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Tests", "Order.UnitTests\Api.Tests\Api.Tests.csproj", "{49497EA5-2C8E-442D-8C7F-D24C6F02AA6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application.Tests", "tests\Application.Tests\Application.Tests.csproj", "{14ED8CA0-3263-433C-84FE-57DCCD670473}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application.Tests", "Order.UnitTests\Application.Tests\Application.Tests.csproj", "{14ED8CA0-3263-433C-84FE-57DCCD670473}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.Tests", "tests\Infrastructure.Tests\Infrastructure.Tests.csproj", "{443B2D11-5E20-419F-8FDD-2C86A00BC68F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.Tests", "Order.UnitTests\Infrastructure.Tests\Infrastructure.Tests.csproj", "{443B2D11-5E20-419F-8FDD-2C86A00BC68F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain.Tests", "tests\Domain.Tests\Domain.Tests.csproj", "{F67FC9E9-4931-48DD-9C0B-A06E791E5883}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain.Tests", "Order.UnitTests\Domain.Tests\Domain.Tests.csproj", "{F67FC9E9-4931-48DD-9C0B-A06E791E5883}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protos", "src\Protos\Protos.csproj", "{AF702408-1086-4D7A-BDAD-88F28B09A322}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protos", "Order\Protos\Protos.csproj", "{AF702408-1086-4D7A-BDAD-88F28B09A322}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "e2e-tests", "e2e-tests", "{254805FA-64CF-4025-B680-9D2D482B6F4B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Order.E2ETests", "Order.E2ETests", "{254805FA-64CF-4025-B680-9D2D482B6F4B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Order.E2ETests", "Order.E2ETests\Order.E2ETests.csproj", "{0E77E391-1F54-4DF4-8479-1CD23C779660}"
 EndProject

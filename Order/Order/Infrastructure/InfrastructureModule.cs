@@ -18,14 +18,14 @@ public static class InfrastructureModule
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
+
         // db context
         services.AddDbContext<AppDbContext>(opt => 
             opt.UseNpgsql(configuration.GetConnectionString("Postgres")));
         
         // Repositories
         services.AddScoped<IEventStoreRepository, EventStoreRepository>();
-        // services.AddScoped<IOrderRepository, OrderRepository>();
-        services.AddScoped<IReturnRequestRepository, ReturnRequestRepository>();
         services.AddScoped<ISnapshotRepository, SnapshotRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
         services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
@@ -45,7 +45,7 @@ public static class InfrastructureModule
         services.AddScoped<IPaymentGateway, PaymentGateway>();
         services.AddScoped<IShippingGateway, ShippingGateway>();
         services.AddScoped<IAccountingGateway, AccountingGateway>();
-        // services.AddScoped<IEmailGateway, EmailGateway>();
+        services.AddScoped<IEmailGateway, EmailGateway>();
 
         // Background services
         services.AddHostedService<OutboxProcessor>();

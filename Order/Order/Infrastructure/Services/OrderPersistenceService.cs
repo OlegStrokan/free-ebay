@@ -164,42 +164,41 @@ public class OrderPersistenceService(
         });
     }
     
-      public async Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
-      {
+    public async Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        var snapshot = await snapshotRepository.GetLatestAsync(
+            orderId.ToString(), "Order", cancellationToken);
 
-          var snapshot = await snapshotRepository.GetLatestAsync(
-              orderId.ToString(), "Order", cancellationToken);
+        if (snapshot != null)
+        {
+            var snapshotState = JsonSerializer.Deserialize<OrderSnapshotState>(snapshot.StateJson);
 
-          if (snapshot != null)
-          {
-            // restore from snapshot
-            var snapshotState = JsonSerializer.Deserialize<OrderSnapshotState>(snapshot.StateJson)!;
-
-            if (snapshotState is null)
+            if (snapshotState is not null)
             {
-                logger.LogWarning(
-                    "Failed to deserialize snapshot for Order {OrderId}. Falling back to full replay.",
-                    orderId);
-                // @think: are we in fucking 70s writing vb code?
-                goto fullReplay;
+                var order = Order.FromSnapshot(snapshotState);
+
+                var deltaEvents = await eventStore.GetEventsAfterVersionAsync(
+                    orderId.ToString(), "Order", snapshot.Version + 1, cancellationToken);
+
+                order.LoadFromHistory(deltaEvents);
+
+                logger.LogDebug(
+                    "Loaded Order {OrderId} with snapshot v{SnapshotVersion} + {DeltaCount} delta events",
+                    orderId, snapshot.Version, deltaEvents.Count());
+
+                return order;
             }
-            
-            var order = Order.FromSnapshot(snapshotState);
-            
-            // load only events that happens after the snapshot version
-            var deltaEvents = await eventStore.GetEventsAfterVersionAsync(
-                orderId.ToString(), "Order", snapshot.Version + 1, cancellationToken);
 
-            order.LoadFromHistory(deltaEvents);
-            
-            logger.LogDebug(
-                "Loader Order {OrderId} with snapshot v{SnapshotVersion} + {DeltaCount} delta events",
-                orderId, snapshot.Version, deltaEvents.Count());
+            logger.LogWarning(
+                "Failed to deserialize snapshot for Order {OrderId}. Falling back to full replay.",
+                orderId);
+        }
 
-            return order; 
-          }
-          
-          fullReplay:
+        return await ReplayOrderFromEventStoreAsync(orderId, cancellationToken);
+    }
+
+    private async Task<Order?> ReplayOrderFromEventStoreAsync(Guid orderId, CancellationToken cancellationToken)
+    {
         var events = await eventStore.GetEventsAsync(
             orderId.ToString(),
             "Order",

@@ -8,6 +8,10 @@ public class KafkaOptions
     
     public string BootstrapServers { get; set; } = "localhost:9092";
     public string ConsumerGroupId { get; set; } = "order-service";
+    // SagaOrchestrationService and KafkaReadModelSynchronizer both consume "order.events".
+    // This is intentional — they use different consumer group IDs (see ConsumerGroupId below and
+    // KafkaReadModelSynchronizer's hardcoded "read-model-updater" group).
+    // NEVER set both services to the same GroupId or they will split partitions between them.
     public string SagaTopic { get; set; } = "order.events";
     public string OrderEventsTopic { get; set; } = "order.events";
     public string ReturnEventsTopic { get; set; } = "return.events";

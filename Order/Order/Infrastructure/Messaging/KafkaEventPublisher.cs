@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Confluent.Kafka;
 using Domain.Common;
 using Domain.Events.CreateOrder;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Messaging;
 
@@ -11,15 +12,16 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
 {
     private readonly IProducer<string, string> _producer;
     private readonly ILogger<KafkaEventPublisher> _logger;
+    private readonly KafkaOptions _options;
 
-    public KafkaEventPublisher(ILogger<KafkaEventPublisher> logger)
+    public KafkaEventPublisher(IOptions<KafkaOptions> options, ILogger<KafkaEventPublisher> logger)
     {
         _logger = logger;
+        _options = options.Value;
 
-        // todo: override with envs
         var config = new ProducerConfig
         {
-            BootstrapServers = "localhost:9092",
+            BootstrapServers = _options.BootstrapServers,
             EnableIdempotence = true,
             MaxInFlight = 1,
             Acks = Acks.All,
@@ -29,10 +31,15 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
         _producer = new ProducerBuilder<string, string>(config).Build();
     }
 
-    public KafkaEventPublisher(IProducer<string, string> producer, ILogger<KafkaEventPublisher> logger)
+    // constructor for testing. supply a pre-built producer and optionally override topic config.
+    public KafkaEventPublisher(
+        IProducer<string, string> producer,
+        ILogger<KafkaEventPublisher> logger,
+        KafkaOptions? options = null)
     {
         _producer = producer;
         _logger = logger;
+        _options = options ?? new KafkaOptions();
     }
     
 
@@ -62,7 +69,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
                 }
             };
 
-            var result = await _producer.ProduceAsync("order.events", message, cancellationToken);
+            var result = await _producer.ProduceAsync(_options.OrderEventsTopic, message, cancellationToken);
 
             _logger.LogInformation(
                 "Published {EventType} to Kafka Partition: {Partition}, Offset: {Offset}",
@@ -104,7 +111,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
                 }
             };
 
-            var result = await _producer.ProduceAsync("order.events", message, cancellationToken);
+            var result = await _producer.ProduceAsync(_options.OrderEventsTopic, message, cancellationToken);
 
             _logger.LogInformation(
                 "Published {EventType} to Kafka Partition: {Partition}, Offset: {Offset}",
