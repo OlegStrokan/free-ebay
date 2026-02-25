@@ -52,6 +52,7 @@ public class EventStoreRepository(
         return eventTypes;
     }
 
+    // I want to suck my own dick for this code. isn't it's cool?
     public async Task SaveEventsAsync(
         string aggregateId,
         string aggregateType,
