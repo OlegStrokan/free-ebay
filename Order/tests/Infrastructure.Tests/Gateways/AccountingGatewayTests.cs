@@ -1,0 +1,139 @@
+using Application.DTOs;
+using Grpc.Core;
+using Infrastructure.Gateways;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+using Protos.Accounting;
+
+namespace Infrastructure.Tests.Gateways;
+
+public class AccountingGatewayTests
+{
+    private readonly AccountingService.AccountingServiceClient _client =
+        Substitute.For<AccountingService.AccountingServiceClient>();
+
+    private readonly ILogger<AccountingGateway> _logger =
+        Substitute.For<ILogger<AccountingGateway>>();
+
+    private AccountingGateway Build() => new(_client, _logger);
+
+    private static AsyncUnaryCall<T> GrpcCall<T>(T response) =>
+        new AsyncUnaryCall<T>(
+            Task.FromResult(response),
+            Task.FromResult(new Metadata()),
+            () => Status.DefaultSuccess,
+            () => new Metadata(),
+            () => { });
+
+    private static AsyncUnaryCall<T> GrpcFail<T>(StatusCode code, string detail) =>
+        new AsyncUnaryCall<T>(
+            Task.FromException<T>(new RpcException(new Status(code, detail))),
+            Task.FromResult(new Metadata()),
+            () => new Status(code, detail),
+            () => new Metadata(),
+            () => { });
+    
+    [Fact]
+    public async Task RecordRefundAsync_ShouldReturnTransactionId_WhenSucceeds()
+    {
+        var txId = "tx-999";
+        _client
+            .RecordRefundAsync(Arg.Any<RecordRefundRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new RecordRefundResponse { Success = true, TransactionId = txId }));
+
+        var result = await Build().RecordRefundAsync(
+            Guid.NewGuid(), "ref-1", 50m, "USD", "damaged goods type shit", CancellationToken.None);
+
+        Assert.Equal(txId, result);
+    }
+
+    [Fact]
+    public async Task RecordRefundAsync_ShouldThrowInvalidOperation_WhenNotSuccess()
+    {
+        _client
+            .RecordRefundAsync(Arg.Any<RecordRefundRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new RecordRefundResponse { Success = false, ErrorMessage = "accounting error" }));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().RecordRefundAsync(Guid.NewGuid(), "ref-1", 50m, "USD", "reason", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RecordRefundAsync_ShouldThrowInvalidOperation_WhenRpcInvalidArgument()
+    {
+        _client
+            .RecordRefundAsync(Arg.Any<RecordRefundRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<RecordRefundResponse>(StatusCode.InvalidArgument, "bad refund data"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().RecordRefundAsync(Guid.NewGuid(), "ref-1", 50m, "USD", "reason", CancellationToken.None));
+    }
+    
+    [Fact]
+    public async Task ReverseRevenueAsync_ShouldReturnReversalId_WhenSucceeds()
+    {
+        var reversalId = "rev-555";
+        _client
+            .ReverseRevenueAsync(Arg.Any<ReverseRevenueRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new ReverseRevenueResponse { Success = true, ReversalId = reversalId }));
+
+        var result = await Build().ReverseRevenueAsync(
+            Guid.NewGuid(), 100m, "USD", new List<OrderItemDto>(), CancellationToken.None);
+
+        Assert.Equal(reversalId, result);
+    }
+
+    [Fact]
+    public async Task ReverseRevenueAsync_ShouldThrowInvalidOperation_WhenNotSuccess()
+    {
+        _client
+            .ReverseRevenueAsync(Arg.Any<ReverseRevenueRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new ReverseRevenueResponse { Success = false, ErrorMessage = "reversal failed" }));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().ReverseRevenueAsync(Guid.NewGuid(), 100m, "USD", new List<OrderItemDto>(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ReverseRevenueAsync_ShouldThrowInvalidOperation_WhenRpcNotFound()
+    {
+        _client
+            .ReverseRevenueAsync(Arg.Any<ReverseRevenueRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<ReverseRevenueResponse>(StatusCode.NotFound, "order not in accounting"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().ReverseRevenueAsync(Guid.NewGuid(), 100m, "USD", new List<OrderItemDto>(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CancelRevenueReversalAsync_ShouldComplete_WhenSucceeds()
+    {
+        _client
+            .CancelReversalAsync(Arg.Any<CancelReversalRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new CancelReversalResponse { Success = true }));
+
+        await Build().CancelRevenueReversalAsync("rev-1", "mistake", CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task CancelRevenueReversalAsync_ShouldNotThrow_WhenRpcNotFound_IdempotentCancel()
+    {
+        // NotFound = already cancelled - idempotent success (just log warning)
+        _client
+            .CancelReversalAsync(Arg.Any<CancelReversalRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<CancelReversalResponse>(StatusCode.NotFound, "reversal not found"));
+
+        var ex = await Record.ExceptionAsync(() =>
+            Build().CancelRevenueReversalAsync("rev-gone", "reason", CancellationToken.None));
+
+        Assert.Null(ex);
+    }
+}
