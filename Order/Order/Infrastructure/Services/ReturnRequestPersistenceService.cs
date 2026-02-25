@@ -32,9 +32,12 @@ public class ReturnRequestPersistenceService(
 
             try
             {
-                var returnRequest = await LoadReturnRequestByOrderIdAsync(orderId, cancellationToken);
+                var returnRequest = await LoadByOrderIdAsync(orderId, cancellationToken);
                 if (returnRequest is null)
                     throw new ReturnRequestNotFoundException(orderId);
+
+                // Capture version before action(). action() calls RaiseEvent() which increments Version => inconsisnency
+                var expectedVersion = returnRequest.Version;
 
                 await action(returnRequest);
                 
@@ -42,7 +45,7 @@ public class ReturnRequestPersistenceService(
                     returnRequest.Id.Value.ToString(),
                     "ReturnRequest",
                     returnRequest.UncommitedEvents,
-                    returnRequest.Version,
+                    expectedVersion,
                     cancellationToken);
                     
 
@@ -133,44 +136,7 @@ public class ReturnRequestPersistenceService(
 
         return resultIdForIdempotency ?? returnRequest.OrderId.Value;
     }
-    
-    /*  dont judge me, i was high
-        @todo: for better performance maybe maintain an index in read model type shit
-        DONT USE THIS PEACE OF GARBAGE!
-        DONT!
-        @think: should we delete it?
-    */
-    private async Task<ReturnRequest?> LoadThisNastyBitch(
-        Guid orderId,
-        CancellationToken cancellationToken)
-    {
-        // this is not optimal, but i love ego lifting
-        // for now we query DomainEvents directly to find ReturnRequest events
-        var returnRequestEvents = await dbContext.DomainEvents
-            .Where(e => e.AggregateType == "ReturnRequest")
-            .OrderBy(e => e.OccuredOn)
-            .ToListAsync(cancellationToken);
-        
-        // deserizl and check which returnRequest belong to this order
-        foreach (var aggregateId in returnRequestEvents.Select(e => e.AggregateId).Distinct())
-        {
-            var events = await eventStore.GetEventsAsync(
-                aggregateId,
-                "ReturnRequest",
-                cancellationToken);
 
-            if (!events.Any())
-                continue;
-
-            var returnRequest = ReturnRequest.FromHistory(events);
-
-            if (returnRequest.OrderId.Value == orderId)
-                return returnRequest;
-        }
-
-        return null;
-        
-    }
     private async Task<ReturnRequest?> LoadReturnRequestAsync(
         Guid returnRequestId,
         CancellationToken cancellationToken)
@@ -187,7 +153,7 @@ public class ReturnRequestPersistenceService(
         
     }
 
-    private async Task<ReturnRequest?> LoadReturnRequestByOrderIdAsync(
+    public async Task<ReturnRequest?> LoadByOrderIdAsync(
         Guid orderId, CancellationToken cancellationToken)
     {
         var readModel = await dbContext.ReturnRequestReadModels
