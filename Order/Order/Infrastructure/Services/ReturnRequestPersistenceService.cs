@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
+// check OrderReturnPersistanceService which is almost same,
+// but have more explanation comments
 public class ReturnRequestPersistenceService(
     IEventStoreRepository eventStore,
     IOutboxRepository outboxRepository,
@@ -20,7 +22,30 @@ public class ReturnRequestPersistenceService(
 {
     public async Task UpdateReturnRequestAsync(
         Guid orderId,
-        Func<ReturnRequest, Task> action, 
+        Func<ReturnRequest, Task> action,
+        CancellationToken cancellationToken)
+    {
+        const int maxRetries = 3;
+
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await TryUpdateReturnRequestAsync(orderId, action, cancellationToken);
+                return;
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Concurrency conflict") && attempt < maxRetries)
+            {
+                logger.LogWarning(
+                    "Concurrency conflict on attempt {Attempt}/{MaxRetries} for ReturnRequest on Order {OrderId}. Reloading and retrying...",
+                    attempt, maxRetries, orderId);
+            }
+        }
+    }
+
+    private async Task TryUpdateReturnRequestAsync(
+        Guid orderId,
+        Func<ReturnRequest, Task> action,
         CancellationToken cancellationToken)
     {
         var strategy = dbContext.Database.CreateExecutionStrategy();
@@ -36,18 +61,17 @@ public class ReturnRequestPersistenceService(
                 if (returnRequest is null)
                     throw new ReturnRequestNotFoundException(orderId);
 
-                // Capture version before action(). action() calls RaiseEvent() which increments Version => inconsisnency
+                // Capture version before action(). action() calls RaiseEvent() which increments Version => inconsistency
                 var expectedVersion = returnRequest.Version;
 
                 await action(returnRequest);
-                
+
                 await eventStore.SaveEventsAsync(
                     returnRequest.Id.Value.ToString(),
                     "ReturnRequest",
                     returnRequest.UncommitedEvents,
                     expectedVersion,
                     cancellationToken);
-                    
 
                 foreach (var domainEvent in returnRequest.UncommitedEvents)
                 {
@@ -58,7 +82,7 @@ public class ReturnRequestPersistenceService(
                         domainEvent.OccurredOn,
                         cancellationToken);
                 }
-                
+
                 returnRequest.ClearUncommittedEvents();
 
                 await dbContext.SaveChangesAsync(cancellationToken);

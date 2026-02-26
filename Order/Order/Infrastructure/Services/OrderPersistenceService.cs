@@ -21,7 +21,33 @@ public class OrderPersistenceService(
 {
     private const int SnapshotThreshold = 50;
 
+    
+    // we use optimistic locking to prevent.....locking.
+    // more details you can find in integration tests
     public async Task UpdateOrderAsync(
+        Guid orderId,
+        Func<Order, Task> action,
+        CancellationToken cancellationToken)
+    {
+        const int maxRetries = 3;
+
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await TryUpdateOrderAsync(orderId, action, cancellationToken);
+                return;
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Concurrency conflict") && attempt < maxRetries)
+            {
+                logger.LogWarning(
+                    "Concurrency conflict on attempt {Attempt}/{MaxRetries} for Order {OrderId}. Reloading and retrying...",
+                    attempt, maxRetries, orderId);
+            }
+        }
+    }
+
+    private async Task TryUpdateOrderAsync(
         Guid orderId,
         Func<Order, Task> action,
         CancellationToken cancellationToken)
@@ -41,7 +67,22 @@ public class OrderPersistenceService(
 
                 var expectedVersion = order.Version;
                 
+                /* 
+                 * you can argue what we can't retry "action" here: UpdateOrderAsync, BUT:
+                 * action mutates the aggregate which is fine because the aggregate
+                 * reloaded fresh each retry. But if action ever does some external type shit
+                 * like call api, or fucks without condom - unpredictable stuff will happen. ok?
+                 */
                 await action(order);
+
+                /*
+                NOTE:
+                The only thing to watch: if after 3 attempts it still fails, the exception propagates 
+                as-is (InvalidOperationException with "Concurrency conflict"). You may
+                 want to wrap it in a domain-specific exception like OrderConcurrencyException so callers 
+                 can distinguish it from other InvalidOperationExceptions rather than relying on string matching.
+
+                */
 
                 await eventStore.SaveEventsAsync(
                     order.Id.Value.ToString(),
@@ -93,7 +134,6 @@ public class OrderPersistenceService(
                     }
                 }
             }
-            
             catch (Exception ex)
             {
                 logger.LogError(ex, "Transaction failed for Order {OrderId}", orderId);
@@ -164,35 +204,41 @@ public class OrderPersistenceService(
         });
     }
     
+    /*
+     * Essentially it's merging old snapshot with new events. example:
+     * snapshot chunk is 50 events, we have 67 events => 50 snapshot events merge 17 non-snapshot event
+     * snapshot(v0) = { Status: Pending } = full object
+     * delta(v1) = OrderPaidEvent { Status: Paid } = fact/event
+     * result = { Status: Paid } = snapshot + delta (Apply method)
+     */
     public async Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
     {
         var snapshot = await snapshotRepository.GetLatestAsync(
             orderId.ToString(), "Order", cancellationToken);
 
-        if (snapshot != null)
+        if (snapshot == null) return await ReplayOrderFromEventStoreAsync(orderId, cancellationToken);
+        
+        var snapshotState = JsonSerializer.Deserialize<OrderSnapshotState>(snapshot.StateJson);
+
+        if (snapshotState is not null)
         {
-            var snapshotState = JsonSerializer.Deserialize<OrderSnapshotState>(snapshot.StateJson);
+            var order = Order.FromSnapshot(snapshotState);
 
-            if (snapshotState is not null)
-            {
-                var order = Order.FromSnapshot(snapshotState);
+            var deltaEvents = await eventStore.GetEventsAfterVersionAsync(
+                orderId.ToString(), "Order", snapshot.Version + 1, cancellationToken);
 
-                var deltaEvents = await eventStore.GetEventsAfterVersionAsync(
-                    orderId.ToString(), "Order", snapshot.Version + 1, cancellationToken);
+            order.LoadFromHistory(deltaEvents);
 
-                order.LoadFromHistory(deltaEvents);
+            logger.LogDebug(
+                "Loaded Order {OrderId} with snapshot v{SnapshotVersion} + {DeltaCount} delta events",
+                orderId, snapshot.Version, deltaEvents.Count());
 
-                logger.LogDebug(
-                    "Loaded Order {OrderId} with snapshot v{SnapshotVersion} + {DeltaCount} delta events",
-                    orderId, snapshot.Version, deltaEvents.Count());
-
-                return order;
-            }
-
-            logger.LogWarning(
-                "Failed to deserialize snapshot for Order {OrderId}. Falling back to full replay.",
-                orderId);
+            return order;
         }
+
+        logger.LogWarning(
+            "Failed to deserialize snapshot for Order {OrderId}. Falling back to full replay.",
+            orderId);
 
         return await ReplayOrderFromEventStoreAsync(orderId, cancellationToken);
     }

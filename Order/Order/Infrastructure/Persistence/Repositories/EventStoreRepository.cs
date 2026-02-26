@@ -52,7 +52,8 @@ public class EventStoreRepository(
         return eventTypes;
     }
 
-    // I want to suck my own dick for this code. isn't it's cool?
+    // optimistic concurrency type shit: checks expected version against DB, increments per event,
+    // throw ex on mismatch (no auto-retry; caller must reload aggregate and retry)
     public async Task SaveEventsAsync(
         string aggregateId,
         string aggregateType,
@@ -64,7 +65,6 @@ public class EventStoreRepository(
         if (!eventsList.Any())
             return;
 
-        // optimistic concurrency check
         var currentVersion = await GetCurrentVersionAsync(aggregateId, aggregateType, cancellationToken);
 
         if (currentVersion != expectedVersion)

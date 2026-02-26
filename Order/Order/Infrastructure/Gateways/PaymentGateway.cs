@@ -3,6 +3,7 @@ using Application.Gateways.Exceptions;
 using Domain.ValueObjects;
 using Grpc.Core;
 using Protos.Payment;
+using StatusCode = Grpc.Core.StatusCode;
 
 namespace Infrastructure.Gateways;
 
@@ -63,6 +64,11 @@ public sealed class PaymentGateway(
         {
             throw new InsufficientFundsException(
                 $"Payment precondition failed for OrderId={orderId}. Detail={ex.Status.Detail}");
+        }
+        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
+        {
+            throw new GatewayUnavailableException(
+                $"Payment service unavailable for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}", ex);
         }
     }
 

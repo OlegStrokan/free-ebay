@@ -3,6 +3,7 @@ using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Grpc.Core;
 using Protos.Inventory;
+using StatusCode = Grpc.Core.StatusCode;
 
 namespace Infrastructure.Gateways;
 
@@ -50,6 +51,11 @@ public sealed class InventoryGateway(
         {
             throw new InsufficientInventoryException(
                 $"One or more products not found for OrderId={orderId}. Detail={ex.Status.Detail}");
+        }
+        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
+        {
+            throw new GatewayUnavailableException(
+                $"Inventory service unavailable for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}", ex);
         }
     }
 
