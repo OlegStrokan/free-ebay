@@ -40,7 +40,7 @@ public class OutboxProcessorTests
         _serviceProvider.GetService(typeof(IServiceScopeFactory)).Returns(_scopeFactory);
         _scopeFactory.CreateScope().Returns(_serviceScope);
         _serviceScope.ServiceProvider.GetService(typeof(IOutboxRepository)).Returns(_outboxRepository);
-        // ProcessBatchAsync always resolves IDeadLetterRepository — must be registered
+        // ProcessBatchAsync always resolves IDeadLetterRepository - must be registered
         _serviceScope.ServiceProvider.GetService(typeof(IDeadLetterRepository)).Returns(_deadLetterRepository);
     }
 
@@ -117,7 +117,7 @@ public class OutboxProcessorTests
     public async Task ExecuteAsync_ShouldMoveToDeadLetter_WhenRetryCountExceedsMax()
     {
         var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", DateTime.UtcNow);
-        // RetryCount has a private setter — use reflection to configure test state
+        // RetryCount has a private setter - use reflection to configure test state
         typeof(OutboxMessage).GetProperty(nameof(OutboxMessage.RetryCount))!
             .SetValue(message, 5);
 

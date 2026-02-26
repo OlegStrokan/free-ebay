@@ -117,7 +117,7 @@ public class SagaOrchestrationServiceTests
         var completed = await Task.WhenAny(commitSignal.Task, Task.Delay(3000));
         Assert.True(completed == commitSignal.Task, "Commit was never called.");
 
-        // handler factory was asked but no handler was set up — nothing should be dispatched
+        // handler factory was asked but no handler was set up - nothing should be dispatched
         _handlerFactory.Received().GetHandler(Arg.Any<IServiceProvider>(), eventType);
     }
 

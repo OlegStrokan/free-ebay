@@ -54,7 +54,7 @@ public class CreateOrderCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Equal(existingOrderId, result.Value);
 
-        // persistence must NOT be called — idempotency short-circuits
+        // persistence must NOT be called - idempotency short-circuits
         await _orderPersistenceService.DidNotReceive().CreateOrderAsync(
             Arg.Any<Order>(),
             Arg.Any<string>(),

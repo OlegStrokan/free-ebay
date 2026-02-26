@@ -90,7 +90,7 @@ public class SagaWatchdogServiceTests
             Id        = sagaId,
             SagaType  = "OrderSaga",
             Status    = SagaStatus.Running,
-            // 11 minutes ago — well beyond 2× the 5-minute _stuckThreshold
+            // 11 minutes ago - well beyond 2× the 5-minute _stuckThreshold
             UpdatedAt = DateTime.UtcNow.AddMinutes(-11),
             Steps     = new List<SagaStepLog>()
         };

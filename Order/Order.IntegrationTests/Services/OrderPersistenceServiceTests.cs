@@ -54,7 +54,6 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
     [Fact]
     public async Task CreateOrderAsync_ShouldFail_WhenSameIdempotencyKeyIsUsedTwice()
     {
-        // Arrange
         await using var scope = _fixture.CreateScope();
         var svc = scope.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
 
@@ -180,7 +179,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
     {
         var orderId = Guid.Empty;
 
-        // Arrange: create, pay, then insert a corrupt snapshot — all in one scope
+        // create, pay, then insert a corrupt snapshot - all in one scope
         await using (var scope = _fixture.CreateScope())
         {
             var svc          = scope.ServiceProvider.GetRequiredService<IOrderPersistenceService>();

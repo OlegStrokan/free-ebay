@@ -17,10 +17,6 @@ public class ReturnStatusTests
         Assert.Equal(expectedValue, status.Value);
     }
 
-    // =========================================================================
-    // CanTransitionTo — valid paths
-    // =========================================================================
-
     [Fact]
     public void Pending_CanTransitionTo_Received()
     {

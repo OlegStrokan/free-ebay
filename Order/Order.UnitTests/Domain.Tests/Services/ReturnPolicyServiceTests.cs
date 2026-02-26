@@ -53,7 +53,7 @@ public class ReturnPolicyServiceTests
     [Fact]
     public void CalculateReturnWindow_ShouldReturnBaseWindow_ForSubscriberTier()
     {
-        // Subscriber tier applies Max(base, 7) — after fix Max(14, 7) = 14, so window stays at 14
+        // Subscriber tier applies Max(base, 7) - after fix Max(14, 7) = 14, so window stays at 14
         var ctx = Build(customerTier: "Subscriber");
 
         var window = _sut.CalculateReturnWindow(ctx);

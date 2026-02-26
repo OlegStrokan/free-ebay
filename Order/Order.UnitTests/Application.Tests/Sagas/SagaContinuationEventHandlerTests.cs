@@ -298,7 +298,7 @@ public class SagaContinuationEventHandlerTests
         var correlationId = Guid.NewGuid();
         var payload = JsonSerializer.Serialize(new ContEvent { OrderId = correlationId });
 
-        // Status is Running — not WaitingForEvent, not Completed, not Failed
+        // Status is Running - not WaitingForEvent, not Completed, not Failed
         _repository
             .GetByCorrelationIdAsync(correlationId, "ContSaga", Arg.Any<CancellationToken>())
             .Returns(new SagaState
@@ -325,7 +325,7 @@ public class SagaContinuationEventHandlerTests
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
 
-        // But execution still proceeds (not Completed/Failed) — ResumeFromStepAsync is called
+        // But execution still proceeds (not Completed/Failed) - ResumeFromStepAsync is called
         await _sagaBase.Received(1).ResumeFromStepAsync(
             Arg.Any<ContData>(),
             Arg.Any<SagaContext>(),

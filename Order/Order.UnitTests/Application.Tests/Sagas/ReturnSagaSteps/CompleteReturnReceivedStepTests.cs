@@ -82,7 +82,7 @@ public class CompleteReturnReceivedStepTests
     [Fact]
     public async Task CompensateAsync_ShouldNotThrow_AsFinalStepWithManualReview()
     {
-        // CompleteReturn is the last step — compensation is just a warning log, no state change
+        // CompleteReturn is the last step - compensation is just a warning log, no state change
         var exception = await Record.ExceptionAsync(() =>
             BuildStep().CompensateAsync(CreateSampleData(), new ReturnSagaContext(), CancellationToken.None));
 

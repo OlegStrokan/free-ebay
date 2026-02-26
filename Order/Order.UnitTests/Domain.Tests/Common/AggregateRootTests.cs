@@ -152,7 +152,7 @@ public class AggregateRootTests
     {
         var stub = StubAggregate.New();
 
-        // StubAggregate has no Apply(UnhandledDomainEvent) — must throw with a useful message
+        // StubAggregate has no Apply(UnhandledDomainEvent) - must throw with a useful message
         var ex = Assert.Throws<InvalidOperationException>(() => stub.TriggerUnhandled());
 
         Assert.Contains("Apply", ex.Message);

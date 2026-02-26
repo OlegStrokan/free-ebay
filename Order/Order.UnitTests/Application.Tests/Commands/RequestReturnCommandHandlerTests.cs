@@ -127,7 +127,7 @@ public class RequestReturnCommandHandlerTest
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenOrderIsNotCompleted()
     {
-        // Order is Pending — not eligible for return
+        // Order is Pending - not eligible for return
         var items = new List<OrderItem>
         {
             OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD"))

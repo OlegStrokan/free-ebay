@@ -12,6 +12,7 @@ using Xunit;
 
 namespace Order.IntegrationTests.Services;
 
+// kafka is mocked here
 [Collection("Integration")]
 public sealed class OutboxProcessorTests : IClassFixture<IntegrationFixture>
 {
