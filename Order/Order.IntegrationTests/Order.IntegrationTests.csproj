@@ -21,6 +21,9 @@
 
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.14" />
+        <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
     </ItemGroup>
 
     <ItemGroup>

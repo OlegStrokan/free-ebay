@@ -1,6 +1,10 @@
+using Application.Interfaces;
+using Application.Sagas.Persistence;
 using Domain.Interfaces;
 using Infrastructure.Persistence.DbContext;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.Services;
+using Infrastructure.Services.EventIdempotencyChecker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,6 +45,15 @@ public sealed class IntegrationFixture : IAsyncLifetime
 
         services.AddScoped<IEventStoreRepository, EventStoreRepository>();
         services.AddScoped<ISnapshotRepository, SnapshotRepository>();
+        services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
+        services.AddScoped<IDeadLetterRepository, DeadLetterRepository>();
+        services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
+        services.AddScoped<IReturnRequestPersistenceService, ReturnRequestPersistenceService>();
+        services.AddScoped<ISagaRepository, SagaRepository>();
+        services.AddScoped<OrderReadModelUpdater>();
+        services.AddScoped<ReturnRequestReadModelUpdater>();
+        services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
 
         Services = services.BuildServiceProvider();
         

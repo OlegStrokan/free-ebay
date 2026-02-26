@@ -88,7 +88,6 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
             .WithMessage("*Concurrency conflict*");
     }
     
-    
     [Fact]
     public async Task GetEventsAsync_ShouldReturnEventsInVersionOrder_EvenIfInsertedOutOfOrder()
     {
@@ -119,18 +118,12 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         events[1].Should().BeOfType<OrderPaidEvent>("version 1 must come second");
     }
 
-    // =========================================================================
-    // GetEventsAfterVersionAsync — snapshot + delta path
-    // =========================================================================
-
-    /// <summary>
-    /// LoadOrderAsync uses this method to load only the events that occurred after
-    /// the snapshot version, avoiding a full replay.
-    ///
-    /// Setup: save 3 events (v0-v2) as the "historical" baseline, then save 1 more
-    /// event (v3) as the post-snapshot delta.
-    /// Assertion: GetEventsAfterVersionAsync(afterVersion: 2) returns only v3.
-    /// </summary>
+    /* LoadOrderAsync uses this method to load only the events that occurred after
+     * the snapshot version, avoiding a full replay.
+     * setup: save 3 events (v0-v2) as the "historical" baseline, then save 1 more
+     * event (v3) as the post-snapshot delta.
+     * Assertion: GetEventsAfterVersionAsync(afterVersion: 2) returns only v3.
+     */
     [Fact]
     public async Task GetEventsAfterVersionAsync_ShouldReturnOnlyDeltaEvents_AfterSnapshotVersion()
     {
@@ -139,7 +132,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
 
         var aggregateId = Guid.NewGuid().ToString();
 
-        // ── Baseline: 3 events (v0 Created, v1 Paid, v2 Approved) ──
+        // 3 events (v0 Created, v1 Paid, v2 Approved)
         var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
         order.Pay(PaymentId.From("PAY-3"));
         order.Approve();
@@ -151,7 +144,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
 
         order.ClearUncommittedEvents();
 
-        // ── Delta: 1 event (v3 Completed) after snapshot at version 2 ──
+        // new event (v3 Completed) after snapshot at version 2
         order.Complete();
 
         await repo.SaveEventsAsync(
@@ -159,7 +152,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
             order.UncommitedEvents, expectedVersion: 2,
             CancellationToken.None);
 
-        // ── Assert: only the delta event is returned ──
+        // only the delta event is returned
         var delta = (await repo.GetEventsAfterVersionAsync(
             aggregateId, "Order", afterVersion: 2,
             CancellationToken.None)).ToList();
