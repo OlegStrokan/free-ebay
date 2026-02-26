@@ -1,6 +1,6 @@
 namespace Application.DTOs;
 
-// @todo: deadcode - should be deleted or used
+// @todo: deadcode - should be deleted or used, i am aware of that
 public sealed record CreateOrderDto(
     Guid CustomerId,
     List<OrderItemDto> Items,

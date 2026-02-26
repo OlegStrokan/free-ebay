@@ -22,7 +22,7 @@ public interface IShippingGateway
         CancellationToken cancellationToken
     );
     
-    // @todo: deadcode - should be deleted or used
+    // @todo: deadcode - should be deleted or used, i am aware of that
     Task<ShipmentStatusDto> GetShipmentStatusAsync(
         string trackingNumber,
         CancellationToken cancellationToken

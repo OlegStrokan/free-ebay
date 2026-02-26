@@ -6,6 +6,7 @@ using Domain.Common;
 using Domain.Entities;
 using Domain.Entities.Order;
 using Domain.Events.OrderReturn;
+using Domain.Services;
 using Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@ public class RequestReturnCommandHandler(
     IOrderPersistenceService orderPersistenceService,
     IIdempotencyRepository idempotencyRepository,
     IReturnRequestPersistenceService returnRequestPersistenceService,
+    ReturnPolicyService returnPolicyService,
     ILogger<RequestReturnCommandHandler> logger
         ) : IRequestHandler<RequestReturnCommand, Result<Guid>>
 {
@@ -68,9 +70,22 @@ public class RequestReturnCommandHandler(
 
                 var refundAmount = Order.CalculateTotalPrice(itemsToReturn);
 
-                //@todo: use ReturnPolicyService class
-                var returnWindow = TimeSpan.FromDays(14);
+               /* @todo: integrate user service
+                * to make it correct i need to update user proto and 
+                * take all needed info as countryCode, CustomerTier
+                * in addition i need one more integration to product to get
+                * list of categories which products have from current order
+                */
+                var policyContext = new ReturnPolicyContext(
+                    CountryCode: "US",
+                    ProductCategories: new List<string>(), 
+                    CustomerTier: "Standard", 
+                    IsHolidaySeason: false 
+                );
+                
+                var returnWindow = returnPolicyService.CalculateReturnWindow(policyContext);
 
+            
                 var returnRequest = ReturnRequest.Create(
                     OrderId.From(request.OrderId),
                     order.CustomerId,

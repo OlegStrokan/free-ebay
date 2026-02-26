@@ -11,7 +11,7 @@ public record ReturnRequestCreatedEventDto
     public DateTime RequestedAt { get; init; }
 }
 
-// @todo: deadcode - should be deleted or used
+// @todo: deadcode - should be deleted or used, i am aware of that
 public record ReturnRequestDto(
     Guid OrderId,
     string Reason,

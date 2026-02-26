@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Xml.Schema;
 using Application.Common.Enums;
 using Application.Gateways;
 using Application.Interfaces;
@@ -13,6 +11,7 @@ public class ProcessRefundStep(
     IPaymentGateway paymentGateway,
     IOrderPersistenceService orderPersistenceService,
     IReturnRequestPersistenceService returnRequestPersistenceService,
+    IIncidentReporter incidentReporter,
     ILogger<ProcessRefundStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -36,7 +35,6 @@ public class ProcessRefundStep(
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["RefundId"] = context.RefundId,
-                    ["Idempotent"] = true
                 });
             }
             
@@ -138,21 +136,23 @@ public class ProcessRefundStep(
                 data.CorrelationId,
                 context.RefundId);
 
-            await SendCriticalAlertAsync(
-                alertType: "RefundCompensationRequired",
-                orderId: data.CorrelationId,
-                refundId: context.RefundId,
-                message: "Refund issued but return saga failed - manual review required",
-                severity: AlertSeverity.Critical,
+            await incidentReporter.SendAlertAsync(
+                new IncidentAlert(
+                    AlertType: "RefundCompensationRequired",
+                    OrderId: data.CorrelationId,
+                    RefundId: context.RefundId,
+                    Message: "Refund issued but return saga failed - manual review required",
+                    Severity: AlertSeverity.Critical),
                 cancellationToken);
 
-            await CreateManualInterventionTicketAsync(
-                orderId: data.CorrelationId,
-                refundId: context.RefundId,
-                issue: "Refund issued but downstream steps failed",
-                suggestedAction: "1. Verify if customer returned items\n" +
-                                 "2. If items not returned, contact customer\n" +
-                                 "3. If customer unresponsive, initiate re-charge or collection",
+            await incidentReporter.CreateInterventionTicketAsync(
+                new InterventionTicket(
+                    OrderId: data.CorrelationId,
+                    RefundId: context.RefundId,
+                    Issue: "Refund issued but downstream steps failed",
+                    SuggestedAction: "1. Verify if customer returned items\n" +
+                                     "2. If items not returned, contact customer\n" +
+                                     "3. If customer unresponsive, initiate re-charge or collection"),
                 cancellationToken);
         }
         catch (Exception ex)
@@ -165,39 +165,4 @@ public class ProcessRefundStep(
         }
     }
     
-    // @todo: make separate class with more dynamic behavior
-    private async Task SendCriticalAlertAsync(
-        string alertType,
-        Guid orderId,
-        string refundId,
-        string message,
-        AlertSeverity severity,
-        CancellationToken cancellationToken)
-    {
-        // @todo: integrate with: pagerDuty, email, sms, slack...fucking something
-        
-        logger.LogInformation("Sending {Severity} alert: {AlertType} for order {OrderId}",
-            severity,
-            alertType,
-            orderId);
-
-        await Task.CompletedTask;
-    }
-    
-    // @todo make separate class. Request should be sent on help desk
-    private async Task CreateManualInterventionTicketAsync(
-        Guid orderId,
-        string refundId,
-        string issue,
-        string suggestedAction,
-        CancellationToken cancellationToken)
-    {
-        logger.LogInformation(
-            "Creating manual intervention ticket for order {OrderId}",
-            orderId);
-        
-        // @todo: create ticket: jira/internal
-
-        await Task.CompletedTask;
-    }
 }
