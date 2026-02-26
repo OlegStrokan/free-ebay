@@ -12,9 +12,10 @@ namespace Application.Tests.Sagas.OrderSagaSteps;
 public class ProcessPaymentStepTests
 {
     private readonly IPaymentGateway _paymentGateway = Substitute.For<IPaymentGateway>();
+    private readonly IIncidentReporter _incidentReporter = Substitute.For<IIncidentReporter>();
     private readonly ILogger<ProcessPaymentStep> _logger = Substitute.For<ILogger<ProcessPaymentStep>>();
 
-    private ProcessPaymentStep BuildStep() => new(_paymentGateway, _logger);
+    private ProcessPaymentStep BuildStep() => new(_paymentGateway, _incidentReporter, _logger);
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_AndSetPaymentIdInContext_WhenGatewaySucceeds()
@@ -47,7 +48,6 @@ public class ProcessPaymentStepTests
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Equal(true, result.Data?["Idempotent"]);
 
         await _paymentGateway.DidNotReceive().ProcessPaymentAsync(
             Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<decimal>(),

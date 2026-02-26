@@ -36,7 +36,6 @@ public sealed class ValidateReturnRequestStep(
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["OrderId"] = data.CorrelationId,
-                    ["Idempotent"] = true
                 });
             }
             
@@ -67,7 +66,6 @@ public sealed class ValidateReturnRequestStep(
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["OrderId"] = data.CorrelationId,
-                    ["Idempotent"] = true,
                     ["Source"] = "ExistingRecord"
                 });
             }

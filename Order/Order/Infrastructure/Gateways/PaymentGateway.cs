@@ -34,7 +34,8 @@ public sealed class PaymentGateway(
 
             if (!response.Success)
             {
-                // @think: does another method exists to map error?
+                // it's more clear than extracting it to a separate method
+                // eventually we will move it when we have like 20+ error codes
                 throw response.ErrorCode switch
                 {
                     "INSUFFICIENT_FUNDS" => new InsufficientFundsException(

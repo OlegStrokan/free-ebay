@@ -71,7 +71,6 @@ public class ProcessRefundStepTests
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Equal(true, result.Data?["Idempotent"]);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());

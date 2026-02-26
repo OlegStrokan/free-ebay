@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Application.Common.Enums;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Application.Interfaces;
@@ -13,6 +14,7 @@ namespace Application.Sagas.OrderSaga.Steps;
 public sealed class CreateShipmentStep(
     IShippingGateway shippingGateway,
     IOrderPersistenceService orderPersistenceService,
+    IIncidentReporter incidentReporter,
     ILogger<CreateShipmentStep> logger
     ) : ISagaStep<OrderSagaData, OrderSagaContext>
 {
@@ -33,7 +35,6 @@ public sealed class CreateShipmentStep(
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["ShipmentId"] = context.ShipmentId,
-                    ["Idempotent"] = true
                 });
             }
 
@@ -163,6 +164,14 @@ public sealed class CreateShipmentStep(
                 ex,
                 "Failed to compensate shipment {ShipmentId}. Manual intervention required",
                 context.ShipmentId);
+
+            await incidentReporter.CreateInterventionTicketAsync(
+                new InterventionTicket(
+                    OrderId: data.CorrelationId,
+                    RefundId: null,
+                    Issue: $"Failed to cancel shipment {context.ShipmentId} during compensation",
+                    SuggestedAction: "Manually cancel the shipment with the shipping provider"),
+                cancellationToken);
         }
     }
     }

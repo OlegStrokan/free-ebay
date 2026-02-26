@@ -115,18 +115,6 @@ public class EventStoreRepository(
             return DeserializeEvents(storedEvents,  aggregateId, aggregateType);
     }
 
-    public async Task<bool> ExistsAsync(
-        string aggregateId,
-        string aggregateType,
-        CancellationToken cancellationToken = default)
-    {
-        return await dbContext.DomainEvents
-            .AnyAsync(e =>
-                    e.AggregateId == aggregateId &&
-                    e.AggregateType == aggregateType,
-                cancellationToken);
-    }
-
     public async Task<int> GetCurrentVersionAsync(
         string aggregateId,
         string aggregateType,
@@ -176,8 +164,7 @@ public class EventStoreRepository(
                     aggregateId);
                 continue;
             }
-
-            // @think: is this a good approach to cast type?
+            
             var domainEvent = (IDomainEvent?)JsonSerializer.Deserialize(
                 storedEvent.EventData, eventType);
 

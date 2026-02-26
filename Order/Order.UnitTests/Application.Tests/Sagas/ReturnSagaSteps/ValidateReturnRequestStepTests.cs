@@ -66,7 +66,6 @@ public class ValidateReturnRequestStepTests
         var result = await BuildStep().ExecuteAsync(CreateSampleData(Guid.NewGuid()), context, CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Equal(true, result.Data?["Idempotent"]);
 
         await _orderPersistenceService.DidNotReceive()
             .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());

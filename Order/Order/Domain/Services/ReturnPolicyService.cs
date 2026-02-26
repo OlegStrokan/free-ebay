@@ -1,7 +1,5 @@
 namespace Domain.Services;
 
-// @todo
-
 public record ReturnPolicyContext(
     string CountryCode,
     List<string> ProductCategories,
@@ -12,7 +10,8 @@ public record ReturnPolicyContext(
 
 public class ReturnPolicyService
 {
-    // @think: you can do better my boy. Make it more clever before production
+    // @todo: you can do better my boy. In 1.0 version of this app
+    // we should have more clever approach to handle return window
     private static readonly HashSet<string> EuCountries = new() { "DE", "FR", "PL", "ES", "IT", "CZ", "NL", "AT" }; 
     public TimeSpan CalculateReturnWindow(ReturnPolicyContext context)
     {

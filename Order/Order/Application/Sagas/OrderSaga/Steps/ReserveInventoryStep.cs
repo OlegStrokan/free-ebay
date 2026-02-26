@@ -1,3 +1,4 @@
+using Application.Common.Enums;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Application.Sagas.Steps;
@@ -7,6 +8,7 @@ namespace Application.Sagas.OrderSaga.Steps;
 
 public sealed class ReserveInventoryStep(
     IInventoryGateway inventoryGateway,
+    IIncidentReporter incidentReporter,
     ILogger<ReserveInventoryStep> logger)
     : ISagaStep<OrderSagaData, OrderSagaContext>
 {
@@ -18,7 +20,20 @@ public sealed class ReserveInventoryStep(
     {
         try
         {
-            // @think: is this reliable way to check idempotency? what if app crushes? use db type shit?
+            /* if you have a question "is this reliable way to check idempotency?" same for other steps
+             * I will say fuck yea. sagaContext is persisted to db after every step
+             * on crash/restart ResumeFromStepAsync deserialized the context and context.<field_name>
+             * will be populated. crash between reserveAsync and the context save would re-run the step
+             * but inventoryGateway.ReserveAsync is idempotent on the service side so we don't care
+             * -----------------------------------------------------------------------------------------
+             * BUT: it's idempotent because this is our microservice which developed by the best developer
+             * in the world - me. If the inventory service were an external service developed by another
+             * team which is stupid enough to write in public api what idempotency is supported, but in
+             * reality they were middle-level coders relied on claude 4.5 so there is no fucking idempotency
+             * support, we will have unpredictable behavior. Should we recheck idempotency on our side?
+             * It's cost money, if we Jeff Bezos creation we would use a deduplication table on our side.
+             * If we RogaIKopyta we don't do it, because we try to sue external system to make us fool
+             */
             if (!string.IsNullOrEmpty(context.ReservationId))
             {
                 logger.LogInformation(
@@ -28,8 +43,6 @@ public sealed class ReserveInventoryStep(
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["ReservationId"] = context.ReservationId,
-                    // @think: should i remove this? we haven't used this field
-                    ["Idempotent"] = true
                 });
             }
             logger.LogInformation(
@@ -101,9 +114,15 @@ public sealed class ReserveInventoryStep(
                 ex,
                 "Failed to release inventory reservation {ReservationId}. Manual intervention may be required",
                 context.ReservationId);
-            
+
+            await incidentReporter.CreateInterventionTicketAsync(
+                new InterventionTicket(
+                    OrderId: data.CorrelationId,
+                    RefundId: null,
+                    Issue: $"Failed to release inventory reservation {context.ReservationId}",
+                    SuggestedAction: "Manually release the reservation in inventory service"),
+                cancellationToken);
             // don't throw - we want to continue compensating other steps
-            // logs this for manual review/cleanup
         }
     }
 }

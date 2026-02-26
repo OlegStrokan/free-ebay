@@ -12,9 +12,10 @@ namespace Application.Tests.Sagas.OrderSagaSteps;
 public class ReserveInventoryStepTests
 {
     private readonly IInventoryGateway _inventoryGateway = Substitute.For<IInventoryGateway>();
+    private readonly IIncidentReporter _incidentReporter = Substitute.For<IIncidentReporter>();
     private readonly ILogger<ReserveInventoryStep> _logger = Substitute.For<ILogger<ReserveInventoryStep>>();
 
-    private ReserveInventoryStep BuildStep() => new(_inventoryGateway, _logger);
+    private ReserveInventoryStep BuildStep() => new(_inventoryGateway, _incidentReporter, _logger);
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_AndSetReservationId_WhenGatewaySucceeds()
@@ -45,8 +46,7 @@ public class ReserveInventoryStepTests
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Equal(true, result.Data?["Idempotent"]);
-
+        
         await _inventoryGateway.DidNotReceive().ReserveAsync(
             Arg.Any<Guid>(), Arg.Any<List<OrderItemDto>>(), Arg.Any<CancellationToken>());
     }

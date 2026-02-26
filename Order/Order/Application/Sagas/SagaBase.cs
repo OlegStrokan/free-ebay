@@ -16,6 +16,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
     private readonly ISagaErrorClassifier _errorClassifier;
     protected readonly IEnumerable<ISagaStep<TData, TContext>> Steps;
     protected abstract string SagaType { get; }
+    protected virtual TimeSpan SagaTimeout => TimeSpan.FromMinutes(5);
 
     protected SagaBase(
         ISagaRepository sagaRepository,
@@ -31,24 +32,18 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
 
     public async Task<SagaResult> ExecuteAsync(TData data, CancellationToken cancellationToken)
     {
-        /* @think: what if .... you know... we could create timeout cancellation token
-        timespan = 5 min
-        use createLinkedTokenSource
-        pass to all call instead of cancellationToken
-        -----------
-        
-        */
-        
         /* @todo: we will add like 400 lines of divined code to create event
          driven stuff type shit yes we have basic logs we have logs,
         but if Berezovsky will lose money because of us?
          
-         
          current implementation: it's too complex so we use SagaWatchdogService for pooling data
          but when berezovsky will come be fucking prepared
       */
-        
-        
+
+        using var timeoutCts = new CancellationTokenSource(SagaTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+        var sagaCancellationToken = linkedCts.Token;
+
         var sagaId = Guid.NewGuid();
         var context = new TContext(); 
 
@@ -68,7 +63,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
             UpdatedAt = DateTime.UtcNow,
         };
 
-        await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+        await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
 
         _logger.LogInformation(
             "Started {SagaType} saga {SagaId} for correlation {CorrelationId}",
@@ -85,7 +80,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
                 step,
                 data,
                 context, 
-                cancellationToken);
+                sagaCancellationToken);
 
             sagaState.Context = JsonSerializer.Serialize(context);
             sagaState.CurrentStep = step.StepName;
@@ -99,7 +94,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
                     step.StepName);
 
                 sagaState.Status = SagaStatus.WaitingForEvent;
-                await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+                await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
 
                 return SagaResult.Success(sagaId);
             }
@@ -111,18 +106,18 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
                     step.StepName, sagaId);
 
                 sagaState.Status = SagaStatus.Failed;
-                await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+                await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
                 
-                await CompensateAsync(sagaId, cancellationToken);
+                await CompensateAsync(sagaId, sagaCancellationToken);
                 return SagaResult.Failed(sagaId, stepResult.ErrorMessage ?? "Unknown error");
             }
             
-            await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+            await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
         }
 
         sagaState.Status = SagaStatus.Completed;
         sagaState.UpdatedAt = DateTime.UtcNow;
-        await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+        await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
 
         _logger.LogInformation("Saga {SagaId} completed successfully", sagaId);
         return SagaResult.Success(sagaId);
@@ -223,8 +218,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
         TContext context,
         CancellationToken cancellationToken)
     {
-        // @think: right now we have boilerplate retries
-        // UPD: all retry is very different so copy-paste approach is ok
+        //  all retry is very different so copy-paste approach is ok
         
         const int maxRetries = 3;
         int retryCount = 0;

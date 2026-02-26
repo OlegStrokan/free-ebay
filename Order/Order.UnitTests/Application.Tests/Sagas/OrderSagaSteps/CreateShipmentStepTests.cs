@@ -17,10 +17,11 @@ public class CreateShipmentStepTests
 {
     private readonly IShippingGateway _shippingGateway = Substitute.For<IShippingGateway>();
     private readonly IOrderPersistenceService _orderPersistenceService = Substitute.For<IOrderPersistenceService>();
+    private readonly IIncidentReporter _incidentReporter = Substitute.For<IIncidentReporter>();
     private readonly ILogger<CreateShipmentStep> _logger = Substitute.For<ILogger<CreateShipmentStep>>();
 
     private CreateShipmentStep BuildStep() =>
-        new(_shippingGateway, _orderPersistenceService, _logger);
+        new(_shippingGateway, _orderPersistenceService, _incidentReporter, _logger);
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_AndUpdateOrder_WhenGatewaySucceeds()
@@ -58,7 +59,6 @@ public class CreateShipmentStepTests
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Equal(true, result.Data?["Idempotent"]);
 
         // gateway must NOT be called again
         await _shippingGateway.DidNotReceive().CreateShipmentAsync(

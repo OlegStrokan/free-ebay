@@ -61,7 +61,6 @@ public class OrderReadModelUpdater(AppDbContext dbContext, ILogger<OrderReadMode
         if (readModel == null) return;
 
         readModel.Status = "Paid";
-        // @todo: update paymentId.Value type. should it be string or Guid?
         readModel.PaymentId = evt.PaymentId.Value;
         readModel.UpdatedAt = evt.PaidAt;
         readModel.Version++;

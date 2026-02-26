@@ -1,3 +1,4 @@
+using Application.Common.Enums;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Application.Sagas.Steps;
@@ -8,6 +9,7 @@ namespace Application.Sagas.OrderSaga.Steps;
 
 public sealed class ProcessPaymentStep(
     IPaymentGateway paymentGateway,
+    IIncidentReporter incidentReporter,
     ILogger<ProcessPaymentStep> logger)
     : ISagaStep<OrderSagaData, OrderSagaContext>
 {
@@ -32,7 +34,6 @@ public sealed class ProcessPaymentStep(
                 return StepResult.SuccessResult(new Dictionary<string, object>
                 {
                     ["PaymentId"] = context.PaymentId,
-                    ["Idempotent"] = true
                 });
             }
             
@@ -136,9 +137,15 @@ public sealed class ProcessPaymentStep(
                 ex,
                 "Failed to refund payment {PaymentId}. Manual refund required!",
                 context.PaymentId);
-            
-            // log for manual intervention
-            // could also send alert to operations team
+
+            await incidentReporter.SendAlertAsync(
+                new IncidentAlert(
+                    AlertType: "PaymentRefundCompensationFailed",
+                    OrderId: data.CorrelationId,
+                    RefundId: null,
+                    Message: $"Failed to refund payment {context.PaymentId} during saga compensation",
+                    Severity: AlertSeverity.Critical),
+                cancellationToken);
         }
 
         

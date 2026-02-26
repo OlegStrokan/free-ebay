@@ -160,8 +160,6 @@ public class OrderPersistenceService(
             try
             {
                 
-                // @todo: check if order already exists. or we dont care about it?
-
                 await eventStore.SaveEventsAsync(
                     order.Id.Value.ToString(),
                     "Order",

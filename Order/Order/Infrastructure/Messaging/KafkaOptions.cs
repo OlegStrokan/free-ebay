@@ -1,7 +1,6 @@
 namespace Infrastructure.Messaging;
 
 
-//@todo: use it in every "configuration[""]"
 public class KafkaOptions
 {
     public const string SectionName = "Kafka";
