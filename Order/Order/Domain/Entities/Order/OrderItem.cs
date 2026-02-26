@@ -69,7 +69,7 @@ public sealed class OrderItem : Entity<OrderItemId>
         Quantity = newQuantity;
     }
 
-    // @todo: deadcode - should be deleted or used
+    // @todo: deadcode - should be deleted or used, i am aware of that
     public void UpdatePrice(Money newPrice)
     {
         ValidatePrice(newPrice);
@@ -81,7 +81,7 @@ public sealed class OrderItem : Entity<OrderItemId>
         return PriceAtPurchase.Multiply(Quantity);
     }
 
-    // @todo: deadcode - should be deleted or used
+    // @todo: deadcode - should be deleted or used, i am aware of that
     public bool IsPriceValid()
     {
         return PriceAtPurchase.IsGreaterThanZero();

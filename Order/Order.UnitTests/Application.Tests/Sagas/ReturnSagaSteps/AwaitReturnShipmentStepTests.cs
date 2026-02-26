@@ -12,12 +12,13 @@ namespace Application.Tests.Sagas.ReturnSagaSteps;
 public class AwaitReturnShipmentStepTests
 {
     private readonly IShippingGateway _shippingGateway = Substitute.For<IShippingGateway>();
+    private readonly IIncidentReporter _incidentReporter = Substitute.For<IIncidentReporter>();
     private readonly ILogger<AwaitReturnShipmentStep> _logger = Substitute.For<ILogger<AwaitReturnShipmentStep>>();
     private readonly AwaitReturnShipmentStep _step;
 
     public AwaitReturnShipmentStepTests()
     {
-        _step = new AwaitReturnShipmentStep(_shippingGateway, _logger);
+        _step = new AwaitReturnShipmentStep(_shippingGateway, _incidentReporter, _logger);
     }
 
     [Fact]

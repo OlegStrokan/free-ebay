@@ -1,8 +1,8 @@
-using System.Text.Json;
+using Application.Common.Enums;
+using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas.Steps;
 using Domain.Exceptions;
-using Domain.Interfaces;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -10,6 +10,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class ConfirmReturnReceivedStep(
     IReturnRequestPersistenceService returnRequestPersistenceService,
+    IIncidentReporter incidentReporter,
     ILogger<ConfirmReturnReceivedStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -96,13 +97,18 @@ public sealed class ConfirmReturnReceivedStep(
 
 
             // Note: In event-sourced systems, you can't easily "unreceive" items.
-            // This requires manual intervention.
-            // @todo: so do some stuff here! like create ticket, or send this shit to help desk
-
             logger.LogWarning(
                 "ReturnRequest {ReturnRequestId} was marked as received but saga failed. " +
                 "Manual review required to determine if items were actually returned.",
                 data.CorrelationId);
+
+            await incidentReporter.CreateInterventionTicketAsync(
+                new InterventionTicket(
+                    OrderId: data.CorrelationId,
+                    RefundId: null,
+                    Issue: "ReturnRequest marked as Received but saga failed - items may have been returned",
+                    SuggestedAction: "Verify warehouse receipt and determine if refund should proceed manually"),
+                cancellationToken);
         }
         catch (Exception ex)
         {

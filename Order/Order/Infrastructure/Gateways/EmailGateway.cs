@@ -6,9 +6,9 @@ using Application.Gateways;
 
 namespace Infrastructure.Gateways;
 
-// @think: should this service be a separate microservice?
-// yes, change it to sending kafka events, and in separate email service
-// listen for kafka messages.....i guess
+
+// @todo, change this to sending kafka events to email topic
+// in external email system listen for kafka messages.....i guess
 public class EmailGateway
 (IConfiguration configuration,
     ILogger<EmailGateway> logger) : IEmailGateway

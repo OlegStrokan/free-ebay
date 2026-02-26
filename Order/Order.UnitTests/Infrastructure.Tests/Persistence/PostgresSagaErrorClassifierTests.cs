@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace Infrastructure.Tests.Persistence;
 
-// @think: not sure if it's make sense
+// @think: not sure if it's make sense, but for now i leave it
 public class PostgresSagaErrorClassifierTests
 {
     private readonly PostgresSagaErrorClassifier _sut = new();

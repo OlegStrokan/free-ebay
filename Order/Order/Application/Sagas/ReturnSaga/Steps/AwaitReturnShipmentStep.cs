@@ -1,3 +1,4 @@
+using Application.Common.Enums;
 using Application.Gateways;
 using Application.Sagas.Steps;
 using Microsoft.Extensions.Logging;
@@ -6,6 +7,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class AwaitReturnShipmentStep(
     IShippingGateway shippingGateway,
+    IIncidentReporter incidentReporter,
     ILogger<AwaitReturnShipmentStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -114,6 +116,14 @@ public sealed class AwaitReturnShipmentStep(
                 ex,
                 "Failed to cancel return shipment {ShipmentId}. Manual intervention required",
                 context.ReturnShipmentId);
+
+            await incidentReporter.CreateInterventionTicketAsync(
+                new InterventionTicket(
+                    OrderId: data.CorrelationId,
+                    RefundId: null,
+                    Issue: $"Failed to cancel return shipment {context.ReturnShipmentId} during compensation",
+                    SuggestedAction: "Manually cancel return shipment with shipping provider"),
+                cancellationToken);
         }
 
     }

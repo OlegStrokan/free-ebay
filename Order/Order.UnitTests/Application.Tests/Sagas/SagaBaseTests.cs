@@ -34,6 +34,20 @@ public class SagaBaseTests
         protected override string SagaType => "TestSaga";
     }
 
+    // Override SagaTimeout to make timeout tests fast (no 5-min wait)
+    public class TestSagaWithShortTimeout : SagaBase<TestSagaData, TestSagaContext>
+    {
+        public TestSagaWithShortTimeout(
+            ISagaRepository repo,
+            IEnumerable<ISagaStep<TestSagaData, TestSagaContext>> steps,
+            ISagaErrorClassifier errorClassifier,
+            ILogger logger)
+            : base(repo, steps, errorClassifier, logger) {}
+
+        protected override string SagaType => "TestSagaWithShortTimeout";
+        protected override TimeSpan SagaTimeout => TimeSpan.FromMilliseconds(100);
+    }
+
     public class TestSagaData : SagaData {}
     public class TestSagaContext : SagaContext {}
 
@@ -408,34 +422,67 @@ public class SagaBaseTests
             Arg.Is<SagaState>(s => s.Status == SagaStatus.FailedToCompensate),
             Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldFail_WhenSagaTimeoutExpires()
+    {
+        // step blocks indefinitely until its cancellation token fires
+        _step1.Order.Returns(1);
+        _step1.StepName.Returns("Step1");
+        _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
+            .Returns(async callInfo =>
+            {
+                var ct = (CancellationToken)callInfo[2];
+                await Task.Delay(TimeSpan.FromSeconds(30), ct); // waits until the saga timeout kills it
+                return StepResult.SuccessResult();
+            });
+
+        // compensation needs GetByIdAsync; nothing to compensate (no completed steps)
+        _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => new SagaState
+            {
+                Id = (Guid)callInfo[0],
+                Status = SagaStatus.Failed,
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext()),
+                Steps = new List<SagaStepLog>()
+            });
+
+        var saga = new TestSagaWithShortTimeout(_repository, new[] { _step1 }, _errorClassifier, _logger);
+        var result = await saga.ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SagaStatus.Failed, result.Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldFail_WhenExternalCancellationRequested()
+    {
+        // same blocking step — but this time the caller cancels, not the internal timeout
+        _step1.Order.Returns(1);
+        _step1.StepName.Returns("Step1");
+        _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
+            .Returns(async callInfo =>
+            {
+                var ct = (CancellationToken)callInfo[2];
+                await Task.Delay(TimeSpan.FromSeconds(30), ct);
+                return StepResult.SuccessResult();
+            });
+
+        _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => new SagaState
+            {
+                Id = (Guid)callInfo[0],
+                Status = SagaStatus.Failed,
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext()),
+                Steps = new List<SagaStepLog>()
+            });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        var result = await Build(_step1).ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, cts.Token);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SagaStatus.Failed, result.Status);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

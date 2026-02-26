@@ -1,4 +1,5 @@
 using Application.DTOs;
+using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
@@ -15,12 +16,12 @@ public class ConfirmReturnReceivedStepTests
 {
     private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
         Substitute.For<IReturnRequestPersistenceService>();
-
+    private readonly IIncidentReporter _incidentReporter = Substitute.For<IIncidentReporter>();
     private readonly ILogger<ConfirmReturnReceivedStep> _logger =
         Substitute.For<ILogger<ConfirmReturnReceivedStep>>();
 
     private ConfirmReturnReceivedStep BuildStep() =>
-        new(_returnRequestPersistenceService, _logger);
+        new(_returnRequestPersistenceService, _incidentReporter, _logger);
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_WhenReturnRequestUpdatedSuccessfully()

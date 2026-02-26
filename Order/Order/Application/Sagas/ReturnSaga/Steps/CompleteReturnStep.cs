@@ -1,14 +1,14 @@
-using System.Text.Json;
+using Application.Common.Enums;
+using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas.Steps;
-using Domain.Interfaces;
-using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Sagas.ReturnSaga.Steps;
 
 public sealed class CompleteReturnStep(
     IReturnRequestPersistenceService returnRequestPersistenceService,
+    IIncidentReporter incidentReporter,
     ILogger<CompleteReturnStep> logger)
 : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -73,9 +73,13 @@ public sealed class CompleteReturnStep(
            "Manual review required - possible inconsistent state.",
            data.CorrelationId);
 
-       // Note: This is the final step, so compensation just means logging.
-       // The ReturnRequest was marked complete, but something after failed.
-       // Manual intervention is required to determine correct state.
+       await incidentReporter.CreateInterventionTicketAsync(
+           new InterventionTicket(
+               OrderId: data.CorrelationId,
+               RefundId: context.RefundId,
+               Issue: "ReturnRequest marked as Completed but saga failed after",
+               SuggestedAction: "Verify final return state and reconcile if needed"),
+           cancellationToken);
 
     }
 }
