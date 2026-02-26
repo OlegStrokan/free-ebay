@@ -9,6 +9,7 @@ using Infrastructure.Persistence;
 using Infrastructure.Persistence.DbContext;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Services;
+using Infrastructure.Services.EventIdempotencyChecker;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure;
@@ -39,6 +40,7 @@ public static class InfrastructureModule
         services.AddScoped<ISagaErrorClassifier, PostgresSagaErrorClassifier>();
         services.AddScoped<ISagaHandlerFactory, SagaHandlerFactory>();
         services.AddScoped<IEventPublisher, KafkaEventPublisher>();
+        services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
 
         // Gateways
         services.AddScoped<IInventoryGateway, InventoryGateway>();
@@ -46,6 +48,7 @@ public static class InfrastructureModule
         services.AddScoped<IShippingGateway, ShippingGateway>();
         services.AddScoped<IAccountingGateway, AccountingGateway>();
         services.AddScoped<IEmailGateway, EmailGateway>();
+        services.AddScoped<IIncidentReporter, HelpDeskIncidentReporter>();
 
         // Background services
         services.AddHostedService<OutboxProcessor>();

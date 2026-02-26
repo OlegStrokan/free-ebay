@@ -18,12 +18,14 @@ public class ProcessRefundStepTests
     private readonly IOrderPersistenceService _orderPersistenceService = Substitute.For<IOrderPersistenceService>();
     private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
         Substitute.For<IReturnRequestPersistenceService>();
+    private readonly IIncidentReporter _incidentReporter = Substitute.For<IIncidentReporter>();
     private readonly ILogger<ProcessRefundStep> _logger = Substitute.For<ILogger<ProcessRefundStep>>();
 
     private ProcessRefundStep BuildStep() => new(
         _paymentGateway,
         _orderPersistenceService,
         _returnRequestPersistenceService,
+        _incidentReporter,
         _logger);
     
     [Fact]

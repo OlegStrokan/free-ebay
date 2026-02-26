@@ -2,6 +2,7 @@ using Application.Interfaces;
 using Application.Sagas.Steps;
 using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Services;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -10,6 +11,7 @@ namespace Application.Sagas.ReturnSaga.Steps;
 public sealed class ValidateReturnRequestStep(
     IOrderPersistenceService orderPersistenceService,
     IReturnRequestPersistenceService returnRequestPersistenceService,
+    ReturnPolicyService returnPolicyService,
     ILogger<ValidateReturnRequestStep> logger
     ) : ISagaStep<ReturnSagaData, ReturnSagaContext>
 {
@@ -83,7 +85,21 @@ public sealed class ValidateReturnRequestStep(
                 )).ToList();
 
             var refundAmount = Money.Create(data.RefundAmount, data.Currency);
-            var returnWindow = TimeSpan.FromDays(14); // @todo: move to domain service and shit
+            
+            /* @todo: integrate user service
+             * to make it correct i need to update user proto and 
+             * take all needed info as countryCode, CustomerTier
+             * in addition i need one more integration to product to get
+             * list of categories which products have from current order
+            */
+            var policyContext = new ReturnPolicyContext(
+                CountryCode: "US",
+                ProductCategories: new List<string>(), 
+                CustomerTier: "Standard", 
+                IsHolidaySeason: false 
+            );
+            
+            var returnWindow = returnPolicyService.CalculateReturnWindow(policyContext);
 
             
             var returnRequest = ReturnRequest.Create(

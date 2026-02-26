@@ -42,7 +42,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
     {
         _output.WriteLine("Happy Path - Full order flow");
         
-        // arrange gprc fakes
+        // gprc fakes
         var paymentId = "paymentId";
         var reservationId = "reservationId";
 
@@ -52,7 +52,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReservationIdToReturn = reservationId;
         _server.AccountingServer.ShouldSucceed = true;
 
-        // arrange shipping wire mock - rest
+        // shipping wire mock - rest
         var shipmentId = "shipmentId";
         var trackingNumber = "trackingNumber";
 
@@ -65,7 +65,6 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         var customerId = Guid.NewGuid();
         var request = BuildCreateOrderRequest(customerId);
         
-        // act 
         var response = await _client.CreateOrderAsync(request);
 
         response.Success.Should().BeTrue("gRPC call must succeed");

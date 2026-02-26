@@ -4,6 +4,7 @@ using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Services;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -19,12 +20,14 @@ public class ValidateReturnRequestStepTests
     private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
         Substitute.For<IReturnRequestPersistenceService>();
 
+    private readonly ReturnPolicyService _returnPolicyService = new();
     private readonly ILogger<ValidateReturnRequestStep> _logger =
         Substitute.For<ILogger<ValidateReturnRequestStep>>();
 
     private ValidateReturnRequestStep BuildStep() => new(
         _orderPersistenceService,
         _returnRequestPersistenceService,
+        _returnPolicyService,
         _logger);
         
     [Fact]

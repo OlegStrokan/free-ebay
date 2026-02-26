@@ -3,6 +3,7 @@ using Application.DTOs;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Services;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -22,11 +23,12 @@ public class RequestReturnCommandHandlerTest
     private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
         Substitute.For<IReturnRequestPersistenceService>();
 
+    private readonly ReturnPolicyService _returnPolicyService = new();
     private readonly ILogger<RequestReturnCommandHandler> _logger =
         Substitute.For<ILogger<RequestReturnCommandHandler>>();
 
     private RequestReturnCommandHandler BuildHandler() =>
-        new(_orderPersistenceService, _idempotencyRepository, _returnRequestPersistenceService, _logger);
+        new(_orderPersistenceService, _idempotencyRepository, _returnRequestPersistenceService, _returnPolicyService, _logger);
 
     // -------------------------------------------------------------------------
 

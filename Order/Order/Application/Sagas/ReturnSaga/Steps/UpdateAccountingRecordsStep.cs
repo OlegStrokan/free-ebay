@@ -29,7 +29,7 @@ public sealed class UpdateAccountingRecordsStep(
                 context.RefundId);
 
             /* @todo:
-             * as soon as faggots from accounting team update public api
+             * as soon as douchebag from accounting team update public api
              * we will use only one external call to prevent second of waiting
             */
             
