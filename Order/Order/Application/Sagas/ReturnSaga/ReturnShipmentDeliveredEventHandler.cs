@@ -16,7 +16,8 @@ public class ReturnShipmentDeliveredEventHandler
     public ReturnShipmentDeliveredEventHandler(
         IReturnSaga saga,
         ISagaRepository sagaRepository,
-        ILogger<ReturnShipmentDeliveredEventHandler> logger) : base(saga, sagaRepository, logger)
+        ISagaDistributedLock distributedLock,
+        ILogger<ReturnShipmentDeliveredEventHandler> logger) : base(saga, sagaRepository, distributedLock, logger)
     {
         
     }

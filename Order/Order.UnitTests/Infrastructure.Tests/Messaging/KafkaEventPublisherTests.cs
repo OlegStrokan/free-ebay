@@ -89,7 +89,7 @@ public class KafkaEventPublisherTests
         _producer.ProduceAsync(Arg.Any<string>(), Arg.Any<Message<string, string>>(),
             Arg.Any<CancellationToken>()).Returns(new DeliveryResult<string, string>());
 
-        await _sut.PublishRawAsync(eventId, type, content, DateTime.UtcNow, CancellationToken.None);
+        await _sut.PublishRawAsync(eventId, type, content, DateTime.UtcNow, eventId.ToString(), CancellationToken.None);
 
         await _producer.Received(1).ProduceAsync(
             "order.events",
@@ -129,7 +129,7 @@ public class KafkaEventPublisherTests
             .Throws(kafkaException);
 
         await Assert.ThrowsAsync<ProduceException<string, string>>(() =>
-            _sut.PublishRawAsync(eventId, "OrderPaidEvent", "{}", DateTime.UtcNow, CancellationToken.None));
+            _sut.PublishRawAsync(eventId, "OrderPaidEvent", "{}", DateTime.UtcNow, eventId.ToString(), CancellationToken.None));
     }
 
     [Fact]

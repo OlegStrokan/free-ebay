@@ -1,5 +1,6 @@
 ﻿using Application.Gateways;
 using Application.Interfaces;
+using Application.Sagas;
 using Application.Sagas.Persistence;
 using Domain.Interfaces;
 using Infrastructure.BackgroundServices;
@@ -11,6 +12,7 @@ using Infrastructure.Persistence.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.EventIdempotencyChecker;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace Infrastructure;
 
@@ -20,6 +22,11 @@ public static class InfrastructureModule
         IConfiguration configuration)
     {
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
+
+        var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        services.AddSingleton<IConnectionMultiplexer>(
+            _ => ConnectionMultiplexer.Connect(redisConnection));
+        services.AddSingleton<ISagaDistributedLock, RedisSagaDistributedLock>();
 
         // db context
         services.AddDbContext<AppDbContext>(opt => 

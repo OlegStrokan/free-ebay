@@ -12,7 +12,12 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
 {
     private readonly ISagaBase<TData> _saga;
     private readonly ISagaRepository _sagaRepository;
+    private readonly ISagaDistributedLock _distributedLock;
     private readonly ILogger _logger;
+
+    // how long one saga execution may hold the lock before it expires automatically
+    // should be greater than the saga timeout so a stuck saga releases the lock via TTL. isn't it cool?
+    private  readonly TimeSpan _lockExpiry = TimeSpan.FromMinutes(6);
     
     public abstract string EventType { get; }
     public abstract string SagaType { get; }
@@ -23,10 +28,12 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
     protected SagaContinuationEventHandler(
         ISagaBase<TData> saga,
         ISagaRepository sagaRepository,
+        ISagaDistributedLock distributedLock,
         ILogger logger)
     {
         _saga = saga;
         _sagaRepository = sagaRepository;
+        _distributedLock = distributedLock;
         _logger = logger;
     }
     
@@ -57,7 +64,23 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
         }
 
         var correlationId = ExtractCorrelationId(eventDto);
+
+        // prevents two concurrent events (duplicate Kafka delivery or webhook retry type shit
+        // from resuming the same saga at the same time (TOCTOU race type shit)
         
+        var lockKey = $"saga-lock:{SagaType}:{correlationId}";
+        await using var sagaLock = await _distributedLock.TryAcquireAsync(
+            lockKey, _lockExpiry, cancellationToken);
+
+        if (sagaLock == null)
+        {
+            _logger.LogWarning(
+                "Could not acquire lock for {SagaType} {CorrelationId}. " +
+                "Concurrent or duplicate {EventType} event discarded.",
+                SagaType, correlationId, EventType);
+            return;
+        }
+
         _logger.LogInformation(
             "Received {EventType} for correlation {CorrelationId}. " +
             "Attempting to resume {SagaType} from step {StepName}...",

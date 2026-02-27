@@ -15,8 +15,18 @@ public class SagaContinuationEventHandlerTests
     private readonly ISagaRepository _repository = Substitute.For<ISagaRepository>();
     private readonly ISagaBase<ContData> _sagaBase = Substitute.For<ISagaBase<ContData>>();
     private readonly ILogger _logger = Substitute.For<ILogger>();
+    private readonly ISagaDistributedLock _lock = Substitute.For<ISagaDistributedLock>();
+    private readonly ISagaLockHandle _lockHandle = Substitute.For<ISagaLockHandle>();
 
-    private TestContinuationHandler BuildSut() => new(_sagaBase, _repository, _logger);
+    public SagaContinuationEventHandlerTests()
+    {
+        // By default the lock is always acquired successfully.
+        _lock
+            .TryAcquireAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(_lockHandle);
+    }
+
+    private TestContinuationHandler BuildSut() => new(_sagaBase, _repository, _lock, _logger);
 
     private SagaState WaitingState(Guid correlationId) => new()
     {
@@ -332,6 +342,89 @@ public class SagaContinuationEventHandlerTests
             "UpdateStatus",
             Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task HandleAsync_ShouldNotResumeSaga_WhenLockCannotBeAcquired()
+    {
+        // simulate lock already held by another process (returns null)
+        _lock
+            .TryAcquireAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns((ISagaLockHandle?)null);
+
+        var correlationId = Guid.NewGuid();
+        var payload = JsonSerializer.Serialize(new ContEvent { OrderId = correlationId });
+
+        await BuildSut().HandleAsync(payload, CancellationToken.None);
+
+        // Must not touch the repository or the saga
+        await _repository.DidNotReceive()
+            .GetByCorrelationIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _sagaBase.DidNotReceive()
+            .ResumeFromStepAsync(Arg.Any<ContData>(), Arg.Any<SagaContext>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldLogWarning_WhenLockCannotBeAcquired()
+    {
+        _lock
+            .TryAcquireAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns((ISagaLockHandle?)null);
+
+        var correlationId = Guid.NewGuid();
+        var payload = JsonSerializer.Serialize(new ContEvent { OrderId = correlationId });
+
+        await BuildSut().HandleAsync(payload, CancellationToken.None);
+
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldAcquireLock_WithCorrectKey()
+    {
+        var correlationId = Guid.NewGuid();
+        var payload = JsonSerializer.Serialize(new ContEvent { OrderId = correlationId });
+
+        _repository
+            .GetByCorrelationIdAsync(correlationId, "ContSaga", Arg.Any<CancellationToken>())
+            .Returns(WaitingState(correlationId));
+
+        _sagaBase
+            .ResumeFromStepAsync(Arg.Any<ContData>(), Arg.Any<SagaContext>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(SagaResult.Success(Guid.NewGuid()));
+
+        await BuildSut().HandleAsync(payload, CancellationToken.None);
+
+        var expectedKey = $"saga-lock:ContSaga:{correlationId}";
+        await _lock.Received(1).TryAcquireAsync(
+            expectedKey,
+            Arg.Any<TimeSpan>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldReleaseLock_EvenWhenResumeFromStepAsyncThrows()
+    {
+        var correlationId = Guid.NewGuid();
+        var payload = JsonSerializer.Serialize(new ContEvent { OrderId = correlationId });
+
+        _repository
+            .GetByCorrelationIdAsync(correlationId, "ContSaga", Arg.Any<CancellationToken>())
+            .Returns(WaitingState(correlationId));
+
+        _sagaBase
+            .ResumeFromStepAsync(Arg.Any<ContData>(), Arg.Any<SagaContext>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new Exception("saga exploded"));
+
+        await BuildSut().HandleAsync(payload, CancellationToken.None);
+
+        // DisposeAsync on the lock handle must have been called (releasing the lock)
+        await _lockHandle.Received(1).DisposeAsync();
+    }
 }
 
 public class ContEvent
@@ -360,8 +453,9 @@ public class TestContinuationHandler
     public TestContinuationHandler(
         ISagaBase<ContData> saga,
         ISagaRepository repository,
+        ISagaDistributedLock distributedLock,
         ILogger logger)
-        : base(saga, repository, logger) { }
+        : base(saga, repository, distributedLock, logger) { }
 
     protected override Guid ExtractCorrelationId(ContEvent eventDto) => eventDto.OrderId;
 

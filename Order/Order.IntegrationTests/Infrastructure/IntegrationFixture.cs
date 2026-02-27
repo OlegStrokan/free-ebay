@@ -1,4 +1,5 @@
 using Application.Interfaces;
+using Application.Sagas;
 using Application.Sagas.Persistence;
 using Domain.Interfaces;
 using Infrastructure.Persistence.DbContext;
@@ -8,15 +9,16 @@ using Infrastructure.Services.EventIdempotencyChecker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 using Xunit;
 
 namespace Order.IntegrationTests.Infrastructure;
 
-/* Shared fixture that starts one PostgreSQL TestContainer per test class
- * model first, no migration needed
- * test are fully isolated without truncating tables - unique aggregate id per test
- * achieve the same isolation with less overhead
+/* Shared fixture that starts one PostgreSQL + one Redis TestContainer per test class.
+ * model first, no migration needed.
+ * Tests are fully isolated without truncating tables - unique aggregate id per test.
  */
 public sealed class IntegrationFixture : IAsyncLifetime
 {
@@ -27,11 +29,15 @@ public sealed class IntegrationFixture : IAsyncLifetime
         .WithImage("postgres:16-alpine")
         .Build();
 
+    private readonly RedisContainer _redis = new RedisBuilder()
+        .WithImage("redis:7-alpine")
+        .Build();
+
     public IServiceProvider Services { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
-        await _postgres.StartAsync();
+        await Task.WhenAll(_postgres.StartAsync(), _redis.StartAsync());
 
         var services = new ServiceCollection();
 
@@ -42,6 +48,10 @@ public sealed class IntegrationFixture : IAsyncLifetime
 
         services.AddDbContext<AppDbContext>(opt =>
             opt.UseNpgsql(_postgres.GetConnectionString()));
+
+        services.AddSingleton<IConnectionMultiplexer>(
+            _ => ConnectionMultiplexer.Connect(_redis.GetConnectionString()));
+        services.AddSingleton<ISagaDistributedLock, RedisSagaDistributedLock>();
 
         services.AddScoped<IEventStoreRepository, EventStoreRepository>();
         services.AddScoped<ISnapshotRepository, SnapshotRepository>();
@@ -68,7 +78,7 @@ public sealed class IntegrationFixture : IAsyncLifetime
         if (Services is IAsyncDisposable d)
             await d.DisposeAsync();
 
-        await _postgres.DisposeAsync();
+        await Task.WhenAll(_postgres.DisposeAsync().AsTask(), _redis.DisposeAsync().AsTask());
     }
     
     public AsyncServiceScope CreateScope() => Services.CreateAsyncScope();
