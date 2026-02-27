@@ -44,13 +44,10 @@ public class OutboxProcessorTests
         _serviceScope.ServiceProvider.GetService(typeof(IDeadLetterRepository)).Returns(_deadLetterRepository);
     }
 
-    /// <summary>
-    /// Happy path: GetUnprocessedMessages → 1 message → PublishRawAsync → MarkAsProcessed
-    /// </summary>
     [Fact]
     public async Task ExecuteAsync_ShouldPublishAndMarkAsProcessed_WhenMessagesExists()
     {
-        var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", DateTime.UtcNow);
+        var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", DateTime.UtcNow, Guid.NewGuid().ToString());
 
         _outboxRepository.GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
@@ -71,23 +68,20 @@ public class OutboxProcessorTests
         await cts.CancelAsync();
 
         await _eventPublisher.Received(1).PublishRawAsync(
-            message.Id, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+            message.Id, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _outboxRepository.Received(1).MarkAsProcessedAsync(message.Id, Arg.Any<CancellationToken>());
     }
 
-    /// <summary>
-    /// When publishing fails: MarkAsProcessed is NOT called, IncrementRetryCount IS called.
-    /// </summary>
     [Fact]
     public async Task ExecuteAsync_ShouldIncrementRetryAndNotMarkProcessed_WhenPublishingFails()
     {
-        var message = new OutboxMessage(Guid.NewGuid(), "BrokenEvent", "{}", DateTime.UtcNow);
+        var message = new OutboxMessage(Guid.NewGuid(), "BrokenEvent", "{}", DateTime.UtcNow, Guid.NewGuid().ToString());
 
         _outboxRepository.GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         _eventPublisher.PublishRawAsync(Arg.Any<Guid>(), Arg.Any<string>(),
-                Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+                Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("Kafka is down!"));
 
         var signal = new TaskCompletionSource<bool>();
@@ -109,14 +103,10 @@ public class OutboxProcessorTests
         await _outboxRepository.Received(1).IncrementRetryCountAsync(message.Id, Arg.Any<CancellationToken>());
     }
 
-    /// <summary>
-    /// When RetryCount >= MaxRetries (5) the message goes directly to the dead letter queue
-    /// without ever calling PublishRawAsync.
-    /// </summary>
     [Fact]
     public async Task ExecuteAsync_ShouldMoveToDeadLetter_WhenRetryCountExceedsMax()
     {
-        var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", DateTime.UtcNow);
+        var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", DateTime.UtcNow, Guid.NewGuid().ToString());
         // RetryCount has a private setter - use reflection to configure test state
         typeof(OutboxMessage).GetProperty(nameof(OutboxMessage.RetryCount))!
             .SetValue(message, 5);
@@ -128,7 +118,7 @@ public class OutboxProcessorTests
 
         _deadLetterRepository
             .When(x => x.AddAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>()))
+                Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<CancellationToken>()))
             .Do(_ => signal.TrySetResult(true));
 
         var worker = new OutboxProcessor(_serviceProvider, _eventPublisher, _logger, _configuration);
@@ -142,18 +132,15 @@ public class OutboxProcessorTests
         Assert.True(completedTask == signal.Task, "DeadLetterRepository.AddAsync was never called within 3 seconds.");
         await _eventPublisher.DidNotReceive().PublishRawAsync(
             Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+            Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _outboxRepository.Received(1).DeleteAsync(message.Id, Arg.Any<CancellationToken>());
     }
-
-    /// <summary>
-    /// When the message is older than MaxAgeDays (7 days) it goes to the dead letter queue.
-    /// </summary>
+    
     [Fact]
     public async Task ExecuteAsync_ShouldMoveToDeadLetter_WhenMessageExceedsMaxAge()
     {
         var oldDate = DateTime.UtcNow.AddDays(-8); // 8 days old vs 7-day threshold
-        var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", oldDate);
+        var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", oldDate, Guid.NewGuid().ToString());
 
         _outboxRepository.GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
@@ -162,7 +149,7 @@ public class OutboxProcessorTests
 
         _deadLetterRepository
             .When(x => x.AddAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>()))
+                Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<CancellationToken>()))
             .Do(_ => signal.TrySetResult(true));
 
         var worker = new OutboxProcessor(_serviceProvider, _eventPublisher, _logger, _configuration);
@@ -176,7 +163,7 @@ public class OutboxProcessorTests
         Assert.True(completedTask == signal.Task, "DeadLetterRepository.AddAsync was never called within 3 seconds.");
         await _eventPublisher.DidNotReceive().PublishRawAsync(
             Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+            Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _outboxRepository.Received(1).DeleteAsync(message.Id, Arg.Any<CancellationToken>());
     }
 }

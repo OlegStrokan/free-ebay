@@ -10,12 +10,13 @@ public class DeadLetterMessageTests
     private static readonly DateTime ValidOccurredOn = DateTime.UtcNow.AddMinutes(-5);
     private const string ValidFailureReason = "Deserialization failed";
     private const int ValidRetryCount = 3;
+    private const string ValidAggregateId = "AGG-001";
     
     [Fact]
     public void Create_ShouldSucceed_WhenAllParametersAreValid()
     {
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
 
         Assert.Equal(ValidId, msg.Id);
         Assert.Equal(ValidType, msg.Type);
@@ -29,7 +30,7 @@ public class DeadLetterMessageTests
     public void Create_ShouldInitializeDefaultState()
     {
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
 
         Assert.Equal(0, msg.DeadLetterRetryCount);
         Assert.False(msg.IsResolved);
@@ -44,7 +45,7 @@ public class DeadLetterMessageTests
         var before = DateTime.UtcNow;
 
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
 
         Assert.True(msg.MovedToDeadLetterAt >= before);
         Assert.True(msg.MovedToDeadLetterAt <= DateTime.UtcNow);
@@ -55,7 +56,7 @@ public class DeadLetterMessageTests
     {
         var ex = Assert.Throws<ArgumentException>(() =>
             DeadLetterMessage.Create(Guid.Empty, ValidType, ValidContent, ValidOccurredOn,
-                ValidFailureReason, ValidRetryCount));
+                ValidFailureReason, ValidRetryCount, ValidAggregateId));
 
         Assert.Contains("MessageId cannot be empty", ex.Message);
     }
@@ -68,7 +69,7 @@ public class DeadLetterMessageTests
     {
         var ex = Assert.Throws<ArgumentException>(() =>
             DeadLetterMessage.Create(ValidId, type!, ValidContent, ValidOccurredOn,
-                ValidFailureReason, ValidRetryCount));
+                ValidFailureReason, ValidRetryCount, ValidAggregateId));
 
         Assert.Contains("Type is required", ex.Message);
     }
@@ -81,7 +82,7 @@ public class DeadLetterMessageTests
     {
         var ex = Assert.Throws<ArgumentException>(() =>
             DeadLetterMessage.Create(ValidId, ValidType, content!, ValidOccurredOn,
-                ValidFailureReason, ValidRetryCount));
+                ValidFailureReason, ValidRetryCount, ValidAggregateId));
 
         Assert.Contains("Content is required", ex.Message);
     }
@@ -94,7 +95,7 @@ public class DeadLetterMessageTests
     {
         var ex = Assert.Throws<ArgumentException>(() =>
             DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-                reason!, ValidRetryCount));
+                reason!, ValidRetryCount, ValidAggregateId));
 
         Assert.Contains("FailureReason is required", ex.Message);
     }
@@ -103,7 +104,7 @@ public class DeadLetterMessageTests
     public void IncrementRetryCount_ShouldIncrementCounter()
     {
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
 
         msg.IncrementRetryCount();
 
@@ -114,7 +115,7 @@ public class DeadLetterMessageTests
     public void IncrementRetryCount_ShouldSetLastRetryAttempt()
     {
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
         var before = DateTime.UtcNow;
 
         msg.IncrementRetryCount();
@@ -127,7 +128,7 @@ public class DeadLetterMessageTests
     public void IncrementRetryCount_MultipleTimes_ShouldAccumulate()
     {
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
 
         msg.IncrementRetryCount();
         msg.IncrementRetryCount();
@@ -140,7 +141,7 @@ public class DeadLetterMessageTests
     public void MarkAsResolved_ShouldSetIsResolved()
     {
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
 
         msg.MarkAsResolved("Manually replayed by ops team");
 
@@ -151,7 +152,7 @@ public class DeadLetterMessageTests
     public void MarkAsResolved_ShouldSetResolvedAtAndNotes()
     {
         var msg = DeadLetterMessage.Create(ValidId, ValidType, ValidContent, ValidOccurredOn,
-            ValidFailureReason, ValidRetryCount);
+            ValidFailureReason, ValidRetryCount, ValidAggregateId);
         var before = DateTime.UtcNow;
 
         msg.MarkAsResolved("Fixed by replay");

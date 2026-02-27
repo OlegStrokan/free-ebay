@@ -54,7 +54,7 @@ public sealed class OutboxProcessorTests : IClassFixture<IntegrationFixture>
         await using (var setupScope = _fixture.CreateScope())
         {
             var db = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.OutboxMessages.Add(new OutboxMessage(messageId, "OrderCreatedEvent", "{}", DateTime.UtcNow));
+            db.OutboxMessages.Add(new OutboxMessage(messageId, "OrderCreatedEvent", "{}", DateTime.UtcNow, messageId.ToString()));
             await db.SaveChangesAsync();
         }
 
@@ -91,7 +91,7 @@ public sealed class OutboxProcessorTests : IClassFixture<IntegrationFixture>
         {
             var db = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var msg = new OutboxMessage(messageId, "SomeEvent", "{}", DateTime.UtcNow);
+            var msg = new OutboxMessage(messageId, "SomeEvent", "{}", DateTime.UtcNow, messageId.ToString());
             for (var i = 0; i < maxRetries; i++)
                 msg.UpdateFailure("previous error", DateTime.UtcNow);
 
@@ -131,7 +131,7 @@ public sealed class OutboxProcessorTests : IClassFixture<IntegrationFixture>
         {
             var db = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var msg = new OutboxMessage(messageId, "OrderPaidEvent", "{}", DateTime.UtcNow);
+            var msg = new OutboxMessage(messageId, "OrderPaidEvent", "{}", DateTime.UtcNow, messageId.ToString());
             msg.MarkAsProcessed(DateTime.UtcNow);
             db.OutboxMessages.Add(msg);
             await db.SaveChangesAsync();

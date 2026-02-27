@@ -7,9 +7,9 @@ namespace Order.IntegrationTests.TestHelpers;
 public sealed class FakeEventPublisher : IEventPublisher
 {
     private readonly object _lock = new();
-    private readonly List<(Guid Id, string TypeName, string Content)> _published = new();
+    private readonly List<(Guid Id, string TypeName, string Content, string AggregateId)> _published = new();
 
-    public IReadOnlyList<(Guid Id, string TypeName, string Content)> Published
+    public IReadOnlyList<(Guid Id, string TypeName, string Content, string AggregateId)> Published
     {
         get { lock (_lock) { return _published.ToList(); } }
     }
@@ -22,7 +22,7 @@ public sealed class FakeEventPublisher : IEventPublisher
         => Task.CompletedTask;
 
     public Task PublishRawAsync(
-        Guid id, string typeName, string content, DateTime occuredOn,
+        Guid id, string typeName, string content, DateTime occuredOn, string aggregateId,
         CancellationToken cancellationToken)
     {
         if (ShouldFail)
@@ -30,7 +30,7 @@ public sealed class FakeEventPublisher : IEventPublisher
 
         lock (_lock)
         {
-            _published.Add((id, typeName, content));
+            _published.Add((id, typeName, content, aggregateId));
         }
 
         return Task.CompletedTask;
