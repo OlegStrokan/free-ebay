@@ -13,6 +13,7 @@ public interface IDeadLetterRepository
         DateTime occuredOn,
         string failureReason,
         int retryCount,
+        string aggregateId,
         CancellationToken ct);
 
     Task<IEnumerable<DeadLetterMessage>> GetAllAsync(

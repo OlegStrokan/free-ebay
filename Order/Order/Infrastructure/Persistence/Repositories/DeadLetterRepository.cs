@@ -16,6 +16,7 @@ public class DeadLetterRepository(AppDbContext dbContext, ILogger<DeadLetterRepo
         DateTime occuredOn,
         string failureReason,
         int retryCount,
+        string aggregateId,
         CancellationToken ct)
     {
         var deadLetterMessage = DeadLetterMessage.Create(
@@ -24,7 +25,8 @@ public class DeadLetterRepository(AppDbContext dbContext, ILogger<DeadLetterRepo
             content,
             occuredOn,
             failureReason,
-            retryCount);
+            retryCount,
+            aggregateId);
 
         dbContext.DeadLetterMessages.Add(deadLetterMessage);
         await dbContext.SaveChangesAsync(ct);
@@ -86,7 +88,8 @@ public class DeadLetterRepository(AppDbContext dbContext, ILogger<DeadLetterRepo
             Guid.NewGuid(),
             deadLetterMessage.Type,
             deadLetterMessage.Content,
-            deadLetterMessage.OccurredOn);
+            deadLetterMessage.OccurredOn,
+            deadLetterMessage.AggregateId);
 
         dbContext.OutboxMessages.Add(outboxMessage);
         await dbContext.SaveChangesAsync(ct);

@@ -7,6 +7,7 @@ public class DeadLetterMessage
     public Guid Id { get; private set; }
     public string Type { get; private set; } = null!;
     public string Content { get; private set; } = null!;
+    public string AggregateId { get; private set; } = null!;
     public DateTime OccurredOn { get; private set; }
     public string FailureReason { get; private set; }
     public int RetryCount { get; private set; }
@@ -27,11 +28,13 @@ public class DeadLetterMessage
         string content,
         DateTime occurredOn,
         string failureReason,
-        int retryCount)
+        int retryCount,
+        string aggregateId)
     {
         Id = id;
         Type = type;
         Content = content;
+        AggregateId = aggregateId;
         OccurredOn = occurredOn;
         FailureReason = failureReason;
         RetryCount = retryCount;
@@ -46,7 +49,8 @@ public class DeadLetterMessage
         string content,
         DateTime occurredOn,
         string failureReason,
-        int retryCount)
+        int retryCount,
+        string aggregateId)
     {
         if (messageId == Guid.Empty)
             throw new ArgumentException("MessageId cannot be empty", nameof(messageId));
@@ -60,7 +64,7 @@ public class DeadLetterMessage
         if (string.IsNullOrWhiteSpace(failureReason))
             throw new ArgumentException("FailureReason is required", nameof(failureReason));
 
-        return new DeadLetterMessage(messageId, type, content, occurredOn, failureReason, retryCount);
+        return new DeadLetterMessage(messageId, type, content, occurredOn, failureReason, retryCount, aggregateId);
     }
 
     public void IncrementRetryCount()

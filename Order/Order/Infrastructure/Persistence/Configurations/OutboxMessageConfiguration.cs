@@ -16,6 +16,7 @@ public class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage
 
         builder.Property(x => x.Type).IsRequired().HasMaxLength(255);
         builder.Property(x => x.Content).IsRequired().HasColumnType("text");
+        builder.Property(x => x.AggregateId).IsRequired().HasMaxLength(255);
         builder.Property(x => x.OccurredOnUtc).IsRequired();
         builder.Property(x => x.ProcessedOnUtc);
         

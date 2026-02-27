@@ -8,8 +8,9 @@ public interface IOutboxRepository
     Task AddAsync(
         Guid messageId,
         string type,
-        string content, 
+        string content,
         DateTime occurredOn,
+        string aggregateId,
         CancellationToken ct
         );
     Task<IEnumerable<OutboxMessage>> GetUnprocessedMessagesAsync(int batchSize, CancellationToken ct);

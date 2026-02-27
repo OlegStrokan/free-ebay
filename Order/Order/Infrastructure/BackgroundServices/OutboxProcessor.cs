@@ -115,6 +115,7 @@ public sealed class OutboxProcessor(
                 message.Type,
                 message.Content,
                 message.OccurredOnUtc,
+                message.AggregateId,
                 ct);
 
             await outboxRepository.MarkAsProcessedAsync(message.Id, ct);
@@ -153,6 +154,7 @@ public sealed class OutboxProcessor(
                 message.OccurredOnUtc,
                 reason,
                 message.RetryCount,
+                message.AggregateId,
                 ct);
 
             await outboxRepo.DeleteAsync(message.Id, ct);

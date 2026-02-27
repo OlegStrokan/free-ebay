@@ -7,9 +7,9 @@ namespace Infrastructure.Persistence.Repositories;
 
 public class OutboxRepository(AppDbContext dbContext) : IOutboxRepository
 {
-    public async Task AddAsync(Guid messageId, string type, string content, DateTime occurredOn, CancellationToken ct)
+    public async Task AddAsync(Guid messageId, string type, string content, DateTime occurredOn, string aggregateId, CancellationToken ct)
     {
-        var outboxMessage = new OutboxMessage(messageId, type, content, occurredOn);
+        var outboxMessage = new OutboxMessage(messageId, type, content, occurredOn, aggregateId);
 
         await dbContext.OutboxMessages.AddAsync(outboxMessage, ct);
         
