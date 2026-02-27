@@ -98,6 +98,7 @@ public class OrderPersistenceService(
                         domainEvent.GetType().Name,
                         JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
                         DateTime.UtcNow,
+                        order.Id.Value.ToString(),
                         cancellationToken);
                 }
 
@@ -174,6 +175,7 @@ public class OrderPersistenceService(
                         domainEvent.GetType().Name,
                         JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
                         domainEvent.OccurredOn,
+                        order.Id.Value.ToString(),
                         cancellationToken);
                 }
 

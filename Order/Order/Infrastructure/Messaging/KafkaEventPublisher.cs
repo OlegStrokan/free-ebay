@@ -1,15 +1,21 @@
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Application.DTOs;
 using Application.Interfaces;
 using Confluent.Kafka;
 using Domain.Common;
 using Domain.Events.CreateOrder;
+using Domain.Events.OrderReturn;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Messaging;
 
+// kafka has no auto-instrumentation build for opentelemetry so we traced it manually
 public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
 {
+    private static readonly ActivitySource _activitySource = new("OrderService.Kafka");
+
     private readonly IProducer<string, string> _producer;
     private readonly ILogger<KafkaEventPublisher> _logger;
     private readonly KafkaOptions _options;
@@ -58,15 +64,24 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
                 OccurredOn = @event.OccurredOn
             };
 
+            using var activity = _activitySource.StartActivity("kafka.publish", ActivityKind.Producer);
+
+            var headers = new Headers
+            {
+                { "event-type", Encoding.UTF8.GetBytes(eventType) },
+                { "event-id", Encoding.UTF8.GetBytes(@event.EventId.ToString()) }
+            };
+
+            if (Activity.Current != null)
+                headers.Add("traceparent",
+                    Encoding.UTF8.GetBytes(
+                        $"00-{Activity.Current.TraceId}-{Activity.Current.SpanId}-01"));
+
             var message = new Message<string, string>
             {
                 Key = GetEventKey(@event),
                 Value = JsonSerializer.Serialize(eventWrapper),
-                Headers = new Headers
-                {
-                    { "event-type", System.Text.Encoding.UTF8.GetBytes(eventType) },
-                    { "event-id", System.Text.Encoding.UTF8.GetBytes(@event.EventId.ToString()) }
-                }
+                Headers = headers
             };
 
             var result = await _producer.ProduceAsync(_options.OrderEventsTopic, message, cancellationToken);
@@ -85,7 +100,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
         }
 }
 
-    public async Task PublishRawAsync(Guid eventId, string typeName, string content, DateTime occuredOn, CancellationToken cancellationToken)
+    public async Task PublishRawAsync(Guid eventId, string typeName, string content, DateTime occuredOn, string aggregateId, CancellationToken cancellationToken)
     {
         try
         {
@@ -100,15 +115,24 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
 
             var finalJson = JsonSerializer.Serialize(eventWrapper);
 
+            using var activity = _activitySource.StartActivity("kafka.publish", ActivityKind.Producer);
+
+            var headers = new Headers
+            {
+                { "event-type", Encoding.UTF8.GetBytes(typeName) },
+                { "event-id", Encoding.UTF8.GetBytes(eventId.ToString()) }
+            };
+
+            if (Activity.Current != null)
+                headers.Add("traceparent",
+                    Encoding.UTF8.GetBytes(
+                        $"00-{Activity.Current.TraceId}-{Activity.Current.SpanId}-01"));
+
             var message = new Message<string, string>
             {
-                Key = eventId.ToString(),
+                Key = aggregateId,
                 Value = finalJson,
-                Headers = new Headers
-                {
-                    { "event-type", System.Text.Encoding.UTF8.GetBytes(typeName) },
-                    { "event-id", System.Text.Encoding.UTF8.GetBytes(eventId.ToString()) }
-                }
+                Headers = headers
             };
 
             var result = await _producer.ProduceAsync(_options.OrderEventsTopic, message, cancellationToken);
@@ -167,6 +191,11 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
             OrderApprovedEvent e => e.OrderId.Value.ToString(),
             OrderCompletedEvent e => e.OrderId.Value.ToString(),
             OrderCancelledEvent e => e.OrderId.Value.ToString(),
+            OrderTrackingAssignedEvent e => e.OrderId.Value.ToString(),
+            ReturnRequestCreatedEvent e => e.OrderId.Value.ToString(),
+            ReturnItemsReceivedEvent e => e.OrderId.Value.ToString(),
+            ReturnRefundProcessedEvent e => e.OrderId.Value.ToString(),
+            ReturnCompletedEvent e => e.OrderId.Value.ToString(),
             _ => @event.EventId.ToString()
         };
     }

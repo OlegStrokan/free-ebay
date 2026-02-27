@@ -10,6 +10,7 @@ using Infrastructure.Services.EventIdempotencyChecker;
 namespace Infrastructure.BackgroundServices;
 
 // reflection based code sometimes can smell to much voodoo, but many cqrs framwework do the same
+// kafka has no auto-instrumentation build for opentelemetry so we traced it manually
 public sealed class KafkaReadModelSynchronizer : BackgroundService
 {
     private static readonly ActivitySource _activitySource = new("OrderService.Kafka");

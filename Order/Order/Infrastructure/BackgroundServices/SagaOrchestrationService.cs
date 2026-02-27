@@ -10,7 +10,7 @@ using Infrastructure.Messaging;
 
 namespace Infrastructure.BackgroundServices;
 
-// process events from kafka and send it to specific saga handler (like OrderCreatedEventHandler)
+// kafka has no auto-instrumentation build for opentelemetry so we traced it manually
 public class SagaOrchestrationService(
     IServiceProvider serviceProvider,
     ILogger<SagaOrchestrationService> logger,
