@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using IdempotencyRecord = Application.Interfaces.IdempotencyRecord;
 
+
 namespace Infrastructure.Persistence.DbContext;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.EntityFrameworkCore.DbContext(options)
@@ -21,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
     public DbSet<DeadLetterMessage> DeadLetterMessages => Set<DeadLetterMessage>();
     public DbSet<AggregateSnapshot> AggregateSnapshots => Set<AggregateSnapshot>();
+    public DbSet<ReturnRequestLookup> ReturnRequestLookups => Set<ReturnRequestLookup>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -34,6 +36,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
         builder.ApplyConfiguration(new ReturnRequestReadModelConfiguration());
         builder.ApplyConfiguration(new DeadLetterMessageConfiguration());
         builder.ApplyConfiguration(new AggregateSnapshotConfiguration());
+        builder.ApplyConfiguration(new ReturnRequestLookupConfiguration());
     }
     
 }
