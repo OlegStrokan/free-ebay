@@ -7,6 +7,9 @@ package order;
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns(CreateOrderResponse);
   rpc RequestReturn(RequestReturnRequest) returns(RequestReturnResponse);
+  rpc GetOrder(GetOrderRequest) returns(GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns(ListOrdersResponse);
+  rpc GetCustomerOrders(GetCustomerOrdersRequest) returns(GetCustomerOrdersResponse);
 }
 
 message CreateOrderRequest {
@@ -48,4 +51,66 @@ message Address {
   string city = 2;
   string country = 3;
   string postal_code = 4;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  bool success = 1;
+  OrderDetails order = 2;
+  string error_message = 3;
+}
+
+message ListOrdersRequest {
+  int32 page_number = 1;
+  int32 page_size = 2;
+}
+
+message ListOrdersResponse {
+  bool success = 1;
+  repeated OrderSummary orders = 2;
+  string error_message = 3;
+}
+
+message GetCustomerOrdersRequest {
+  string customer_id = 1;
+}
+
+message GetCustomerOrdersResponse {
+  bool success = 1;
+  repeated OrderSummary orders = 2;
+  string error_message = 3;
+}
+
+message OrderDetails {
+  string id = 1;
+  string customer_id = 2;
+  string tracking_id = 3;
+  string payment_id = 4;
+  string status = 5;
+  double total_amount = 6;
+  string currency = 7;
+  Address delivery_address = 8;
+  repeated OrderItemDetail items = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  int32 version = 12;
+}
+
+message OrderSummary {
+  string id = 1;
+  string tracking_id = 2;
+  string status = 3;
+  double total_amount = 4;
+  string currency = 5;
+  string created_at = 6;
+}
+
+message OrderItemDetail {
+  string product_id = 1;
+  int32 quantity = 2;
+  double price = 3;
+  string currency = 4;
 }

@@ -310,3 +310,20 @@ ReturnRequestReadModelUpdater	Same as above.
 EventIdempotencyChecker	The main interesting case is the duplicate key race condition path — that's a DB-level concern. Unit test with EF in-memory could be faked but misses the real uniqueness constraint.
 ProcessedEventsCleanupService	ExecuteDeleteAsync batch loop — this is entirely about DB behavior.
 KafkaReadModelSynchronizer	Builds its own Kafka consumer in the constructor (hardcoded new ConsumerBuilder), reflection-based event type discovery. Can't be unit tested meaningfully without a testable constructor. Needs an integration test with Testcontainers Kafka. This is also the file with your own @think: too much voodoo here comment — agreed.
+
+we use lookup repository specificly for returnRequest, because we need strict consistency during command processing. with orders we dont need it so we have just read repo for query handlers
+
+FUCKING SYNCHRONIZATION WITH READ MODEL
+
+1. PersistenceService (same DB transaction)
+   ├── DomainEvents table
+   ├── OutboxMessages table
+   └── [ReturnRequest only] ReturnRequestLookups table
+
+2. OutboxProcessor (background service, polls every ~2s)
+   └── reads unprocessed OutboxMessages → publishes to Kafka
+
+3. KafkaReadModelSynchronizer (background service, Kafka consumer)
+   └── consumes from "order.events" / "return.events"
+       ├── OrderReadModelUpdater.HandleAsync(...)   → OrderReadModels table
+       └── ReturnRequestReadModelUpdater.HandleAsync(...) → ReturnRequestReadModels table

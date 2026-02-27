@@ -1,10 +1,11 @@
 using Application.Commands.CreateOrder;
 using Application.Commands.RequestReturn;
 using Application.DTOs;
+using Application.Interfaces;
+using Application.Queries;
 using FluentValidation;
 using Grpc.Core;
 using MediatR;
-using Microsoft.IdentityModel.Tokens.Experimental;
 using Protos.Order;
 
 namespace Api.GrpcServices;
@@ -138,6 +139,125 @@ public class OrderGrpcService(
         logger.LogError(ex, "Error during {Method}", methodName);
         throw new RpcException(new Status(StatusCode.Internal, $"Internal error in {methodName}"));
     }
+
+    public override async Task<GetOrderResponse> GetOrder(
+        GetOrderRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            if (!Guid.TryParse(request.OrderId, out var orderId))
+                return new GetOrderResponse { Success = false, ErrorMessage = "Invalid order ID format." };
+
+            var result = await mediator.Send(new GetOrderQuery(orderId), context.CancellationToken);
+
+            if (!result.IsSuccess)
+                return new GetOrderResponse { Success = false, ErrorMessage = result.Error };
+
+            return new GetOrderResponse
+            {
+                Success = true,
+                Order = MapToOrderDetails(result.Value!)
+            };
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            return HandleException<GetOrderResponse>(ex, "GetOrder");
+        }
+    }
+
+    public override async Task<ListOrdersResponse> ListOrders(
+        ListOrdersRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var query = new ListOrdersQuery(
+                PageNumber: Math.Max(1, request.PageNumber),
+                PageSize: Math.Clamp(request.PageSize, 1, 100));
+
+            var result = await mediator.Send(query, context.CancellationToken);
+
+            if (!result.IsSuccess)
+                return new ListOrdersResponse { Success = false, ErrorMessage = result.Error };
+
+            var response = new ListOrdersResponse { Success = true };
+            response.Orders.AddRange(result.Value!.Select(MapToOrderSummary));
+            return response;
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            return HandleException<ListOrdersResponse>(ex, "ListOrders");
+        }
+    }
+
+    public override async Task<GetCustomerOrdersResponse> GetCustomerOrders(
+        GetCustomerOrdersRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            if (!Guid.TryParse(request.CustomerId, out var customerId))
+                return new GetCustomerOrdersResponse { Success = false, ErrorMessage = "Invalid customer ID format." };
+
+            var result = await mediator.Send(new GetCustomerOrdersQuery(customerId), context.CancellationToken);
+
+            if (!result.IsSuccess)
+                return new GetCustomerOrdersResponse { Success = false, ErrorMessage = result.Error };
+
+            var response = new GetCustomerOrdersResponse { Success = true };
+            response.Orders.AddRange(result.Value!.Select(MapToOrderSummary));
+            return response;
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            return HandleException<GetCustomerOrdersResponse>(ex, "GetCustomerOrders");
+        }
+    }
+
+    private static OrderDetails MapToOrderDetails(OrderResponse o)
+    {
+        var details = new OrderDetails
+        {
+            Id = o.Id.ToString(),
+            CustomerId = o.CustomerId.ToString(),
+            TrackingId = o.TrackingId ?? string.Empty,
+            PaymentId = o.PaymentId ?? string.Empty,
+            Status = o.Status,
+            TotalAmount = (double)o.TotalAmount,
+            Currency = o.Currency,
+            DeliveryAddress = new Address
+            {
+                Street = o.DeliveryAddress.Street,
+                City = o.DeliveryAddress.City,
+                Country = o.DeliveryAddress.Country,
+                PostalCode = o.DeliveryAddress.PostalCode
+            },
+            CreatedAt = o.CreatedAt.ToString("O"),
+            UpdatedAt = o.UpdatedAt?.ToString("O") ?? string.Empty,
+            Version = o.Version
+        };
+
+        details.Items.AddRange(o.Items.Select(i => new OrderItemDetail
+        {
+            ProductId = i.ProductId.ToString(),
+            Quantity = i.Quantity,
+            Price = (double)i.Price,
+            Currency = i.Currency
+        }));
+
+        return details;
+    }
+
+    private static OrderSummary MapToOrderSummary(OrderSummaryResponse o) => new()
+    {
+        Id = o.Id.ToString(),
+        TrackingId = o.TrackingId ?? string.Empty,
+        Status = o.Status,
+        TotalAmount = (double)o.TotalAmount,
+        Currency = o.Currency,
+        CreatedAt = o.CreatedAt.ToString("O")
+    };
     
 
     private static CreateOrderCommand MapToCreateCommand(CreateOrderRequest request) => new(
