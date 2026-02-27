@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using Domain.Common;
@@ -10,6 +12,8 @@ namespace Infrastructure.BackgroundServices;
 // reflection based code sometimes can smell to much voodoo, but many cqrs framwework do the same
 public sealed class KafkaReadModelSynchronizer : BackgroundService
 {
+    private static readonly ActivitySource _activitySource = new("OrderService.Kafka");
+
     private readonly IServiceProvider serviceProvider;
     private readonly ILogger<KafkaReadModelSynchronizer> logger;
     private readonly IConsumer<string, string> consumer;
@@ -104,7 +108,26 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
                     if (consumeResult?.Message != null)
                     {
-                        await ProcessMessageAsync(consumeResult, stoppingToken);
+                        // restore trace context propagated from the publisher
+                        Activity? activity = null;
+                        var traceHeader = consumeResult.Message.Headers
+                            .FirstOrDefault(h => h.Key == "traceparent");
+                        if (traceHeader != null)
+                        {
+                            var traceparent = Encoding.UTF8.GetString(traceHeader.GetValueBytes());
+                            if (ActivityContext.TryParse(traceparent, null, out var parentCtx))
+                                activity = _activitySource.StartActivity(
+                                    "kafka.consume.read-model", ActivityKind.Consumer, parentCtx);
+                        }
+
+                        try
+                        {
+                            await ProcessMessageAsync(consumeResult, stoppingToken);
+                        }
+                        finally
+                        {
+                            activity?.Dispose();
+                        }
 
                         // manually commit offset after processing
                         consumer.StoreOffset(consumeResult);
@@ -230,7 +253,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
         if (updater == null)
         {
             logger.LogWarning(
-                "No updater found for event type {EventType",
+                "No updater found for event type {EventType}",
                 eventType.Name);
             return;
         }

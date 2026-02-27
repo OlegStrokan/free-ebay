@@ -10,12 +10,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
-// check OrderReturnPersistanceService which is almost same,
-// but have more explanation comments
+/* same as OrderPersistenceService: no dependency on the eventually-consistent read model
+ * OrderId => ReturnRequestId mapping is written synchronously in the same transaction as
+ * creation events, so LoadByOrderIdAsync is always strongly consistent
+ */
 public class ReturnRequestPersistenceService(
     IEventStoreRepository eventStore,
     IOutboxRepository outboxRepository,
     IIdempotencyRepository idempotencyRepository,
+    IReturnRequestLookupRepository lookupRepository,
     AppDbContext dbContext,
     ILogger<ReturnRequestPersistenceService> logger)
     : IReturnRequestPersistenceService
@@ -80,6 +83,7 @@ public class ReturnRequestPersistenceService(
                         domainEvent.GetType().Name,
                         JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
                         domainEvent.OccurredOn,
+                        returnRequest.Id.Value.ToString(),
                         cancellationToken);
                 }
 
@@ -127,6 +131,7 @@ public class ReturnRequestPersistenceService(
                         domainEvent.GetType().Name,
                         JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
                         domainEvent.OccurredOn,
+                        returnRequest.Id.Value.ToString(),
                         cancellationToken);
                 }
 
@@ -139,14 +144,21 @@ public class ReturnRequestPersistenceService(
                         cancellationToken);
                 }
 
+                // this is done for strict consistency which we need in requestReturn
+                   await lookupRepository.AddAsync(
+                    returnRequest.OrderId.Value,
+                    returnRequest.Id.Value,
+                    cancellationToken);
+
                 returnRequest.ClearUncommittedEvents();
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 
                 logger.LogInformation(
-                    "Created ReturnRequest {ReturnRequestId} with {EventCount} events",
+                    "Created ReturnRequest {ReturnRequestId} for Order {OrderId} with {EventCount} events",
                     returnRequest.Id.Value,
+                    returnRequest.OrderId.Value,
                     returnRequest.Version + 1);
                 
             }
@@ -177,17 +189,18 @@ public class ReturnRequestPersistenceService(
         
     }
 
+    // why we call lookup repo, and then eventStore? 
+    // because caller dont have returnRequestId, only orderId
     public async Task<ReturnRequest?> LoadByOrderIdAsync(
         Guid orderId, CancellationToken cancellationToken)
     {
-        var readModel = await dbContext.ReturnRequestReadModels
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.OrderId == orderId, cancellationToken);
+        // Lookup was written in the same transaction as creation — no eventual consistency gap.
+        var returnRequestId = await lookupRepository.GetReturnRequestIdAsync(orderId, cancellationToken);
 
-        if (readModel == null)
+        if (returnRequestId is null)
             return null;
 
-        return await LoadReturnRequestAsync(readModel.Id, cancellationToken);
+        return await LoadReturnRequestAsync(returnRequestId.Value, cancellationToken);
     }
      
     

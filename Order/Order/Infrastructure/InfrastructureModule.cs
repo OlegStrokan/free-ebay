@@ -33,6 +33,7 @@ public static class InfrastructureModule
         services.AddScoped<IDeadLetterRepository, DeadLetterRepository>();
         services.AddScoped<ISagaRepository, SagaRepository>();
         services.AddScoped<IOrderReadRepository, OrderReadRepository>();
+        services.AddScoped<IReturnRequestLookupRepository, ReturnRequestLookupRepository>();
 
         // Services
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();

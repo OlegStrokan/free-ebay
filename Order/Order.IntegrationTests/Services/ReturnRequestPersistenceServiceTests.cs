@@ -4,7 +4,6 @@ using Domain.Entities.Order;
 using Domain.ValueObjects;
 using FluentAssertions;
 using Infrastructure.Persistence.DbContext;
-using Infrastructure.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Order.IntegrationTests.Infrastructure;
@@ -40,25 +39,7 @@ public sealed class ReturnRequestPersistenceServiceTests : IClassFixture<Integra
         return (request, orderId, customerId);
     }
     
-    private static async Task SeedReadModelAsync(AppDbContext db, ReturnRequest request)
-    {
-        db.ReturnRequestReadModels.Add(new ReturnRequestReadModel
-        {
-            Id           = request.Id.Value,
-            OrderId      = request.OrderId.Value,
-            CustomerId   = request.CustomerId.Value,
-            Status       = "Pending",
-            Reason       = request.Reason,
-            RefundAmount = request.RefundAmount.Amount,
-            Currency     = request.RefundAmount.Currency,
-            ItemsToReturnJson = "[]",
-            RequestedAt  = DateTime.UtcNow,
-            LastSyncedAt = DateTime.UtcNow
-        });
 
-        await db.SaveChangesAsync();
-    }
-    
     [Fact]
     public async Task CreateReturnRequestAsync_ShouldSaveEventsAndOutboxMessage()
     {
@@ -66,7 +47,7 @@ public sealed class ReturnRequestPersistenceServiceTests : IClassFixture<Integra
         var svc = scope.ServiceProvider.GetRequiredService<IReturnRequestPersistenceService>();
         var db  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var (request, _, _) = BuildReturnRequest();
+        var (request, orderId, _) = BuildReturnRequest();
         
         await svc.CreateReturnRequestAsync(request, cancellationToken: CancellationToken.None);
 
@@ -79,33 +60,45 @@ public sealed class ReturnRequestPersistenceServiceTests : IClassFixture<Integra
             .Where(m => m.Id == events[0].EventId)
             .ToListAsync();
 
+        // Lookup row must exist in the same transaction as the events
+        var lookup = await db.ReturnRequestLookups
+            .FirstOrDefaultAsync(l => l.OrderId == orderId.Value);
+
         events.Should().HaveCount(1, "only ReturnRequestCreatedEvent is raised on Create");
-        outbox.Should().HaveCount(1,
-            "outbox row must mirror every domain event");
+        outbox.Should().HaveCount(1, "outbox row must mirror every domain event");
+        lookup.Should().NotBeNull("lookup must be written atomically with events");
+        lookup!.ReturnRequestId.Should().Be(request.Id.Value);
     }
     
     [Fact]
-    public async Task LoadByOrderIdAsync_ShouldFindReturnRequest_ViaReadModel()
+    public async Task LoadByOrderIdAsync_ShouldFindReturnRequest_WithoutReadModel()
     {
         await using var scope = _fixture.CreateScope();
         var svc = scope.ServiceProvider.GetRequiredService<IReturnRequestPersistenceService>();
-        var db  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var (request, orderId, _) = BuildReturnRequest();
 
+        // CreateReturnRequestAsync writes the lookup in the same transaction — no read model needed
         await svc.CreateReturnRequestAsync(request, cancellationToken: CancellationToken.None);
 
-        // The read-model normally arrives via KafkaReadModelSynchronizer; seed it manually
-        await SeedReadModelAsync(db, request);
-
-        // lookup by the business orderId (not by the return-request id)
         var loaded = await svc.LoadByOrderIdAsync(orderId.Value, CancellationToken.None);
 
         loaded.Should().NotBeNull();
         loaded!.Id.Value.Should().Be(request.Id.Value,
-            "LoadByOrderIdAsync must reconstruct the same aggregate");
+            "lookup table must map orderId → returnRequestId without any read model dependency");
         loaded.OrderId.Value.Should().Be(orderId.Value);
         loaded.Reason.Should().Be(request.Reason);
+    }
+
+    [Fact]
+    public async Task LoadByOrderIdAsync_ShouldReturnNull_WhenNoReturnRequestExists()
+    {
+        await using var scope = _fixture.CreateScope();
+        var svc = scope.ServiceProvider.GetRequiredService<IReturnRequestPersistenceService>();
+
+        var result = await svc.LoadByOrderIdAsync(Guid.NewGuid(), CancellationToken.None);
+
+        result.Should().BeNull("no return request was ever created for this orderId");
     }
 
 
@@ -120,11 +113,10 @@ public sealed class ReturnRequestPersistenceServiceTests : IClassFixture<Integra
     {
         await using var setupScope = _fixture.CreateScope();
         var setupSvc = setupScope.ServiceProvider.GetRequiredService<IReturnRequestPersistenceService>();
-        var setupDb  = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var (request, orderId, _) = BuildReturnRequest();
         await setupSvc.CreateReturnRequestAsync(request, cancellationToken: CancellationToken.None);
-        await SeedReadModelAsync(setupDb, request);
+        // no read model seeding needed — lookup is written atomically in CreateReturnRequestAsync
 
         await using var scopeA = _fixture.CreateScope();
         await using var scopeB = _fixture.CreateScope();

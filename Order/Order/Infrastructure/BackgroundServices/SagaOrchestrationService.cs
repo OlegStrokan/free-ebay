@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Application.Interfaces;
 using Application.Sagas.Handlers;
@@ -16,6 +18,7 @@ public class SagaOrchestrationService(
     IConfiguration configuration)
     : BackgroundService
 {
+    private static readonly ActivitySource _activitySource = new("OrderService.Kafka");
     private readonly string _topic = configuration["Kafka:SagaTopic"] ?? "order.events";
 
 
@@ -40,7 +43,7 @@ public class SagaOrchestrationService(
                    var messageValue = consumeResult.Message.Value;
 
                    logger.LogInformation(
-                       "Received message from topic {Topic}, partition {Partition}, office {Offset}",
+                       "Received message from topic {Topic}, partition {Partition}, offset {Offset}",
                        consumeResult.Topic,
                        consumeResult.Partition,
                        consumeResult.Offset
@@ -50,16 +53,36 @@ public class SagaOrchestrationService(
 
                    if (eventWrapper == null)
                    {
-                       logger.LogWarning(("Failed to deserialize event wrapper"));
+                       logger.LogWarning("Failed to deserialize event wrapper");
                        kafkaConsumer.Commit(consumeResult);
                        continue;
                    }
 
-                   await ProcessEventAsync(eventWrapper, stoppingToken);
+                   // restore trace context propagated from the publisher
+                   Activity? activity = null;
+                   var traceHeader = consumeResult.Message.Headers
+                       .FirstOrDefault(h => h.Key == "traceparent");
+                   if (traceHeader != null)
+                   {
+                       var traceparent = Encoding.UTF8.GetString(traceHeader.GetValueBytes());
+                       if (ActivityContext.TryParse(traceparent, null, out var parentCtx))
+                           activity = _activitySource.StartActivity(
+                               $"kafka.consume.{eventWrapper.EventType}",
+                               ActivityKind.Consumer, parentCtx);
+                   }
+
+                   try
+                   {
+                       await ProcessEventAsync(eventWrapper, stoppingToken);
+                   }
+                   finally
+                   {
+                       activity?.Dispose();
+                   }
 
                    kafkaConsumer.Commit(consumeResult);
 
-                   logger.LogInformation("Successfully processed and committed office {Offset}", consumeResult.Offset);
+                   logger.LogInformation("Successfully processed and committed offset {Offset}", consumeResult.Offset);
                }
                catch (ConsumeException ex)
                {
