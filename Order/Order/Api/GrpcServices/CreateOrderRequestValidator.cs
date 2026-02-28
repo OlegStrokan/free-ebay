@@ -25,7 +25,9 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
         {
             item.RuleFor(i => i.ProductId).NotEmpty().Must(BeAGuid);
             item.RuleFor(i => i.Quantity).GreaterThan(0);
-            item.RuleFor(i => i.Price).GreaterThan(0);
+            item.RuleFor(i => i.Price)
+                .Must(p => p != null && (p.Units > 0 || p.Nanos > 0))
+                .WithMessage("Price must be greater than zero");
             item.RuleFor(i => i.Currency).NotEmpty();
         });
     }

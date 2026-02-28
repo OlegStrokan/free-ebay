@@ -3,6 +3,7 @@ using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Grpc.Net.Client;
+using Infrastructure.Extensions;
 using Org.BouncyCastle.Bcpg;
 using Protos.Accounting;
 using Protos.Inventory;
@@ -38,7 +39,7 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
             {
                 OrderId = orderId.ToString(),
                 CustomerId = customerId.ToString(),
-                Amount = (double)amount,
+                Amount = amount.ToDecimalValue(),
                 Currency = currency,
                 PaymentMethod = paymentMethod
             });
@@ -61,7 +62,7 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
             new RefundPaymentRequest
             {
                 PaymentId = paymentId,
-                Amount = (double)amount,
+                Amount = amount.ToDecimalValue(),
                 Reason = reason
             },
             cancellationToken: cancellationToken);
@@ -150,7 +151,7 @@ public class FakeGrpcAccountingGateway : IAccountingGateway
             {
                 OrderId = orderId.ToString(),
                 RefundId = refundId,
-                Amount = (double)amount,
+                Amount = amount.ToDecimalValue(),
                 Currency = currency,
                 Reason = reason
             },
@@ -172,7 +173,7 @@ public class FakeGrpcAccountingGateway : IAccountingGateway
         var request = new ReverseRevenueRequest
         {
             OrderId = orderId.ToString(),
-            Amount = (double)amount,
+            Amount = amount.ToDecimalValue(),
             Currency = currency,
         };
 
@@ -182,7 +183,7 @@ public class FakeGrpcAccountingGateway : IAccountingGateway
             {
                 ProductId = item.ProductId.ToString(),
                 Quantity = item.Quantity,
-                Price = (double)item.Price,
+                Price = item.Price.ToDecimalValue(),
                 Currency = item.Currency
             });
         }

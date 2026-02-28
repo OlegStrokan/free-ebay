@@ -1,6 +1,7 @@
 using Application.DTOs;
 using Application.Gateways;
 using Grpc.Core;
+using Infrastructure.Extensions;
 using Protos.Accounting;
 
 namespace Infrastructure.Gateways;
@@ -24,7 +25,7 @@ public class AccountingGateway(
         {
             OrderId = orderId.ToString(),
             RefundId = refundId,
-            Amount = (double)amount,
+            Amount = amount.ToDecimalValue(),
             Currency = currency,
             Reason = reason
         };
@@ -63,7 +64,7 @@ public class AccountingGateway(
         var request = new ReverseRevenueRequest
         {
             OrderId = orderId.ToString(),
-            Amount = (double)amount,
+            Amount = amount.ToDecimalValue(),
             Currency = currency
         };
 
@@ -71,7 +72,7 @@ public class AccountingGateway(
         {
             ProductId = i.ProductId.ToString(),
             Quantity = i.Quantity,
-            Price = (double)i.Price,
+            Price = i.Price.ToDecimalValue(),
             Currency = i.Currency
         }));
 

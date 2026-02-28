@@ -4,6 +4,7 @@ using Confluent.Kafka;
 using Domain.Entities;
 using Domain.ValueObjects;
 using FluentAssertions;
+using Infrastructure.Extensions;
 using Order.E2ETests.Infrastructure;
 using Protos.Order;
 using WireMock.RequestBuilders;
@@ -97,7 +98,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         {
             ProductId = Guid.NewGuid().ToString(),
             Quantity = 1,
-            Price = 29.99,
+            Price = 29.99m.ToDecimalValue(),
             Currency = "USD"
         });
 
@@ -168,7 +169,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
         // check grpc servers 
         _server.PaymentService.RefundCalls.Should().HaveCount(1);
-        _server.PaymentService.RefundCalls[0].Amount.Should().BeApproximately(29.99, 0.01);
+        _server.PaymentService.RefundCalls[0].Amount.ToDecimal().Should().BeApproximately(29.99m, 0.01m);
         _server.PaymentService.RefundCalls[0].Reason.Should().Contain("Product defective");
 
         _server.AccountingServer.RecordRefundCalls.Should().HaveCount(1);
@@ -176,7 +177,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
 
         _server.AccountingServer.ReverseRevenueCalls.Should().HaveCount(1);
-        _server.AccountingServer.ReverseRevenueCalls[0].Amount.Should().BeApproximately(29.99, 0.01);
+        _server.AccountingServer.ReverseRevenueCalls[0].Amount.ToDecimal().Should().BeApproximately(29.99m, 0.01m);
 
         _output.WriteLine("✅ Payment & Accounting gRPC calls verified");
 
@@ -242,7 +243,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         {
             ProductId = Guid.NewGuid().ToString(),
             Quantity = 1,
-            Price = 50.00,
+            Price = 50.00m.ToDecimalValue(),
             Currency = "USD"
         });
         
@@ -306,7 +307,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         {
             ProductId = Guid.NewGuid().ToString(),
             Quantity = 1, 
-            Price = 75.00,
+            Price = 75.00m.ToDecimalValue(),
             Currency = "USD"
         });
         
@@ -400,7 +401,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         {
             ProductId = Guid.NewGuid().ToString(),
             Quantity = 1,
-            Price = 100.00,
+            Price = 100.00m.ToDecimalValue(),
             Currency = "USD"
         });
         
@@ -481,7 +482,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         {
             ProductId = Guid.NewGuid().ToString(),
             Quantity = 1,
-            Price = 29.99,
+            Price = 29.99m.ToDecimalValue(),
             Currency = "USD"
         });
 

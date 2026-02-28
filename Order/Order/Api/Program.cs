@@ -1,13 +1,18 @@
 using Api.GrpcServices;
 using Application;
+using FluentValidation;
 using Infrastructure;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Protos.Order;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+builder.Services.AddScoped<IValidator<CreateOrderRequest>, CreateOrderRequestValidator>();
+builder.Services.AddScoped<IValidator<RequestReturnRequest>, RequestReturnRequestValidator>();
 
 builder.Services.AddGrpc();
 

@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "common.proto";
+
 option csharp_namespace = "Protos.Order";
 
 package order;
@@ -42,7 +44,7 @@ message RequestReturnResponse {
 message OrderItem {
   string product_id = 1;
   int32 quantity = 2;
-  double price = 3;
+  common.DecimalValue price = 3;
   string currency = 4;
 }
 
@@ -90,7 +92,7 @@ message OrderDetails {
   string tracking_id = 3;
   string payment_id = 4;
   string status = 5;
-  double total_amount = 6;
+  common.DecimalValue total_amount = 6;
   string currency = 7;
   Address delivery_address = 8;
   repeated OrderItemDetail items = 9;
@@ -103,7 +105,7 @@ message OrderSummary {
   string id = 1;
   string tracking_id = 2;
   string status = 3;
-  double total_amount = 4;
+  common.DecimalValue total_amount = 4;
   string currency = 5;
   string created_at = 6;
 }
@@ -111,6 +113,6 @@ message OrderSummary {
 message OrderItemDetail {
   string product_id = 1;
   int32 quantity = 2;
-  double price = 3;
+  common.DecimalValue price = 3;
   string currency = 4;
 }

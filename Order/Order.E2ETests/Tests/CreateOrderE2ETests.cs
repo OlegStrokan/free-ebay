@@ -3,6 +3,7 @@ using Application.Sagas.Persistence;
 using Confluent.Kafka;
 using Domain.ValueObjects;
 using FluentAssertions;
+using Infrastructure.Extensions;
 using Order.E2ETests.Infrastructure;
 using Protos.Order;
 using WireMock.ResponseBuilders;
@@ -106,7 +107,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.PaymentService.ProcessCalls.Should().HaveCount(1);
         _server.PaymentService.ProcessCalls[0].OrderId.Should().Be(orderId.ToString());
         _server.PaymentService.ProcessCalls[0].Currency.Should().Be("USD");
-        _server.PaymentService.ProcessCalls[0].Amount.Should().BeApproximately(59.98, 0.01);
+        _server.PaymentService.ProcessCalls[0].Amount.ToDecimal().Should().BeApproximately(59.98m, 0.01m);
 
         _server.InventoryService.ReserveCalls.Should().HaveCount(1);
         _server.InventoryService.ReserveCalls[0].OrderId.Should().Be(orderId.ToString());
@@ -291,7 +292,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         {
             ProductId = Guid.NewGuid().ToString(),
             Quantity = 2,
-            Price = 29.99,
+            Price = 29.99m.ToDecimalValue(),
             Currency = "USD"
         });
 
