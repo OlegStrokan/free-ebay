@@ -56,15 +56,25 @@ public sealed class OutboxProcessor(
         
         logger.LogDebug("Processing {Count} outbox messages", messages.Count());
 
+        // Group by AggregateId so messages for the same aggregate are processed in
+        // OccurredOnUtc order (causal ordering). Different aggregates still run in parallel.
+        var groups = messages
+            .GroupBy(m => m.AggregateId)
+            .Select(g => g.OrderBy(m => m.OccurredOnUtc).ToList())
+            .ToList();
+
         var options = new ParallelOptions
         {
             MaxDegreeOfParallelism = _maxDegreeOfParallelism,
             CancellationToken = stoppingToken
         };
 
-        await Parallel.ForEachAsync(messages, options, async (message, ct) =>
+        await Parallel.ForEachAsync(groups, options, async (group, ct) =>
         {
-            await ProcessMessageAsync(message, outboxRepository, deadLetterRepository, ct);
+            foreach (var message in group)
+            {
+                await ProcessMessageAsync(message, outboxRepository, deadLetterRepository, ct);
+            }
         });
     }
 

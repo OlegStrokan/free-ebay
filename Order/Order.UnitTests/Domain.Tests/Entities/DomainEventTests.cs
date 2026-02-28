@@ -1,3 +1,4 @@
+using Domain.Common;
 using Domain.Entities;
 
 namespace Domain.Tests.Entities;
@@ -9,14 +10,14 @@ public class DomainEventTests
     {
         var evt = DomainEvent.Create(
             aggregateId: "order-abc",
-            aggregateType: "Order",
+            aggregateType: AggregateTypes.Order,
             eventType: "OrderCreatedEvent",
             eventData: "{\"total\":100}",
             version: 1);
 
         Assert.NotEqual(Guid.Empty, evt.EventId);
         Assert.Equal("order-abc", evt.AggregateId);
-        Assert.Equal("Order", evt.AggregateType);
+        Assert.Equal(AggregateTypes.Order, evt.AggregateType);
         Assert.Equal("OrderCreatedEvent", evt.EventType);
         Assert.Equal("{\"total\":100}", evt.EventData);
         Assert.Equal(1, evt.Version);
@@ -66,7 +67,7 @@ public class DomainEventTests
     public void Create_ShouldThrow_WhenAggregateIdIsNullOrWhitespace(string? aggregateId)
     {
         var ex = Assert.Throws<ArgumentException>(() =>
-            DomainEvent.Create(aggregateId!, "Order", "EventType", "{}", 0));
+            DomainEvent.Create(aggregateId!, AggregateTypes.Order, "EventType", "{}", 0));
 
         Assert.Contains("AggregateId is required", ex.Message);
     }
@@ -90,7 +91,7 @@ public class DomainEventTests
     public void Create_ShouldThrow_WhenEventTypeIsNullOrWhitespace(string? eventType)
     {
         var ex = Assert.Throws<ArgumentException>(() =>
-            DomainEvent.Create("id", "Order", eventType!, "{}", 0));
+            DomainEvent.Create("id", AggregateTypes.Order, eventType!, "{}", 0));
 
         Assert.Contains("EventType is required", ex.Message);
     }

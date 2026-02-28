@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Domain.Common;
 using Domain.Entities;
 using Domain.Entities.Order;
 using Domain.Events.CreateOrder;
+using Domain.Exceptions;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using FluentAssertions;
@@ -44,19 +46,19 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         order.Approve();
 
         await repo.SaveEventsAsync(
-            aggregateId, "Order",
+            aggregateId, AggregateTypes.Order,
             order.UncommitedEvents, expectedVersion: -1,
             CancellationToken.None);
 
         var stored = await db.DomainEvents
-            .Where(e => e.AggregateId == aggregateId && e.AggregateType == "Order")
+            .Where(e => e.AggregateId == aggregateId && e.AggregateType == AggregateTypes.Order)
             .OrderBy(e => e.Version)
             .ToListAsync();
 
         stored.Should().HaveCount(3);
         stored.Select(e => e.Version).Should().Equal(0, 1, 2);
         stored.Select(e => e.AggregateId).Should().AllBe(aggregateId);
-        stored.Select(e => e.AggregateType).Should().AllBe("Order");
+        stored.Select(e => e.AggregateType).Should().AllBe(AggregateTypes.Order);
         stored[0].EventType.Should().Be(nameof(OrderCreatedEvent));
         stored[1].EventType.Should().Be(nameof(OrderPaidEvent));
         stored[2].EventType.Should().Be(nameof(OrderApprovedEvent));
@@ -73,19 +75,18 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
 
         // first writer succeeds - stream is now at version 0
         await repo.SaveEventsAsync(
-            aggregateId, "Order",
+            aggregateId, AggregateTypes.Order,
             order.UncommitedEvents, expectedVersion: -1,
             CancellationToken.None);
 
         // second writer loaded at version -1 and now tries to commit; must fail
         var act = () => repo.SaveEventsAsync(
-            aggregateId, "Order",
+            aggregateId, AggregateTypes.Order,
             order.UncommitedEvents, expectedVersion: -1, 
             CancellationToken.None);
 
         await act.Should()
-            .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*Concurrency conflict*");
+            .ThrowAsync<ConcurrencyConflictException>();
     }
     
     [Fact]
@@ -107,11 +108,11 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
             order.UncommitedEvents[1], order.UncommitedEvents[1].GetType());
 
         // insert deliberately in WRONG insertion order: Paid(v1) before Created(v0)
-        db.DomainEvents.Add(DomainEvent.Create(aggregateId, "Order", nameof(OrderPaidEvent),    paidJson,    version: 1));
-        db.DomainEvents.Add(DomainEvent.Create(aggregateId, "Order", nameof(OrderCreatedEvent), createdJson, version: 0));
+        db.DomainEvents.Add(DomainEvent.Create(aggregateId, AggregateTypes.Order, nameof(OrderPaidEvent),    paidJson,    version: 1));
+        db.DomainEvents.Add(DomainEvent.Create(aggregateId, AggregateTypes.Order, nameof(OrderCreatedEvent), createdJson, version: 0));
         await db.SaveChangesAsync();
 
-        var events = (await repo.GetEventsAsync(aggregateId, "Order", CancellationToken.None)).ToList();
+        var events = (await repo.GetEventsAsync(aggregateId, AggregateTypes.Order, CancellationToken.None)).ToList();
 
         events.Should().HaveCount(2);
         events[0].Should().BeOfType<OrderCreatedEvent>("version 0 must come first");
@@ -138,7 +139,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         order.Approve();
 
         await repo.SaveEventsAsync(
-            aggregateId, "Order",
+            aggregateId, AggregateTypes.Order,
             order.UncommitedEvents, expectedVersion: -1,
             CancellationToken.None);
 
@@ -148,13 +149,13 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         order.Complete();
 
         await repo.SaveEventsAsync(
-            aggregateId, "Order",
+            aggregateId, AggregateTypes.Order,
             order.UncommitedEvents, expectedVersion: 2,
             CancellationToken.None);
 
         // only the delta event is returned
         var delta = (await repo.GetEventsAfterVersionAsync(
-            aggregateId, "Order", afterVersion: 2,
+            aggregateId, AggregateTypes.Order, afterVersion: 2,
             CancellationToken.None)).ToList();
 
         delta.Should().ContainSingle(

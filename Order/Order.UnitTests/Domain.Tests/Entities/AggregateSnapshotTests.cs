@@ -1,3 +1,4 @@
+using Domain.Common;
 using Domain.Entities;
 
 namespace Domain.Tests.Entities;
@@ -9,13 +10,13 @@ public class AggregateSnapshotTests
     {
         var snapshot = AggregateSnapshot.Create(
             aggregateId: "order-123",
-            aggregateType: "Order",
+            aggregateType: AggregateTypes.Order,
             version: 5,
             stateJson: "{\"status\":\"Completed\"}");
 
         Assert.NotEqual(Guid.Empty, snapshot.Id);
         Assert.Equal("order-123", snapshot.AggregateId);
-        Assert.Equal("Order", snapshot.AggregateType);
+        Assert.Equal(AggregateTypes.Order, snapshot.AggregateType);
         Assert.Equal(5, snapshot.Version);
         Assert.Equal("{\"status\":\"Completed\"}", snapshot.StateJson);
     }
@@ -55,7 +56,7 @@ public class AggregateSnapshotTests
     public void Create_ShouldThrow_WhenAggregateIdIsNullOrWhitespace(string? aggregateId)
     {
         var ex = Assert.Throws<ArgumentException>(() =>
-            AggregateSnapshot.Create(aggregateId!, "Order", 1, "{}"));
+            AggregateSnapshot.Create(aggregateId!, AggregateTypes.Order, 1, "{}"));
 
         Assert.Contains("AggregateId is required", ex.Message);
     }
@@ -78,7 +79,7 @@ public class AggregateSnapshotTests
     public void Create_ShouldThrow_WhenVersionIsNegative(int version)
     {
         var ex = Assert.Throws<ArgumentException>(() =>
-            AggregateSnapshot.Create("id", "Order", version, "{}"));
+            AggregateSnapshot.Create("id", AggregateTypes.Order, version, "{}"));
 
         Assert.Contains("Version must be >= 0", ex.Message);
     }
@@ -90,7 +91,7 @@ public class AggregateSnapshotTests
     public void Create_ShouldThrow_WhenStateJsonIsNullOrWhitespace(string? stateJson)
     {
         var ex = Assert.Throws<ArgumentException>(() =>
-            AggregateSnapshot.Create("id", "Order", 1, stateJson!));
+            AggregateSnapshot.Create("id", AggregateTypes.Order, 1, stateJson!));
 
         Assert.Contains("StateJson is required", ex.Message);
     }

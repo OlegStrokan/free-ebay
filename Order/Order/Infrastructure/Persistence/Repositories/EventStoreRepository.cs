@@ -1,9 +1,10 @@
-using System.Reflection;
 using System.Text.Json;
 using Domain.Common;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Interfaces;
 using Infrastructure.Persistence.DbContext;
+using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -11,47 +12,10 @@ namespace Infrastructure.Persistence.Repositories;
 
 public class EventStoreRepository(
     AppDbContext dbContext,
+    IDomainEventTypeRegistry eventTypeRegistry,
     ILogger<EventStoreRepository> logger
 ) : IEventStoreRepository
 {
-    // auto-discover all event types at startup
-    private static readonly Dictionary<string, Type> EventTypeMap = DiscoverEventTypes();
-
-    private static Dictionary<string, Type> DiscoverEventTypes()
-    {
-        var eventTypes = new Dictionary<string, Type>();
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-        foreach (var assembly in assemblies)
-        {
-            // skip system assemblies for performance
-            if (assembly.FullName?.StartsWith("System") == true ||
-                assembly.FullName?.StartsWith("Microsoft") == true)
-                continue;
-
-            try
-            {
-                var types = assembly.GetTypes()
-                    .Where(t => typeof(IDomainEvent).IsAssignableFrom(t) &&
-                                !t.IsInterface &&
-                                !t.IsAbstract);
-
-                foreach (var type in types)
-                {
-                    eventTypes[type.Name] = type;
-                }
-            }
-
-            catch (ReflectionTypeLoadException ex)
-            {
-                // skip assemblies that can't be loaded
-                continue;
-            }
-        }
-
-        return eventTypes;
-    }
-
     // optimistic concurrency type shit: checks expected version against DB, increments per event,
     // throw ex on mismatch (no auto-retry; caller must reload aggregate and retry)
     public async Task SaveEventsAsync(
@@ -68,9 +32,9 @@ public class EventStoreRepository(
         var currentVersion = await GetCurrentVersionAsync(aggregateId, aggregateType, cancellationToken);
 
         if (currentVersion != expectedVersion)
-            throw new InvalidOperationException(
-                $"Concurrency conflict for {aggregateType} {aggregateId}. " +
-                $"Expected version {expectedVersion}, but current version is {currentVersion}");
+            throw new ConcurrencyConflictException(
+                aggregateType, aggregateId,
+                attempts: 0); // retries are counted by the persistence service
 
         var nextVersion = expectedVersion + 1;
 
@@ -96,9 +60,8 @@ public class EventStoreRepository(
         }
         catch (DbUpdateException ex) when (IsUniqueConstrainViolation(ex))
         {
-            throw new InvalidOperationException(
-                $"Concurrency conflict (Db constraint) for {aggregateType} {aggregateId}. " +
-                $"Another writer commited version {expectedVersion + 1} first. ", ex);
+            throw new ConcurrencyConflictException(
+                aggregateType, aggregateId, attempts: 0);
         }
     }
 
@@ -154,7 +117,7 @@ public class EventStoreRepository(
 
         foreach (var storedEvent in storedEvents)
         {
-            if (!EventTypeMap.TryGetValue(storedEvent.EventType, out var eventType))
+            if (!eventTypeRegistry.TryGetType(storedEvent.EventType, out var eventType))
             {
                 logger.LogWarning(
                     "Unknown event type {EventType} for {AggregateType} {AggregateId}. " +

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
@@ -19,15 +18,17 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
     private readonly ILogger<KafkaReadModelSynchronizer> logger;
     private readonly IConsumer<string, string> consumer;
     private readonly List<string> topics;
-    private readonly Dictionary<string, Type> eventTypeMap;
+    private readonly IDomainEventTypeRegistry eventTypeRegistry;
 
     public KafkaReadModelSynchronizer(
         IServiceProvider serviceProvider,
         IConfiguration configuration,
+        IDomainEventTypeRegistry eventTypeRegistry,
         ILogger<KafkaReadModelSynchronizer> logger)
     {
         this.serviceProvider = serviceProvider;
         this.logger = logger;
+        this.eventTypeRegistry = eventTypeRegistry;
 
         var kafkaConfig = new ConsumerConfig
         {
@@ -48,48 +49,6 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             configuration["Kafka:OrderEventsTopic"] ?? "order.events",
             configuration["Kafka:ReturnEventsTopic"] ?? "return.events"
         };
-
-        // auto discover all event types at startup
-        eventTypeMap = DiscoverEventTypes();
-
-        logger.LogInformation(
-            "Discovered {Count} event types: {EventTypes}",
-            eventTypeMap.Count,
-            string.Join(", ", eventTypeMap));
-    }
-
-    private static Dictionary<string, Type> DiscoverEventTypes()
-    {
-        var eventTypes = new Dictionary<string, Type>();
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-        foreach (var assembly in assemblies)
-        {
-            // skip system assemblies for performance
-            if (assembly.FullName?.StartsWith("System") == true ||
-                assembly.FullName?.StartsWith("Microsoft") == true)
-                continue;
-
-
-            try
-            {
-                var types = assembly.GetTypes()
-                    .Where(t => typeof(IDomainEvent).IsAssignableFrom(t) &&
-                                !t.IsInterface && !t.IsAbstract);
-
-                foreach (var type in types)
-                {
-                    eventTypes[type.Name] = type;
-                }
-            }
-            catch (ReflectionTypeLoadException)
-            {
-                // skip assemblies that can't be loaded
-                continue;
-            }
-        }
-
-        return eventTypes;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -138,6 +97,11 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
                 catch (ConsumeException ex)
                 {
                     logger.LogError(ex, "Error consuming Kafka message");
+                }
+                catch (OperationCanceledException)
+                {
+                    // stoppingToken was cancelled — exit the loop cleanly
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -210,7 +174,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             return;
         }
 
-        if (!eventTypeMap.TryGetValue(eventType, out var domainEventType))
+        if (!eventTypeRegistry.TryGetType(eventType, out var domainEventType))
         {
             logger.LogWarning(
                 "Unknown event type {EventType}. Skipping.", eventType);
@@ -238,18 +202,10 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
         CancellationToken cancellationToken)
     {
         var eventType = domainEvent.GetType();
-        
-        // determine which updater to use based on event namespace/name
-        object? updater = null;
 
-        if (eventType.FullName?.Contains("Order") == true &&
-            !eventType.FullName.Contains("Return"))
-        {
-            updater = scope.ServiceProvider.GetService<OrderReadModelUpdater>();
-        } else if (eventType.FullName?.Contains("Return") == true)
-        {   
-            updater = scope.ServiceProvider.GetService<ReturnRequestReadModelUpdater>();
-        }
+        var updater = scope.ServiceProvider
+            .GetServices<IReadModelUpdater>()
+            .FirstOrDefault(u => u.CanHandle(eventType));
 
         if (updater == null)
         {

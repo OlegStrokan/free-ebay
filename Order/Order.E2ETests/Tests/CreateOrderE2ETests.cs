@@ -1,5 +1,6 @@
 using Application.Sagas;
 using Application.Sagas.Persistence;
+using Domain.Common;
 using Confluent.Kafka;
 using Domain.ValueObjects;
 using FluentAssertions;
@@ -75,7 +76,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         await Task.Delay(TimeSpan.FromSeconds(10));
         
         // assert event store
-        var events = await _server.GetEventsAsync(orderId, "Order");
+        var events = await _server.GetEventsAsync(orderId, AggregateTypes.Order);
         var eventTypes = events.Select(e => e.GetType().Name).ToList();
         _output.WriteLine($"Events: {string.Join(", ", eventTypes)}");
 
@@ -86,7 +87,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
     
         // assert saga
         var saga = await _server.WaitForSagaStatusAsync(
-            orderId, "OrderSaga", SagaStatus.Completed, timeoutSeconds: 30);
+            orderId, SagaTypes.OrderSaga, SagaStatus.Completed, timeoutSeconds: 30);
 
         saga.Should().NotBeNull("saga must reach Completed within timeout");
         saga!.Status.Should().Be(SagaStatus.Completed);
@@ -162,7 +163,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _output.WriteLine($"Both returned: {response1.OrderId}");
 
         var orderId = Guid.Parse(response1.OrderId);
-        var events = await _server.GetEventsAsync(orderId, "Order");
+        var events = await _server.GetEventsAsync(orderId, AggregateTypes.Order);
 
         events.Count(e => e.GetType().Name == "OrderCreatedEvent")
             .Should().Be(1, "only ONE order must be created");
@@ -198,7 +199,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         
         // saga should be Compensated
         var saga = await _server.WaitForSagaStatusAsync(
-            orderId, "OrderSaga", SagaStatus.Compensated, timeoutSeconds: 30);
+            orderId, SagaTypes.OrderSaga, SagaStatus.Compensated, timeoutSeconds: 30);
 
         saga.Should().NotBeNull();
         saga!.Status.Should().Be(SagaStatus.Compensated);
@@ -219,7 +220,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReleaseCalls.Should().HaveCountGreaterOrEqualTo(1);
         _server.InventoryService.ReleaseCalls[0].ReservationId.Should().Be("ReservationId");
 
-        var events = await _server.GetEventsAsync(orderId, "Order");
+        var events = await _server.GetEventsAsync(orderId, AggregateTypes.Order);
         var eventTypes = events.Select(e => e.GetType().Name).ToList();
 
         eventTypes.Should().Contain("OrderCreatedEvent");
@@ -255,7 +256,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         await Task.Delay(TimeSpan.FromSeconds(20));
 
         var saga = await _server.WaitForSagaStatusAsync(
-            orderId, "OrderSaga", SagaStatus.Completed, timeoutSeconds: 60);
+            orderId, SagaTypes.OrderSaga, SagaStatus.Completed, timeoutSeconds: 60);
 
         saga.Should().NotBeNull();
 

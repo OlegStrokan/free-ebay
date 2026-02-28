@@ -49,6 +49,9 @@ public sealed class IntegrationFixture : IAsyncLifetime
         services.AddDbContext<AppDbContext>(opt =>
             opt.UseNpgsql(_postgres.GetConnectionString()));
 
+        services.AddDbContext<ReadDbContext>(opt =>
+            opt.UseNpgsql(_postgres.GetConnectionString()));
+
         services.AddSingleton<IConnectionMultiplexer>(
             _ => ConnectionMultiplexer.Connect(_redis.GetConnectionString()));
         services.AddSingleton<ISagaDistributedLock, RedisSagaDistributedLock>();
@@ -61,8 +64,11 @@ public sealed class IntegrationFixture : IAsyncLifetime
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
         services.AddScoped<IReturnRequestPersistenceService, ReturnRequestPersistenceService>();
         services.AddScoped<ISagaRepository, SagaRepository>();
+        // register as concrete (for direct test resolution) AND as IReadModelUpdater (for routing)
         services.AddScoped<OrderReadModelUpdater>();
         services.AddScoped<ReturnRequestReadModelUpdater>();
+        services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<OrderReadModelUpdater>());
+        services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<ReturnRequestReadModelUpdater>());
         services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
 
         Services = services.BuildServiceProvider();
@@ -70,7 +76,10 @@ public sealed class IntegrationFixture : IAsyncLifetime
         // build a full schema
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.EnsureCreatedAsync();
+        var readDb = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
+        await Task.WhenAll(
+            db.Database.EnsureCreatedAsync(),
+            readDb.Database.EnsureCreatedAsync());
     }
 
     public async Task DisposeAsync()

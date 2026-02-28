@@ -2,6 +2,7 @@ using System.Data;
 using System.Text.Json;
 using Application.DTOs;
 using Application.Interfaces;
+using Domain.Common;
 using Domain.Entities;
 using Domain.Entities.Order;
 using Domain.Exceptions;
@@ -38,13 +39,15 @@ public class OrderPersistenceService(
                 await TryUpdateOrderAsync(orderId, action, cancellationToken);
                 return;
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("Concurrency conflict") && attempt < maxRetries)
+            catch (ConcurrencyConflictException) when (attempt < maxRetries)
             {
                 logger.LogWarning(
                     "Concurrency conflict on attempt {Attempt}/{MaxRetries} for Order {OrderId}. Reloading and retrying...",
                     attempt, maxRetries, orderId);
             }
         }
+
+        throw new ConcurrencyConflictException(AggregateTypes.Order, orderId.ToString(), maxRetries);
     }
 
     private async Task TryUpdateOrderAsync(
@@ -75,18 +78,9 @@ public class OrderPersistenceService(
                  */
                 await action(order);
 
-                /*
-                NOTE:
-                The only thing to watch: if after 3 attempts it still fails, the exception propagates 
-                as-is (InvalidOperationException with "Concurrency conflict"). You may
-                 want to wrap it in a domain-specific exception like OrderConcurrencyException so callers 
-                 can distinguish it from other InvalidOperationExceptions rather than relying on string matching.
-
-                */
-
                 await eventStore.SaveEventsAsync(
                     order.Id.Value.ToString(),
-                    "Order",
+                    AggregateTypes.Order,
                     order.UncommitedEvents,
                     expectedVersion,
                     cancellationToken);
@@ -115,7 +109,7 @@ public class OrderPersistenceService(
                         var snapshotState = order.ToSnapshotState();
                         var snapshot = AggregateSnapshot.Create(
                             order.Id.Value.ToString(),
-                            "Order",
+                            AggregateTypes.Order,
                             order.Version,
                             JsonSerializer.Serialize(snapshotState));
 
@@ -163,7 +157,7 @@ public class OrderPersistenceService(
                 
                 await eventStore.SaveEventsAsync(
                     order.Id.Value.ToString(),
-                    "Order",
+                    AggregateTypes.Order,
                     order.UncommitedEvents,
                     expectedVersion: -1,
                     cancellationToken);
@@ -214,7 +208,7 @@ public class OrderPersistenceService(
     public async Task<Order?> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
     {
         var snapshot = await snapshotRepository.GetLatestAsync(
-            orderId.ToString(), "Order", cancellationToken);
+            orderId.ToString(), AggregateTypes.Order, cancellationToken);
 
         if (snapshot == null) return await ReplayOrderFromEventStoreAsync(orderId, cancellationToken);
         
@@ -225,7 +219,7 @@ public class OrderPersistenceService(
             var order = Order.FromSnapshot(snapshotState);
 
             var deltaEvents = await eventStore.GetEventsAfterVersionAsync(
-                orderId.ToString(), "Order", snapshot.Version + 1, cancellationToken);
+                orderId.ToString(), AggregateTypes.Order, snapshot.Version + 1, cancellationToken);
 
             order.LoadFromHistory(deltaEvents);
 
@@ -247,7 +241,7 @@ public class OrderPersistenceService(
     {
         var events = await eventStore.GetEventsAsync(
             orderId.ToString(),
-            "Order",
+            AggregateTypes.Order,
             cancellationToken);
 
         if (!events.Any())
