@@ -46,7 +46,7 @@ public sealed class SendConfirmationEmailStep(
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            _logger.LogCritical(
                 ex,
                 "Failed to send confirmation email for order {OrderId}",
                 data.CorrelationId);

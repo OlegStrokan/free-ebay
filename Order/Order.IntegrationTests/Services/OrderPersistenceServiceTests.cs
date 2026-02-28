@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.Interfaces;
+using Domain.Common;
 using Domain.Entities;
 using Domain.Entities.Order;
 using Domain.Interfaces;
@@ -154,7 +155,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
 
             var snapshotJson = JsonSerializer.Serialize(loaded0!.ToSnapshotState());
             await snapshotRepo.SaveAsync(
-                AggregateSnapshot.Create(orderId.ToString(), "Order", 0, snapshotJson),
+                AggregateSnapshot.Create(orderId.ToString(), AggregateTypes.Order, 0, snapshotJson),
                 CancellationToken.None);
 
             // add one delta event so the stream is: snapshot@v=0 , event@v=1
@@ -197,7 +198,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
 
             // "null" is valid JSON but deserializes to null for a record type,
             // triggering the fallback-to-full-replay path in LoadOrderAsync.
-            var corruptSnapshot = AggregateSnapshot.Create(orderId.ToString(), "Order", 0, "null");
+            var corruptSnapshot = AggregateSnapshot.Create(orderId.ToString(), AggregateTypes.Order, 0, "null");
             await snapshotRepo.SaveAsync(corruptSnapshot, CancellationToken.None);
         }
 

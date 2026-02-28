@@ -2,6 +2,7 @@ using Api.GrpcServices;
 using Application;
 using FluentValidation;
 using Infrastructure;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Protos.Order;
@@ -11,10 +12,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-builder.Services.AddScoped<IValidator<CreateOrderRequest>, CreateOrderRequestValidator>();
-builder.Services.AddScoped<IValidator<RequestReturnRequest>, RequestReturnRequestValidator>();
+// Scan Api assembly for validators. ApplicationModule already scans the Application assembly,
+// so together they cover validators in both layers.
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddGrpc();
+
+builder.Services.AddGrpcHealthChecks()
+    .AddCheck("Sample", () => HealthCheckResult.Healthy());
+
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(b => b
@@ -29,5 +35,7 @@ builder.Services.AddOpenTelemetry()
 var app = builder.Build();
 
 app.MapGrpcService<OrderGrpcService>();
+app.MapGrpcHealthChecksService();
+
 
 app.Run();

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Persistence.Repositories;
 
 // read-only repository, uses denormalized OrderReadModel instead of replaying events
-public class OrderReadRepository(AppDbContext dbContext) : IOrderReadRepository
+public class OrderReadRepository(ReadDbContext dbContext) : IOrderReadRepository
 {
     public async Task<OrderResponse?> GetByIdAsync(Guid orderId, CancellationToken ct = default)
     {

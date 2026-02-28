@@ -1,6 +1,7 @@
 using Application.Sagas;
 using Application.Sagas.Persistence;
 using Confluent.Kafka;
+using Domain.Common;
 using Domain.Entities;
 using Domain.ValueObjects;
 using FluentAssertions;
@@ -114,7 +115,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         await Task.Delay(TimeSpan.FromSeconds(5));
 
         // waiting for webhook 
-        var saga = await _server.GetSagaStateAsync(orderId, "ReturnSaga");
+        var saga = await _server.GetSagaStateAsync(orderId, SagaTypes.ReturnSaga);
         
         saga.Should().NotBeNull("saga must be created");
         saga!.Status.Should().Be(SagaStatus.WaitingForEvent,
@@ -141,7 +142,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         await Task.Delay(TimeSpan.FromSeconds(10));
         
         saga = await _server.WaitForSagaStatusAsync(
-            orderId, "ReturnSaga", SagaStatus.Completed, timeoutSeconds: 30);
+            orderId, SagaTypes.ReturnSaga, SagaStatus.Completed, timeoutSeconds: 30);
 
         saga.Should().NotBeNull("saga must complete after webhook");
         saga!.Status.Should().Be(SagaStatus.Completed);
@@ -182,7 +183,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine("✅ Payment & Accounting gRPC calls verified");
 
         // check if aggregate in correct state 
-        var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
+        var events = await _server.GetEventsAsync(returnRequestId, AggregateTypes.ReturnRequest);
         var eventTypes = events.Select(e => e.GetType().Name).ToList();
 
         eventTypes.Should().Contain("ReturnRequestCreatedEvent");
@@ -260,7 +261,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine("Both returned: {response1.ReturnRequestId}");
 
         var returnRequestId = Guid.Parse(response1.ReturnRequestId);
-        var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
+        var events = await _server.GetEventsAsync(returnRequestId, AggregateTypes.ReturnRequest);
 
         events.Count(e => e.GetType().Name == "ReturnRequestCreatedEvent")
             .Should().Be(1, "only ONE ReturnRequestCreatedEvent must exists");
@@ -329,7 +330,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         await Task.Delay(TimeSpan.FromSeconds(10));
 
         var saga = await _server.WaitForSagaStatusAsync(
-            orderId, "ReturnSaga", SagaStatus.Compensated, timeoutSeconds: 30);
+            orderId, SagaTypes.ReturnSaga, SagaStatus.Compensated, timeoutSeconds: 30);
 
         saga.Should().NotBeNull();
         saga!.Status.Should().Be(SagaStatus.Compensated);
@@ -357,7 +358,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         
         _output.WriteLine("Return shipment cancelled via REST");
 
-        var events = await _server.GetEventsAsync(returnRequestId, "ReturnRequest");
+        var events = await _server.GetEventsAsync(returnRequestId, AggregateTypes.ReturnRequest);
         var eventTypes = events.Select(e => e.GetType().Name).ToList();
 
         eventTypes.Should().Contain("ReturnRequestCreatedEvent");
@@ -413,7 +414,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         await Task.Delay(TimeSpan.FromSeconds(5));
         
         // saga stuck in waitingForEvent
-        var saga = await _server.GetSagaStateAsync(orderId, "ReturnSaga");
+        var saga = await _server.GetSagaStateAsync(orderId, SagaTypes.ReturnSaga);
         saga.Should().NotBeNull();
         saga!.Status.Should().Be(SagaStatus.WaitingForEvent);
         
@@ -433,7 +434,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         await Task.Delay(TimeSpan.FromSeconds(70)); // wait 1 full watchdog cycle
         
         // watchdog marked saga as failed and compensated
-        saga = await _server.GetSagaStateAsync(orderId, "ReturnSaga");
+        saga = await _server.GetSagaStateAsync(orderId, SagaTypes.ReturnSaga);
         saga.Should().NotBeNull();
         (saga!.Status == SagaStatus.Compensated || saga.Status == SagaStatus.Failed)
             .Should().BeTrue("watchdog should fail and compensate stuck saga");
@@ -491,7 +492,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
         // Wait for order saga to complete
         await _server.WaitForSagaStatusAsync(
-            orderId, "OrderSaga", SagaStatus.Completed, timeoutSeconds: 30);
+            orderId, SagaTypes.OrderSaga, SagaStatus.Completed, timeoutSeconds: 30);
 
         return orderId;
     }

@@ -27,10 +27,16 @@ public static class InfrastructureModule
         services.AddSingleton<IConnectionMultiplexer>(
             _ => ConnectionMultiplexer.Connect(redisConnection));
         services.AddSingleton<ISagaDistributedLock, RedisSagaDistributedLock>();
+        services.AddSingleton<IDomainEventTypeRegistry, DomainEventTypeRegistry>();
 
         // db context
         services.AddDbContext<AppDbContext>(opt => 
             opt.UseNpgsql(configuration.GetConnectionString("Postgres")));
+        
+        services.AddDbContext<ReadDbContext>(opt =>
+            opt.UseNpgsql(
+                configuration.GetConnectionString("PostgresReadModel")
+                ?? configuration.GetConnectionString("Postgres")));
         
         // Repositories
         services.AddScoped<IEventStoreRepository, EventStoreRepository>();
@@ -45,10 +51,13 @@ public static class InfrastructureModule
         // Services
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
         services.AddScoped<IReturnRequestPersistenceService, ReturnRequestPersistenceService>();
+        services.AddScoped<ISubscriptionPersistenceService, SubscriptionPersistenceService>();
         services.AddScoped<ISagaErrorClassifier, PostgresSagaErrorClassifier>();
         services.AddScoped<ISagaHandlerFactory, SagaHandlerFactory>();
         services.AddScoped<IEventPublisher, KafkaEventPublisher>();
         services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
+        services.AddScoped<IReadModelUpdater, OrderReadModelUpdater>();
+        services.AddScoped<IReadModelUpdater, ReturnRequestReadModelUpdater>();
 
         // Gateways
         services.AddScoped<IInventoryGateway, InventoryGateway>();

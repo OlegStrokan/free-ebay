@@ -35,7 +35,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<OrderReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var evt = BuildOrderCreatedEvent();
         
@@ -56,7 +56,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
         // create read model first via OrderCreated, then send OrderPaid
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<OrderReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var orderId    = Guid.NewGuid();
         var customerId = CustomerId.CreateUnique();
@@ -86,7 +86,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<OrderReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var evt = BuildOrderCreatedEvent();
 
@@ -104,7 +104,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<OrderReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var orderId = Guid.NewGuid();
         await updater.HandleAsync(BuildOrderCreatedEvent(orderId));
@@ -127,7 +127,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<OrderReadModelUpdater>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var orderId    = Guid.NewGuid();
         var customerId = CustomerId.CreateUnique();
@@ -149,7 +149,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<OrderReadModelUpdater>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var orderId = Guid.NewGuid();
         var customerId = CustomerId.CreateUnique();
@@ -174,7 +174,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<ReturnRequestReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var productId  = ProductId.CreateUnique();
         var orderItem  = OrderItem.Create(productId, 1, Money.Create(80, "USD"));
@@ -207,7 +207,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<ReturnRequestReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var rrId = ReturnRequestId.CreateUnique();
         var evt = new ReturnRequestCreatedEvent(
@@ -232,7 +232,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<ReturnRequestReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var rrId     = ReturnRequestId.CreateUnique();
         var orderId  = OrderId.CreateUnique();
@@ -264,7 +264,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<ReturnRequestReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var rrId    = ReturnRequestId.CreateUnique();
         var orderId = OrderId.CreateUnique();
@@ -299,7 +299,7 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
     {
         await using var scope = _fixture.CreateScope();
         var updater = scope.ServiceProvider.GetRequiredService<ReturnRequestReadModelUpdater>();
-        var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db      = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         var rrId    = ReturnRequestId.CreateUnique();
         var orderId = OrderId.CreateUnique();

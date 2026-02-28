@@ -7,8 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
-public class ReturnRequestReadModelUpdater(AppDbContext dbContext, ILogger<ReturnRequestReadModelUpdater> logger)
+public class ReturnRequestReadModelUpdater(ReadDbContext dbContext, ILogger<ReturnRequestReadModelUpdater> logger)
+    : IReadModelUpdater
 {
+    private static readonly HashSet<Type> _handledTypes =
+    [
+        typeof(ReturnRequestCreatedEvent),
+        typeof(ReturnItemsReceivedEvent),
+        typeof(ReturnRefundProcessedEvent),
+        typeof(ReturnCompletedEvent)
+    ];
+
+    public bool CanHandle(Type eventType) => _handledTypes.Contains(eventType);
     public async Task HandleAsync(ReturnRequestCreatedEvent evt, CancellationToken ct = default)
     {
         var exists = await dbContext.ReturnRequestReadModels

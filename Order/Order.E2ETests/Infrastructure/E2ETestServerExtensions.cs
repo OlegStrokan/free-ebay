@@ -51,7 +51,7 @@ public static class E2ETestServerExtensions
         Guid returnRequestId)
     {
         using var scope = server.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
 
         return await db.ReturnRequestReadModels
             .FirstOrDefaultAsync(r => r.Id == returnRequestId);

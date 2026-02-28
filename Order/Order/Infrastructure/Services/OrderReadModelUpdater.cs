@@ -8,8 +8,19 @@ namespace Infrastructure.Services;
 
 // keeps the read model in sync with the event store
 // can be triggered by: outbox processor, background service, in-memory event bus (immediate consistency)
-public class OrderReadModelUpdater(AppDbContext dbContext, ILogger<OrderReadModelUpdater> logger)
+public class OrderReadModelUpdater(ReadDbContext dbContext, ILogger<OrderReadModelUpdater> logger)
+    : IReadModelUpdater
 {
+    private static readonly HashSet<Type> _handledTypes =
+    [
+        typeof(OrderCreatedEvent),
+        typeof(OrderPaidEvent),
+        typeof(OrderTrackingAssignedEvent),
+        typeof(OrderCompletedEvent),
+        typeof(OrderCancelledEvent)
+    ];
+
+    public bool CanHandle(Type eventType) => _handledTypes.Contains(eventType);
     public async Task HandleAsync(OrderCreatedEvent evt, CancellationToken ct = default)
     {
 

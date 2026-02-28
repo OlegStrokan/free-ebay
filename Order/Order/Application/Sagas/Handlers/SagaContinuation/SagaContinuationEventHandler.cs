@@ -15,9 +15,15 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
     private readonly ISagaDistributedLock _distributedLock;
     private readonly ILogger _logger;
 
-    // how long one saga execution may hold the lock before it expires automatically
-    // should be greater than the saga timeout so a stuck saga releases the lock via TTL. isn't it cool?
-    private  readonly TimeSpan _lockExpiry = TimeSpan.FromMinutes(6);
+    // How long one saga execution may hold the lock before it expires automatically.
+    // Must be greater than SagaBase.SagaTimeout (5 min) so a stuck saga never blocks the key forever.
+    private readonly TimeSpan _lockExpiry = TimeSpan.FromMinutes(6);
+
+    // If a concurrent instance holds the lock, retry a few times before giving up.
+    // The holder will complete and release quickly in the normal case (duplicate delivery).
+    // After retries the saga state check (Completed/Failed) acts as the idempotency guard.
+    private const int LockRetryCount = 3;
+    private static readonly TimeSpan LockRetryBaseDelay = TimeSpan.FromMilliseconds(200);
     
     public abstract string EventType { get; }
     public abstract string SagaType { get; }
@@ -65,21 +71,37 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
 
         var correlationId = ExtractCorrelationId(eventDto);
 
-        // prevents two concurrent events from resuming the same saga at the same time (TOCTOU race)
-        // can be: duplicate Kafka delivery, webhook retry, concurrent execution across instances
-        
+        // Prevents two concurrent events from resuming the same saga at the same time (TOCTOU race).
+        // Root causes: duplicate Kafka delivery, webhook retry, multiple app instances.
+        // Retry: the holder finishes quickly, so a brief backoff lets us acquire after it releases.
+        // If after all retries we still can't acquire, the idempotency status-check below is the
+        // secondary guard (saga will be Completed or Failed, so no harm).
         var lockKey = $"saga-lock:{SagaType}:{correlationId}";
-        await using var sagaLock = await _distributedLock.TryAcquireAsync(
-            lockKey, _lockExpiry, cancellationToken);
+        ISagaLockHandle? sagaLock = null;
+
+        for (var attempt = 1; attempt <= LockRetryCount; attempt++)
+        {
+            sagaLock = await _distributedLock.TryAcquireAsync(lockKey, _lockExpiry, cancellationToken);
+            if (sagaLock != null) break;
+
+            _logger.LogWarning(
+                "Could not acquire lock for {SagaType} {CorrelationId} on attempt {Attempt}/{Max}. Retrying...",
+                SagaType, correlationId, attempt, LockRetryCount);
+
+            if (attempt < LockRetryCount)
+                await Task.Delay(LockRetryBaseDelay * attempt, cancellationToken);
+        }
 
         if (sagaLock == null)
         {
             _logger.LogWarning(
-                "Could not acquire lock for {SagaType} {CorrelationId}. " +
+                "Could not acquire lock for {SagaType} {CorrelationId} after {Max} attempts. " +
                 "Concurrent or duplicate {EventType} event discarded.",
-                SagaType, correlationId, EventType);
+                SagaType, correlationId, LockRetryCount, EventType);
             return;
         }
+
+        await using var _ = sagaLock;
 
         _logger.LogInformation(
             "Received {EventType} for correlation {CorrelationId}. " +

@@ -89,6 +89,11 @@ public class SagaOrchestrationService(
                    logger.LogError(ex, "Kafka consume error");
                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                }
+               catch (OperationCanceledException)
+               {
+                   // stoppingToken was cancelled - exit the loop cleanly
+                   throw;
+               }
                catch (Exception ex)
                {
                    logger.LogError(ex, "Error processing message");

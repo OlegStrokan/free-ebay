@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.Json;
 using Application.Interfaces;
+using Domain.Common;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Interfaces;
@@ -37,13 +38,15 @@ public class ReturnRequestPersistenceService(
                 await TryUpdateReturnRequestAsync(orderId, action, cancellationToken);
                 return;
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("Concurrency conflict") && attempt < maxRetries)
+            catch (ConcurrencyConflictException) when (attempt < maxRetries)
             {
                 logger.LogWarning(
                     "Concurrency conflict on attempt {Attempt}/{MaxRetries} for ReturnRequest on Order {OrderId}. Reloading and retrying...",
                     attempt, maxRetries, orderId);
             }
         }
+
+        throw new ConcurrencyConflictException(AggregateTypes.ReturnRequest, orderId.ToString(), maxRetries);
     }
 
     private async Task TryUpdateReturnRequestAsync(
@@ -71,7 +74,7 @@ public class ReturnRequestPersistenceService(
 
                 await eventStore.SaveEventsAsync(
                     returnRequest.Id.Value.ToString(),
-                    "ReturnRequest",
+                    AggregateTypes.ReturnRequest,
                     returnRequest.UncommitedEvents,
                     expectedVersion,
                     cancellationToken);
@@ -119,7 +122,7 @@ public class ReturnRequestPersistenceService(
             {
                 await eventStore.SaveEventsAsync(
                     returnRequest.Id.Value.ToString(),
-                    "ReturnRequest",
+                    AggregateTypes.ReturnRequest,
                     returnRequest.UncommitedEvents,
                     expectedVersion: -1,
                     cancellationToken);
@@ -179,7 +182,7 @@ public class ReturnRequestPersistenceService(
     {
         var events = await eventStore.GetEventsAsync(
             returnRequestId.ToString(),
-            "ReturnRequest",
+            AggregateTypes.ReturnRequest,
             cancellationToken);
 
         if (!events.Any())

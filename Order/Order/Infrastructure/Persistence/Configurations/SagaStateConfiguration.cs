@@ -22,6 +22,8 @@ public class SagaStateConfiguration : IEntityTypeConfiguration<SagaState>
 
         builder.HasIndex(x => x.UpdatedAt);
 
+        builder.HasIndex(x => new { x.Status, x.UpdatedAt });
+
         builder.HasMany(x => x.Steps)
             .WithOne()
             .HasForeignKey(x => x.SagaId)
