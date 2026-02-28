@@ -2,6 +2,7 @@ using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Domain.ValueObjects;
 using Grpc.Core;
+using Infrastructure.Extensions;
 using Protos.Payment;
 using StatusCode = Grpc.Core.StatusCode;
 
@@ -23,7 +24,7 @@ public sealed class PaymentGateway(
         {
             OrderId = orderId.ToString(),
             CustomerId = customerId.ToString(),
-            Amount = (double)amount,
+            Amount = amount.ToDecimalValue(),
             Currency = currency,
             PaymentMethod = paymentMethod
         };
@@ -82,7 +83,7 @@ public sealed class PaymentGateway(
         var request = new RefundPaymentRequest
         {
             PaymentId = paymentId,
-            Amount = (double)amount,
+            Amount = amount.ToDecimalValue(),
             Reason = reason
         };
 

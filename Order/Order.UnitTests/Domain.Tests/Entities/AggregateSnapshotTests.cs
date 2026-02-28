@@ -27,8 +27,8 @@ public class AggregateSnapshotTests
 
         var snapshot = AggregateSnapshot.Create("id", "Type", 0, "{}");
 
-        Assert.True(snapshot.TakenAn >= before);
-        Assert.True(snapshot.TakenAn <= DateTime.UtcNow);
+        Assert.True(snapshot.TakenAt >= before);
+        Assert.True(snapshot.TakenAt <= DateTime.UtcNow);
     }
 
     [Fact]

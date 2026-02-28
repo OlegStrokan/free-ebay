@@ -12,26 +12,27 @@ public class ReturnPolicyService
 {
     // @todo: you can do better my boy. In 1.0 version of this app
     // we should have more clever approach to handle return window
-    private static readonly HashSet<string> EuCountries = new() { "DE", "FR", "PL", "ES", "IT", "CZ", "NL", "AT" }; 
+    private static readonly HashSet<string> EuCountries = new() { "DE", "FR", "PL", "ES", "IT", "CZ", "NL", "AT" };
+
     public TimeSpan CalculateReturnWindow(ReturnPolicyContext context)
     {
         var window = TimeSpan.FromDays(14);
-        
+
         if (EuCountries.Contains(context.CountryCode.ToUpper()))
-            window = Max(window, TimeSpan.FromDays(14));
+            window = Max(window, TimeSpan.FromDays(30));
 
         if (context.CustomerTier == "Subscriber")
-            window = Max(window, TimeSpan.FromDays(7));
+            window = Max(window, TimeSpan.FromDays(21));
 
         if (context.CustomerTier == "Premium")
-            window = Add(window, TimeSpan.FromDays(21));
+            window = Add(window, TimeSpan.FromDays(30));
 
         if (context.IsHolidaySeason)
             window = Add(window, TimeSpan.FromDays(14));
 
         return window;
     }
-    
+
     private static TimeSpan Max(TimeSpan a, TimeSpan b) => a > b ? a : b;
     private static TimeSpan Add(TimeSpan base_, TimeSpan extra) => base_ + extra;
 }

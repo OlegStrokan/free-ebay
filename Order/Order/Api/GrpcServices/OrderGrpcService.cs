@@ -3,6 +3,7 @@ using Application.Commands.RequestReturn;
 using Application.DTOs;
 using Application.Interfaces;
 using Application.Queries;
+using Api.Mappers;
 using FluentValidation;
 using Grpc.Core;
 using MediatR;
@@ -23,82 +24,49 @@ public class OrderGrpcService(
     {
         try
         {
-            logger.LogInformation(
-                "CreateOrder gRPC request received for customer {CustomerId} with idempotency key {IdempotencyKey}",
-                request.CustomerId,
-                request.IdempotencyKey);
-
-            var validationResult = await createValidator.ValidateAsync(request);
+            // 1. Use the injected validator
+            var validationResult = await createValidator.ValidateAsync(request, context.CancellationToken);
 
             if (!validationResult.IsValid)
             {
-                logger.LogWarning(
-                    "CreateOrder validation failed: {Error}",
-                    validationResult.ToString());
-
                 return new CreateOrderResponse
                 {
                     Success = false,
-                    ErrorMessage = validationResult.ToString()
+                    ErrorMessage = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage))
                 };
             }
 
             var command = MapToCreateCommand(request);
-
             var result = await mediator.Send(command, context.CancellationToken);
-
-            if (result.IsSuccess)
-            {
-                logger.LogInformation(
-                    "Order created successfully: {OrderId}",
-                    result.Value);
-
-                return new CreateOrderResponse
-                {
-                    Success = true,
-                    OrderId = result.Value.ToString()
-                };
-            }
-
-            logger.LogWarning("Order creation failed: {Error}",
-                result.Error);
 
             return new CreateOrderResponse
             {
-                Success = false,
+                Success = result.IsSuccess,
+                OrderId = result.IsSuccess ? result.Value.ToString() : string.Empty,
                 ErrorMessage = result.Error
             };
         }
         catch (Exception ex) when (ex is not RpcException)
         {
-            return HandleException<CreateOrderResponse>(ex, "CreateOrder");
+            HandleException(ex, nameof(CreateOrder));
+            throw; // unreachable: HandleException always throws, but required by the compiler
         }
     }
 
     public override async Task<RequestReturnResponse> RequestReturn(
         RequestReturnRequest request,
-        ServerCallContext context
-        )
+        ServerCallContext context)
     {
         try
         {
-            logger.LogInformation(
-                "RequestReturn gRPC request received for order {OrderId} with idempotency key {IdempotencyKey}",
-                request.OrderId,
-                request.IdempotencyKey);
-
-            var validationResult = await returnValidator.ValidateAsync(request);
+            var validationResult = await returnValidator.ValidateAsync(request, context.CancellationToken);
 
             if (!validationResult.IsValid)
             {
-                logger.LogWarning(
-                    "RequestReturn validation failed: {Error}",
-                    validationResult.ToString());
-
                 return new RequestReturnResponse
                 {
                     Success = false,
-                    ErrorMessage = validationResult.ToString()
+                    ErrorMessage = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage))
                 };
             }
 
@@ -106,8 +74,7 @@ public class OrderGrpcService(
                 OrderId: Guid.Parse(request.OrderId),
                 Reason: request.Reason,
                 ItemsToReturn: request.ItemsToReturn.Select(i =>
-                    new OrderItemDto(Guid.Parse(i.ProductId), i.Quantity,
-                        (decimal)i.Price, i.Currency)).ToList(),
+                    new OrderItemDto(Guid.Parse(i.ProductId), i.Quantity, i.Price.ToDecimal(), i.Currency)).ToList(),
                 IdempotencyKey: request.IdempotencyKey);
 
             var result = await mediator.Send(command, context.CancellationToken);
@@ -116,19 +83,20 @@ public class OrderGrpcService(
             {
                 Success = result.IsSuccess,
                 ReturnRequestId = result.IsSuccess ? result.Value.ToString() : string.Empty,
-                ErrorMessage = result.Error,
-
+                ErrorMessage = result.Error
             };
         }
-
         catch (Exception ex) when (ex is not RpcException)
         {
-            return HandleException<RequestReturnResponse>(ex, "RequestReturn");
-
+            HandleException(ex, nameof(RequestReturn));
+            throw;
         }
     }
     
-    private T HandleException<T>(Exception ex, string methodName) where T : new()
+
+    // @think think about this type shit cuz you know
+    [System.Diagnostics.CodeAnalysis.DoesNotReturn]
+    private void HandleException(Exception ex, string methodName)
     {
         if (ex is FormatException)
         {
@@ -162,7 +130,8 @@ public class OrderGrpcService(
         }
         catch (Exception ex) when (ex is not RpcException)
         {
-            return HandleException<GetOrderResponse>(ex, "GetOrder");
+            HandleException(ex, "GetOrder");
+            throw;
         }
     }
 
@@ -187,7 +156,8 @@ public class OrderGrpcService(
         }
         catch (Exception ex) when (ex is not RpcException)
         {
-            return HandleException<ListOrdersResponse>(ex, "ListOrders");
+            HandleException(ex, "ListOrders");
+            throw;
         }
     }
 
@@ -211,7 +181,8 @@ public class OrderGrpcService(
         }
         catch (Exception ex) when (ex is not RpcException)
         {
-            return HandleException<GetCustomerOrdersResponse>(ex, "GetCustomerOrders");
+            HandleException(ex, "GetCustomerOrders");
+            throw;
         }
     }
 
@@ -224,7 +195,7 @@ public class OrderGrpcService(
             TrackingId = o.TrackingId ?? string.Empty,
             PaymentId = o.PaymentId ?? string.Empty,
             Status = o.Status,
-            TotalAmount = (double)o.TotalAmount,
+            TotalAmount = o.TotalAmount.ToDecimalValue(),
             Currency = o.Currency,
             DeliveryAddress = new Address
             {
@@ -242,7 +213,7 @@ public class OrderGrpcService(
         {
             ProductId = i.ProductId.ToString(),
             Quantity = i.Quantity,
-            Price = (double)i.Price,
+            Price = i.Price.ToDecimalValue(),
             Currency = i.Currency
         }));
 
@@ -254,7 +225,7 @@ public class OrderGrpcService(
         Id = o.Id.ToString(),
         TrackingId = o.TrackingId ?? string.Empty,
         Status = o.Status,
-        TotalAmount = (double)o.TotalAmount,
+        TotalAmount = o.TotalAmount.ToDecimalValue(),
         Currency = o.Currency,
         CreatedAt = o.CreatedAt.ToString("O")
     };
@@ -263,7 +234,7 @@ public class OrderGrpcService(
     private static CreateOrderCommand MapToCreateCommand(CreateOrderRequest request) => new(
         CustomerId: Guid.Parse(request.CustomerId),
         Items: request.Items.Select(i =>
-            new OrderItemDto(Guid.Parse(i.ProductId), i.Quantity, (decimal)i.Price, i.Currency)).ToList(),
+            new OrderItemDto(Guid.Parse(i.ProductId), i.Quantity, i.Price.ToDecimal(), i.Currency)).ToList(),
         DeliveryAddress: new AddressDto(
             request.DeliveryAddress.Street,
             request.DeliveryAddress.City,

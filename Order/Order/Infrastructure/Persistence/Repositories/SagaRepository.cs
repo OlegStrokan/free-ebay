@@ -68,9 +68,12 @@ public class SagaRepository(AppDbContext dbContext) : ISagaRepository
 
     public async Task<List<SagaState>> GetStuckSagasAsync(DateTime updatedBeforeCutoff, CancellationToken cancellationToken)
     {
-
+        // Explicitly exclude WaitingForEvent: those sagas are intentionally paused ( AwaitReturnShipmentStep type shit
+        // waiting days for a physical package). They must not be treated as stuck or compensated by the watchdog
         return await dbContext.SagaStates
-            .Where(x => x.Status == SagaStatus.Running && x.UpdatedAt < updatedBeforeCutoff)
+            .Where(x => x.Status == SagaStatus.Running
+                        && x.Status != SagaStatus.WaitingForEvent
+                        && x.UpdatedAt < updatedBeforeCutoff)
             .Include(x => x.Steps)
             .ToListAsync(cancellationToken);
     }

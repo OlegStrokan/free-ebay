@@ -16,7 +16,7 @@ public class AggregateSnapshotConfiguration : IEntityTypeConfiguration<Aggregate
         builder.Property(s => s.AggregateType).HasMaxLength(100).IsRequired();
         builder.Property(s => s.Version).IsRequired();
         builder.Property(s => s.StateJson).HasColumnType("jsonb").IsRequired();
-        builder.Property(s => s.TakenAn);
+        builder.Property(s => s.TakenAt);
         builder.HasIndex(s => new { s.AggregateId, s.AggregateType, s.Version })
             .IsUnique()
             .HasDatabaseName("IX_AggregateSnapshots_AggregateType_Version");

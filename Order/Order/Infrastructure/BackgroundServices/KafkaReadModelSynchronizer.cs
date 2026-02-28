@@ -293,13 +293,14 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             using var doc = JsonDocument.Parse(eventData);
             if (doc.RootElement.TryGetProperty("EventId", out var eventIdElement))
                 return Guid.Parse(eventIdElement.GetString()!);
+
+            throw new InvalidOperationException("Message is missing a valid 'EventId' property");
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to extract EventId from event data");
+            throw;
         }
-
-        return Guid.NewGuid();
     }
 
     public override void Dispose()

@@ -7,7 +7,7 @@ public class AggregateSnapshot
     public string AggregateType { get; set; } = null!;
     public int Version { get; set; }
     public string StateJson { get; set; } = null!;
-    public DateTime TakenAn { get; set; }
+    public DateTime TakenAt { get; set; }
 
 
     private AggregateSnapshot() {}
@@ -34,7 +34,7 @@ public class AggregateSnapshot
             AggregateType = aggregateType,
             Version = version,
             StateJson = stateJson,
-            TakenAn = DateTime.UtcNow
+            TakenAt = DateTime.UtcNow
         };
     }
 }
