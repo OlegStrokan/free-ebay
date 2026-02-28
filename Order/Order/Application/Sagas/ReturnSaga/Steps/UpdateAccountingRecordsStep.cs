@@ -43,7 +43,7 @@ public sealed class UpdateAccountingRecordsStep(
                 cancellationToken);
 
             logger.LogInformation(
-                "Refund recorded is accounting. Journal Entry: {JournalEntryId}",
+                "Refund recorded in accounting. Journal Entry: {JournalEntryId}",
                 journalEntryId);
 
             // step 2: reverse the revenue

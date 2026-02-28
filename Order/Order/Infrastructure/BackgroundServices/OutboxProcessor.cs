@@ -97,7 +97,7 @@ public sealed class OutboxProcessor(
             if (message.RetryCount >= _maxRetries)
             {
                 logger.LogWarning(
-                    "Message {MessageId} exceeded max reteids ({MaxRetries}). Moving to dead letter queue.",
+                    "Message {MessageId} exceeded max retries ({MaxRetries}). Moving to dead letter queue.",
                     message.Id,
                     _maxRetries);
 

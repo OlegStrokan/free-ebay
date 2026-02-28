@@ -53,7 +53,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
         eventTypeMap = DiscoverEventTypes();
 
         logger.LogInformation(
-            "Disovered {Count} event types: {EventTypes}",
+            "Discovered {Count} event types: {EventTypes}",
             eventTypeMap.Count,
             string.Join(", ", eventTypeMap));
     }

@@ -1,4 +1,5 @@
 using Api.GrpcServices;
+using Api.Mappers;
 using Application.Commands.CreateOrder;
 using Application.Commands.RequestReturn;
 using Application.Common;
@@ -135,7 +136,7 @@ public class OrderGrpcServiceTests
             {
                 Street = "Main St", City = "Prague", Country = "CZ", PostalCode = "11000"
             },
-            Items = { new OrderItem { ProductId = productId.ToString(), Quantity = 2, Price = 50.0, Currency = "USD" } }
+            Items = { new OrderItem { ProductId = productId.ToString(), Quantity = 2,  Price = 100.00m.ToDecimalValue(), Currency = "USD" } }
         };
 
         _createValidator
@@ -262,7 +263,7 @@ public class OrderGrpcServiceTests
             OrderId = orderId.ToString(),
             Reason = "Defective product",
             IdempotencyKey = "idem-return",
-            ItemsToReturn = { new OrderItem { ProductId = productId.ToString(), Quantity = 1, Price = 100.0, Currency = "USD" } }
+            ItemsToReturn = { new OrderItem { ProductId = productId.ToString(), Quantity = 1,  Price = 100.00m.ToDecimalValue(), Currency = "USD" } }
         };
 
         _returnValidator
@@ -316,7 +317,7 @@ public class OrderGrpcServiceTests
         {
             Street = "Baker St", City = "London", Country = "UK", PostalCode = "NW1"
         },
-        Items = { new OrderItem { ProductId = Guid.NewGuid().ToString(), Quantity = 1, Price = 99.99, Currency = "USD" } }
+        Items = { new OrderItem { ProductId = Guid.NewGuid().ToString(), Quantity = 1,Price = 99.99m.ToDecimalValue(), Currency = "USD" } }
     };
 
     private static RequestReturnRequest ValidRequestReturnRequest() => new()
@@ -324,6 +325,6 @@ public class OrderGrpcServiceTests
         OrderId = Guid.NewGuid().ToString(),
         Reason = "Damaged in transit",
         IdempotencyKey = Guid.NewGuid().ToString(),
-        ItemsToReturn = { new OrderItem { ProductId = Guid.NewGuid().ToString(), Quantity = 1, Price = 99.99, Currency = "USD" } }
+        ItemsToReturn = { new OrderItem { ProductId = Guid.NewGuid().ToString(), Quantity = 1,  Price = 99.99m.ToDecimalValue(), Currency = "USD" } }
     };
 }

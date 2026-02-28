@@ -90,7 +90,7 @@ public sealed class OrderItem : Entity<OrderItemId>
     private static void ValidatePrice(Money price)
     {
         if (!price.IsGreaterThanZero())
-            throw new DomainException($"Order item price should be greater then zero. Got {price}");
+            throw new DomainException($"Order item price should be greater than zero. Got {price}");
     }
 
     private static void ValidateQuantity(int quantity)

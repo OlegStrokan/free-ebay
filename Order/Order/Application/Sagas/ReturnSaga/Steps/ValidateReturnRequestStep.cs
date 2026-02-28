@@ -40,7 +40,7 @@ public sealed class ValidateReturnRequestStep(
             }
             
             logger.LogInformation(
-                "Validation return request for order {OrderId}",
+                "Validating return request for order {OrderId}",
                 data.CorrelationId);
 
             var order = await orderPersistenceService.LoadOrderAsync(
@@ -72,7 +72,7 @@ public sealed class ValidateReturnRequestStep(
 
             if (!order.IsEligibleForReturn())
             {
-                return StepResult.Failure($"Order {data.CorrelationId} id not eligible for return.");
+                return StepResult.Failure($"Order {data.CorrelationId} id is not eligible for return.");
             }
 
             var itemsToReturn = data.ReturnedItems.Select(dto =>

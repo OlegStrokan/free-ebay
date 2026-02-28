@@ -88,7 +88,7 @@ public sealed class Order : AggregateRoot<OrderId>
         List<OrderItem> items)
     {
         if (items == null || items.Count == 0)
-            throw new DomainException("Order must have a least one item");
+            throw new DomainException("Order must have at least one item");
 
         var order = new Order();
         var totalPrice = CalculateTotalPrice(items);

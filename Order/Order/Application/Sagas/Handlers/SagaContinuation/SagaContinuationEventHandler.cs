@@ -65,8 +65,8 @@ public abstract class SagaContinuationEventHandler<TEvent, TData, TContext>
 
         var correlationId = ExtractCorrelationId(eventDto);
 
-        // prevents two concurrent events (duplicate Kafka delivery or webhook retry type shit
-        // from resuming the same saga at the same time (TOCTOU race type shit)
+        // prevents two concurrent events from resuming the same saga at the same time (TOCTOU race)
+        // can be: duplicate Kafka delivery, webhook retry, concurrent execution across instances
         
         var lockKey = $"saga-lock:{SagaType}:{correlationId}";
         await using var sagaLock = await _distributedLock.TryAcquireAsync(
