@@ -8,5 +8,5 @@ public static class AggregateTypes
 {
     public const string Order = "Order";
     public const string ReturnRequest = "ReturnRequest";
-    public const string Subscription = "Subscription";
+    public const string B2BOrder = "B2BOrder";
 }

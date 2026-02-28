@@ -35,6 +35,7 @@ builder.Services.AddOpenTelemetry()
 var app = builder.Build();
 
 app.MapGrpcService<OrderGrpcService>();
+app.MapGrpcService<B2BOrderGrpcService>();
 app.MapGrpcHealthChecksService();
 
 

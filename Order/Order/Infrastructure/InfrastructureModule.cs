@@ -51,7 +51,7 @@ public static class InfrastructureModule
         // Services
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
         services.AddScoped<IReturnRequestPersistenceService, ReturnRequestPersistenceService>();
-        services.AddScoped<ISubscriptionPersistenceService, SubscriptionPersistenceService>();
+        services.AddScoped<IB2BOrderPersistenceService, B2BOrderPersistenceService>();
         services.AddScoped<ISagaErrorClassifier, PostgresSagaErrorClassifier>();
         services.AddScoped<ISagaHandlerFactory, SagaHandlerFactory>();
         services.AddScoped<IEventPublisher, KafkaEventPublisher>();
