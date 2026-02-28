@@ -14,6 +14,14 @@ service OrderService {
   rpc GetCustomerOrders(GetCustomerOrdersRequest) returns(GetCustomerOrdersResponse);
 }
 
+service B2BOrderService {
+  rpc StartB2BOrder(StartB2BOrderRequest) returns(B2BOrderResponse);
+  rpc UpdateQuoteDraft(UpdateQuoteDraftRequest) returns(B2BOrderResponse);
+  rpc FinalizeQuote(FinalizeQuoteRequest) returns(FinalizeQuoteResponse);
+  rpc CancelB2BOrder(CancelB2BOrderRequest) returns(B2BOrderResponse);
+  rpc GetB2BOrder(GetB2BOrderRequest) returns(GetB2BOrderResponse);
+}
+
 message CreateOrderRequest {
   string customer_id = 1;
   repeated OrderItem items = 2;
@@ -115,4 +123,92 @@ message OrderItemDetail {
   int32 quantity = 2;
   common.DecimalValue price = 3;
   string currency = 4;
+}
+
+// ─── B2B / Quote messages ─────────────────────────────────────────────────────
+
+message StartB2BOrderRequest {
+  string customer_id = 1;
+  string company_name = 2;
+  Address delivery_address = 3;
+  string idempotency_key = 4;
+}
+
+// Describes a single atomic mutation to a quote line-item.
+// The UpdateQuoteDraft RPC carries a repeated list of these.
+message QuoteItemChange {
+  string change_type = 1;    // "AddItem" | "RemoveItem" | "ChangeQuantity" | "AdjustItemPrice"
+  string product_id = 2;
+  int32 quantity = 3;
+  common.DecimalValue price = 4;
+  string currency = 5;
+}
+
+message UpdateQuoteDraftRequest {
+  string b2b_order_id = 1;
+  repeated QuoteItemChange changes = 2;
+  string comment = 3;
+  string comment_author = 4;
+}
+
+message FinalizeQuoteRequest {
+  string b2b_order_id = 1;
+  string payment_method = 2;
+  string idempotency_key = 3;
+}
+
+message CancelB2BOrderRequest {
+  string b2b_order_id = 1;
+  repeated string reasons = 2;
+}
+
+message GetB2BOrderRequest {
+  string b2b_order_id = 1;
+}
+
+// Generic success/error response for write operations
+message B2BOrderResponse {
+  bool success = 1;
+  string b2b_order_id = 2;
+  string error_message = 3;
+}
+
+// FinalizeQuote returns the newly created B2C Order id
+message FinalizeQuoteResponse {
+  bool success = 1;
+  string b2b_order_id = 2;
+  string order_id = 3;
+  string error_message = 4;
+}
+
+message GetB2BOrderResponse {
+  bool success = 1;
+  B2BOrderDetails b2b_order = 2;
+  string error_message = 3;
+}
+
+message B2BOrderDetails {
+  string id = 1;
+  string customer_id = 2;
+  string company_name = 3;
+  string status = 4;
+  common.DecimalValue total_price = 5;
+  string currency = 6;
+  common.DecimalValue discount_percent = 7;
+  Address delivery_address = 8;
+  repeated B2BLineItemDetail items = 9;
+  repeated string comments = 10;
+  string requested_delivery_date = 11;
+  string finalized_order_id = 12;
+  int32 version = 13;
+}
+
+message B2BLineItemDetail {
+  string line_item_id = 1;
+  string product_id = 2;
+  int32 quantity = 3;
+  common.DecimalValue unit_price = 4;
+  common.DecimalValue adjusted_unit_price = 5;
+  string currency = 6;
+  bool is_removed = 7;
 }
