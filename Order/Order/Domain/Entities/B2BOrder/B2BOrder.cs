@@ -92,9 +92,7 @@ public sealed class B2BOrder : AggregateRoot<B2BOrderId>
         Comments: _comments.ToList());
 
     public static B2BOrder FromSnapshot(B2BOrderSnapshotState state) => new(state);
-
-    // ── Commands ─────────────────────────────────────────────────────────────────
-
+    
     public static B2BOrder Start(CustomerId customerId, string companyName, Address deliveryAddress)
     {
         if (string.IsNullOrWhiteSpace(companyName))
@@ -138,7 +136,7 @@ public sealed class B2BOrder : AggregateRoot<B2BOrderId>
         RaiseEvent(new LineItemQuantityChangedEvent(Id, item.Id, newQuantity, DateTime.UtcNow));
     }
 
-    // B2B-specific: salesperson manually overrides a line-item unit price
+    // B2B-specific: saleshead manually overrides a line-item unit price
     public void AdjustItemPrice(ProductId productId, Money newPrice)
     {
         EnsureInDraft();
@@ -155,7 +153,7 @@ public sealed class B2BOrder : AggregateRoot<B2BOrderId>
         RaiseEvent(new DiscountAppliedEvent(Id, discountPercent, DateTime.UtcNow));
     }
 
-    // Negotiation log — both sides can comment without changing state
+    // Negotiation log = both sides can comment without changing state
     public void AddComment(string author, string text)
     {
         if (string.IsNullOrWhiteSpace(author))
@@ -182,7 +180,7 @@ public sealed class B2BOrder : AggregateRoot<B2BOrderId>
     public void Finalize(Guid createdOrderId)
     {
         EnsureInDraft();
-        if (!_items.Any(i => !i.IsRemoved))
+        if (_items.All(i => i.IsRemoved))
             throw new DomainException("Cannot finalize an empty quote");
 
         RaiseEvent(new QuoteFinalizedEvent(Id, createdOrderId, DateTime.UtcNow));
@@ -198,7 +196,7 @@ public sealed class B2BOrder : AggregateRoot<B2BOrderId>
         RaiseEvent(new B2BOrderCancelledEvent(Id, reasons, DateTime.UtcNow));
     }
 
-    // ── Apply (event projection) ──────────────────────────────────────────────
+    // event projection
 
     private void Apply(B2BOrderStartedEvent evt)
     {
@@ -272,7 +270,7 @@ public sealed class B2BOrder : AggregateRoot<B2BOrderId>
         _updatedAt = evt.OccurredAt;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // helpers 
 
     private void EnsureInDraft()
     {
