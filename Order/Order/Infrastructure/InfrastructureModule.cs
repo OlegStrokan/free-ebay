@@ -47,6 +47,7 @@ public static class InfrastructureModule
         services.AddScoped<ISagaRepository, SagaRepository>();
         services.AddScoped<IOrderReadRepository, OrderReadRepository>();
         services.AddScoped<IReturnRequestLookupRepository, ReturnRequestLookupRepository>();
+        services.AddScoped<IB2BOrderReadRepository, B2BOrderReadRepository>();
 
         // Services
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
@@ -58,6 +59,9 @@ public static class InfrastructureModule
         services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
         services.AddScoped<IReadModelUpdater, OrderReadModelUpdater>();
         services.AddScoped<IReadModelUpdater, ReturnRequestReadModelUpdater>();
+        // register as concrete (for direct test resolution) AND as IReadModelUpdater (for routing)
+        services.AddScoped<B2BOrderReadModelUpdater>();
+        services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<B2BOrderReadModelUpdater>());
 
         // Gateways
         services.AddScoped<IInventoryGateway, InventoryGateway>();

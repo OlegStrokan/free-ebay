@@ -111,4 +111,33 @@ public static class E2ETestServerExtensions
 
         return null;
     }
+
+    public static async Task<B2BOrderReadModel?> GetB2BOrderReadModelAsync(
+        this E2ETestServer server,
+        Guid b2bOrderId)
+    {
+        using var scope = server.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
+        return await db.B2BOrderReadModels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == b2bOrderId);
+    }
+
+    public static async Task<B2BOrderReadModel?> WaitForB2BOrderReadModelStatusAsync(
+        this E2ETestServer server,
+        Guid b2bOrderId,
+        string expectedStatus,
+        int timeoutSeconds = 30)
+    {
+        for (var i = 0; i < timeoutSeconds; i++)
+        {
+            var model = await server.GetB2BOrderReadModelAsync(b2bOrderId);
+            if (model?.Status == expectedStatus)
+                return model;
+
+            await Task.Delay(1000);
+        }
+
+        return null;
+    }
 }

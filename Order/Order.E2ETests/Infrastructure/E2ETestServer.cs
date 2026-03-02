@@ -92,6 +92,12 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
                 options.UseNpgsql(_postgreSqlContainer.GetConnectionString());
             });
 
+            services.RemoveAll<DbContextOptions<ReadDbContext>>();
+            services.AddDbContext<ReadDbContext>(options =>
+            {
+                options.UseNpgsql(_postgreSqlContainer.GetConnectionString());
+            });
+
             services.Configure<KafkaOptions>(options =>
             {
                 options.BootstrapServers = KafkaBootstrapServers;
@@ -124,6 +130,15 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         return new OrderService.OrderServiceClient(channel);
     }
 
+    public B2BOrderService.B2BOrderServiceClient CreateB2BOrderClient()
+    {
+        var httpClient = CreateClient();
+        var channel = GrpcChannel.ForAddress(
+            httpClient.BaseAddress!,
+            new GrpcChannelOptions { HttpClient = httpClient });
+        return new B2BOrderService.B2BOrderServiceClient(channel);
+    }
+
     public T GetService<T>() where T : notnull
     {
         using var scope = Services.CreateScope();
@@ -133,8 +148,10 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task MigrateDatabaseAsync()
     {
         using var scope = Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await dbContext.Database.MigrateAsync();
+        var dbContext  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var readDb     = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
+        await dbContext.Database.EnsureCreatedAsync();
+        await readDb.Database.EnsureCreatedAsync();
     }
 
     public void ResetAll()

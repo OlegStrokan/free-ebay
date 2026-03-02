@@ -63,12 +63,17 @@ public sealed class IntegrationFixture : IAsyncLifetime
         services.AddScoped<IDeadLetterRepository, DeadLetterRepository>();
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
         services.AddScoped<IReturnRequestPersistenceService, ReturnRequestPersistenceService>();
+        services.AddScoped<IB2BOrderPersistenceService, B2BOrderPersistenceService>();
+        services.AddScoped<IOrderReadRepository, OrderReadRepository>();
+        services.AddScoped<IB2BOrderReadRepository, B2BOrderReadRepository>();
         services.AddScoped<ISagaRepository, SagaRepository>();
         // register as concrete (for direct test resolution) AND as IReadModelUpdater (for routing)
         services.AddScoped<OrderReadModelUpdater>();
         services.AddScoped<ReturnRequestReadModelUpdater>();
+        services.AddScoped<B2BOrderReadModelUpdater>();
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<OrderReadModelUpdater>());
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<ReturnRequestReadModelUpdater>());
+        services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<B2BOrderReadModelUpdater>());
         services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
 
         Services = services.BuildServiceProvider();
