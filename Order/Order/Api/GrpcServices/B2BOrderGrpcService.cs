@@ -162,10 +162,10 @@ public class B2BOrderGrpcService(
                 DiscountPercent = s.DiscountPercent.ToDecimalValue(),
                 DeliveryAddress = new Address
                 {
-                    Street = s.Street,
-                    City = s.City,
-                    Country = s.Country,
-                    PostalCode = s.PostalCode
+                    Street = s.DeliveryAddress.Street,
+                    City = s.DeliveryAddress.City,
+                    Country = s.DeliveryAddress.Country,
+                    PostalCode = s.DeliveryAddress.PostalCode
                 },
                 RequestedDeliveryDate = s.RequestedDeliveryDate?.ToString("O") ?? string.Empty,
                 FinalizedOrderId = s.FinalizedOrderId?.ToString() ?? string.Empty,
