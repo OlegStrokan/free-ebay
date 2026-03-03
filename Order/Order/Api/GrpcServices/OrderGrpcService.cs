@@ -24,7 +24,6 @@ public class OrderGrpcService(
     {
         try
         {
-            // 1. Use the injected validator
             var validationResult = await createValidator.ValidateAsync(request, context.CancellationToken);
 
             if (!validationResult.IsValid)
@@ -92,10 +91,7 @@ public class OrderGrpcService(
             throw;
         }
     }
-    
 
-    // @think think about this type shit cuz you know
-    [System.Diagnostics.CodeAnalysis.DoesNotReturn]
     private void HandleException(Exception ex, string methodName)
     {
         if (ex is FormatException)

@@ -48,11 +48,13 @@ public static class InfrastructureModule
         services.AddScoped<IOrderReadRepository, OrderReadRepository>();
         services.AddScoped<IReturnRequestLookupRepository, ReturnRequestLookupRepository>();
         services.AddScoped<IB2BOrderReadRepository, B2BOrderReadRepository>();
+        services.AddScoped<IRecurringOrderReadRepository, RecurringOrderReadRepository>();
 
         // Services
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
         services.AddScoped<IReturnRequestPersistenceService, ReturnRequestPersistenceService>();
         services.AddScoped<IB2BOrderPersistenceService, B2BOrderPersistenceService>();
+        services.AddScoped<IRecurringOrderPersistenceService, RecurringOrderPersistenceService>();
         services.AddScoped<ISagaErrorClassifier, PostgresSagaErrorClassifier>();
         services.AddScoped<ISagaHandlerFactory, SagaHandlerFactory>();
         services.AddScoped<IEventPublisher, KafkaEventPublisher>();
@@ -62,6 +64,8 @@ public static class InfrastructureModule
         // register as concrete (for direct test resolution) AND as IReadModelUpdater (for routing)
         services.AddScoped<B2BOrderReadModelUpdater>();
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<B2BOrderReadModelUpdater>());
+        services.AddScoped<RecurringOrderReadModelUpdater>();
+        services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<RecurringOrderReadModelUpdater>());
 
         // Gateways
         services.AddScoped<IInventoryGateway, InventoryGateway>();
@@ -73,6 +77,7 @@ public static class InfrastructureModule
 
         // Background services
         services.AddHostedService<OutboxProcessor>();
+        services.AddHostedService<RecurringOrderSchedulerService>();
         services.AddHostedService<SagaOrchestrationService>();
         services.AddHostedService<KafkaReadModelSynchronizer>();
         services.AddHostedService<SagaWatchdogService>();

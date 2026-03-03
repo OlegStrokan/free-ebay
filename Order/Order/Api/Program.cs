@@ -36,6 +36,7 @@ var app = builder.Build();
 
 app.MapGrpcService<OrderGrpcService>();
 app.MapGrpcService<B2BOrderGrpcService>();
+app.MapGrpcService<RecurringOrderGrpcService>();
 app.MapGrpcHealthChecksService();
 
 

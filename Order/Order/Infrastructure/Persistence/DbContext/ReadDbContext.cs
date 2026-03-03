@@ -15,11 +15,13 @@ public class ReadDbContext(DbContextOptions<ReadDbContext> options)
     public DbSet<OrderReadModel> OrderReadModels => Set<OrderReadModel>();
     public DbSet<ReturnRequestReadModel> ReturnRequestReadModels => Set<ReturnRequestReadModel>();
     public DbSet<B2BOrderReadModel> B2BOrderReadModels => Set<B2BOrderReadModel>();
+    public DbSet<RecurringOrderReadModel> RecurringOrderReadModels => Set<RecurringOrderReadModel>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfiguration(new OrderReadModelConfiguration());
         builder.ApplyConfiguration(new ReturnRequestReadModelConfiguration());
         builder.ApplyConfiguration(new B2BOrderReadModelConfiguration());
+        builder.ApplyConfiguration(new RecurringOrderReadModelConfiguration());
     }
 }
