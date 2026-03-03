@@ -2,7 +2,6 @@ using Application.Commands.FinalizeQuote;
 using Application.Interfaces;
 using Domain.Entities.B2BOrder;
 using Domain.Entities.Order;
-using Domain.Interfaces;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -15,17 +14,11 @@ public class FinalizeQuoteCommandHandlerTests
     private readonly IB2BOrderPersistenceService _b2bPersistenceService =
         Substitute.For<IB2BOrderPersistenceService>();
 
-    private readonly IOrderPersistenceService _orderPersistenceService =
-        Substitute.For<IOrderPersistenceService>();
-
-    private readonly IIdempotencyRepository _idempotencyRepository =
-        Substitute.For<IIdempotencyRepository>();
-
     private readonly ILogger<FinalizeQuoteCommandHandler> _logger =
         Substitute.For<ILogger<FinalizeQuoteCommandHandler>>();
 
     private FinalizeQuoteCommandHandler BuildHandler() =>
-        new(_b2bPersistenceService, _orderPersistenceService, _idempotencyRepository, _logger);
+        new(_b2bPersistenceService, _logger);
 
     private static B2BOrder BuildDraftOrderWithItem()
     {
@@ -47,16 +40,16 @@ public class FinalizeQuoteCommandHandlerTests
         var b2bOrder = BuildDraftOrderWithItem();
         var b2bOrderId = b2bOrder.Id.Value;
 
-        _idempotencyRepository
-            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((IdempotencyRecord?)null);
-
         _b2bPersistenceService
             .LoadB2BOrderAsync(b2bOrderId, Arg.Any<CancellationToken>())
             .Returns(b2bOrder);
 
         _b2bPersistenceService
-            .UpdateB2BOrderAsync(Arg.Any<Guid>(), Arg.Any<Func<B2BOrder, Task>>(), Arg.Any<CancellationToken>())
+            .FinalizeB2BOrderAsync(
+                b2bOrderId,
+                Arg.Any<Order>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
         var result = await BuildHandler().Handle(ValidCommand(b2bOrderId), CancellationToken.None);
@@ -64,38 +57,16 @@ public class FinalizeQuoteCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.NotEqual(Guid.Empty, result.Value);
 
-        await _orderPersistenceService.Received(1).CreateOrderAsync(
+        await _b2bPersistenceService.Received(1).FinalizeB2BOrderAsync(
+            b2bOrderId,
             Arg.Any<Order>(),
-            Arg.Any<string>(),
+            "idem-finalize-001",
             Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_ShouldReturnExistingOrderId_WhenDuplicateIdempotencyKey()
-    {
-        var existingOrderId = Guid.NewGuid();
-        _idempotencyRepository
-            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new IdempotencyRecord("idem-finalize-dup", existingOrderId, DateTime.UtcNow));
-
-        var result = await BuildHandler().Handle(
-            new FinalizeQuoteCommand(Guid.NewGuid(), "CreditCard", "idem-finalize-dup"),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(existingOrderId, result.Value);
-
-        await _orderPersistenceService.DidNotReceive()
-            .CreateOrderAsync(Arg.Any<Order>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenB2BOrderNotFound()
     {
-        _idempotencyRepository
-            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((IdempotencyRecord?)null);
-
         _b2bPersistenceService
             .LoadB2BOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((B2BOrder?)null);
@@ -106,28 +77,74 @@ public class FinalizeQuoteCommandHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("not found", result.Error);
+
+        await _b2bPersistenceService.DidNotReceive().FinalizeB2BOrderAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<Order>(),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnFailure_WhenOrderCreationThrows()
+    public async Task Handle_ShouldReturnFailure_WhenFinalizeThrows()
     {
         var b2bOrder = BuildDraftOrderWithItem();
-
-        _idempotencyRepository
-            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((IdempotencyRecord?)null);
+        var b2bOrderId = b2bOrder.Id.Value;
 
         _b2bPersistenceService
-            .LoadB2BOrderAsync(b2bOrder.Id.Value, Arg.Any<CancellationToken>())
+            .LoadB2BOrderAsync(b2bOrderId, Arg.Any<CancellationToken>())
             .Returns(b2bOrder);
 
-        _orderPersistenceService
-            .CreateOrderAsync(Arg.Any<Order>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Throws(new Exception("Payment gateway down"));
+        _b2bPersistenceService
+            .FinalizeB2BOrderAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<Order>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Throws(new Exception("Database transaction failed"));
 
-        var result = await BuildHandler().Handle(ValidCommand(b2bOrder.Id.Value), CancellationToken.None);
+        var result = await BuildHandler().Handle(ValidCommand(b2bOrderId), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("Payment gateway down", result.Error);
+        Assert.Contains("Database transaction failed", result.Error);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldConvertB2BItemsToOrderItems_Correctly()
+    {
+        var customerId = CustomerId.CreateUnique();
+        var productId1 = ProductId.CreateUnique();
+        var productId2 = ProductId.CreateUnique();
+
+        var b2bOrder = B2BOrder.Start(
+            customerId,
+            "Test Company",
+            Address.Create("Street", "City", "Country", "12345"));
+        b2bOrder.AddItem(productId1, 3, Money.Create(50m, "USD"));
+        b2bOrder.AddItem(productId2, 2, Money.Create(75m, "USD"));
+        b2bOrder.ClearUncommittedEvents();
+
+        var b2bOrderId = b2bOrder.Id.Value;
+
+        _b2bPersistenceService
+            .LoadB2BOrderAsync(b2bOrderId, Arg.Any<CancellationToken>())
+            .Returns(b2bOrder);
+
+        Order? capturedOrder = null;
+        _b2bPersistenceService
+            .FinalizeB2BOrderAsync(
+                b2bOrderId,
+                Arg.Do<Order>(o => capturedOrder = o),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var result = await BuildHandler().Handle(ValidCommand(b2bOrderId), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedOrder);
+        Assert.Equal(2, capturedOrder.Items.Count());
+        Assert.Contains(capturedOrder.Items, item => item.Quantity == 3);
+        Assert.Contains(capturedOrder.Items, item => item.Quantity == 2);
     }
 }

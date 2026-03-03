@@ -75,6 +75,7 @@ public class RequestReturnCommandHandler(
                 * take all needed info as countryCode, CustomerTier
                 * in addition i need one more integration to product to get
                 * list of categories which products have from current order
+                * for now it's enough
                 */
                 var policyContext = new ReturnPolicyContext(
                     CountryCode: "US",

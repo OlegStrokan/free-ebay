@@ -28,7 +28,11 @@ public class B2BOrderGrpcService(
         {
             var validation = await startValidator.ValidateAsync(request, context.CancellationToken);
             if (!validation.IsValid)
-                return Fail(string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)));
+                return new B2BOrderResponse
+                {
+                    Success = false,
+                    ErrorMessage = string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))
+                };
 
             var command = new StartB2BOrderCommand(
                 CustomerId: Guid.Parse(request.CustomerId),
@@ -39,8 +43,8 @@ public class B2BOrderGrpcService(
             var result = await mediator.Send(command, context.CancellationToken);
 
             return result.IsSuccess
-                ? Ok(result.Value.ToString())
-                : Fail(result.Error ?? "Unknown error");
+                ? new B2BOrderResponse { Success = true, B2BOrderId = result.Value.ToString() }
+                : new B2BOrderResponse { Success = false, ErrorMessage = result.Error ?? "Unknown error" };
         }
         catch (Exception ex) when (ex is not RpcException)
         {
@@ -57,7 +61,11 @@ public class B2BOrderGrpcService(
         {
             var validation = await updateValidator.ValidateAsync(request, context.CancellationToken);
             if (!validation.IsValid)
-                return Fail(string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)));
+                return new B2BOrderResponse
+                {
+                    Success = false,
+                    ErrorMessage = string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))
+                };
 
             var command = new UpdateQuoteDraftCommand(
                 B2BOrderId: Guid.Parse(request.B2BOrderId),
@@ -70,8 +78,8 @@ public class B2BOrderGrpcService(
             var result = await mediator.Send(command, context.CancellationToken);
 
             return result.IsSuccess
-                ? Ok(request.B2BOrderId)
-                : Fail(result.Error ?? "Unknown error");
+                ? new B2BOrderResponse { Success = true, B2BOrderId = request.B2BOrderId }
+                : new B2BOrderResponse { Success = false, ErrorMessage = result.Error ?? "Unknown error" };
         }
         catch (Exception ex) when (ex is not RpcException)
         {
@@ -117,7 +125,7 @@ public class B2BOrderGrpcService(
         try
         {
             if (!Guid.TryParse(request.B2BOrderId, out var b2bOrderId))
-                return Fail("Invalid B2BOrderId format");
+                return new B2BOrderResponse { Success = false, ErrorMessage = "Invalid B2BOrderId format" };
 
             var command = new CancelB2BOrderCommand(
                 b2bOrderId,
@@ -126,8 +134,8 @@ public class B2BOrderGrpcService(
             var result = await mediator.Send(command, context.CancellationToken);
 
             return result.IsSuccess
-                ? Ok(request.B2BOrderId)
-                : Fail(result.Error ?? "Unknown error");
+                ? new B2BOrderResponse { Success = true, B2BOrderId = request.B2BOrderId }
+                : new B2BOrderResponse { Success = false, ErrorMessage = result.Error ?? "Unknown error" };
         }
         catch (Exception ex) when (ex is not RpcException)
         {
@@ -198,12 +206,6 @@ public class B2BOrderGrpcService(
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static B2BOrderResponse Ok(string b2bOrderId) =>
-        new() { Success = true, B2BOrderId = b2bOrderId };
-
-    private static B2BOrderResponse Fail(string error) =>
-        new() { Success = false, ErrorMessage = error };
 
     [System.Diagnostics.CodeAnalysis.DoesNotReturn]
     private void HandleException(Exception ex, string method)

@@ -4,11 +4,11 @@ using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
 using Domain.Entities.B2BOrder;
+using Domain.Entities.Order;
 using Domain.Exceptions;
 using Domain.Interfaces;
 using Infrastructure.Persistence.DbContext;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services;
 
@@ -152,9 +152,90 @@ public class B2BOrderPersistenceService(
             }
         });
     }
+    
+    public async Task FinalizeB2BOrderAsync(
+        Guid b2bOrderId,
+        Order orderToCreate,
+        string idempotencyKey,
+        CancellationToken ct)
+    {
+        var strategy = dbContext.Database.CreateExecutionStrategy();
 
-    // ── Load ──────────────────────────────────────────────────────────────────
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database
+                .BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
+            try
+            {
+                var b2bOrder = await LoadB2BOrderAsync(b2bOrderId, ct)
+                    ?? throw new DomainException($"B2BOrder {b2bOrderId} not found");
+
+                var b2bOrderExpectedVersion = b2bOrder.Version;
+
+                b2bOrder.Finalize(orderToCreate.Id.Value);
+
+                await eventStore.SaveEventsAsync(
+                    orderToCreate.Id.Value.ToString(),
+                    AggregateTypes.Order,
+                    orderToCreate.UncommitedEvents,
+                    expectedVersion: -1,
+                    ct);
+
+                await eventStore.SaveEventsAsync(
+                    b2bOrder.Id.Value.ToString(),
+                    AggregateTypes.B2BOrder,
+                    b2bOrder.UncommitedEvents,
+                    b2bOrderExpectedVersion,
+                    ct);
+
+                foreach (var evt in orderToCreate.UncommitedEvents)
+                {
+                    await outboxRepository.AddAsync(
+                        evt.EventId,
+                        evt.GetType().Name,
+                        JsonSerializer.Serialize(evt, evt.GetType()),
+                        evt.OccurredOn,
+                        orderToCreate.Id.Value.ToString(),
+                        ct);
+                }
+
+                foreach (var evt in b2bOrder.UncommitedEvents)
+                {
+                    await outboxRepository.AddAsync(
+                        evt.EventId,
+                        evt.GetType().Name,
+                        JsonSerializer.Serialize(evt, evt.GetType()),
+                        evt.OccurredOn,
+                        b2bOrder.Id.Value.ToString(),
+                        ct);
+                }
+
+                await idempotencyRepository.SaveAsync(
+                    idempotencyKey,
+                    orderToCreate.Id.Value,
+                    DateTime.UtcNow,
+                    ct);
+
+                orderToCreate.ClearUncommittedEvents();
+                b2bOrder.ClearUncommittedEvents();
+
+                await dbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                logger.LogInformation(
+                    "Finalized B2BOrder {B2BOrderId} → Order {OrderId}",
+                    b2bOrderId, orderToCreate.Id.Value);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Transaction failed finalizing B2BOrder {B2BOrderId}", b2bOrderId);
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        });
+    }
+    
     public async Task<B2BOrder?> LoadB2BOrderAsync(Guid b2bOrderId, CancellationToken ct)
     {
         var snapshot = await snapshotRepository.GetLatestAsync(
@@ -185,9 +266,7 @@ public class B2BOrderPersistenceService(
 
         return order;
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
+    
     private async Task<B2BOrder?> ReplayFromStoreAsync(Guid b2bOrderId, CancellationToken ct)
     {
         var events = await eventStore.GetEventsAsync(
@@ -217,7 +296,7 @@ public class B2BOrderPersistenceService(
         }
         catch (Exception ex)
         {
-            // Snapshot failure is never fatal — we can always replay
+            // snapshot failure is never fatal - we can always replay
             logger.LogWarning(ex,
                 "Failed to take snapshot for B2BOrder {B2BOrderId} at version {Version}. " +
                 "Will replay from full event history on next load.",

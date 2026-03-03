@@ -3,6 +3,8 @@ using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
 using Domain.Entities.B2BOrder;
+using Domain.Entities.Order;
+using Domain.Exceptions;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using FluentAssertions;
@@ -201,5 +203,184 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         result.Should().NotBeNull("full-replay of B2BOrderStartedEvent must reconstruct the aggregate");
         result!.Version.Should().Be(1, "one event (B2BOrderStartedEvent) replayed");
         result.Status.Should().Be(B2BOrderStatus.Draft);
+    }
+
+    [Fact]
+    public async Task FinalizeB2BOrderAsync_ShouldSaveBothOrderAndB2BOrderEvents_AtomicallyInSingleTransaction()
+    {
+        await using var scope = _fixture.CreateScope();
+        var b2bSvc = scope.ServiceProvider.GetRequiredService<IB2BOrderPersistenceService>();
+        var orderSvc = scope.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var b2bOrder = BuildOrderWithItem();
+        var b2bOrderId = b2bOrder.Id.Value;
+        await b2bSvc.StartB2BOrderAsync(b2bOrder, Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var customerId = b2bOrder.CustomerId;
+        var orderItems = b2bOrder.ActiveItems
+            .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
+            .ToList();
+        var order = Domain.Entities.Order.Order.Create(customerId, b2bOrder.DeliveryAddress, orderItems);
+        var idempotencyKey = Guid.NewGuid().ToString();
+
+        await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, idempotencyKey, CancellationToken.None);
+
+        var b2bOrderAggId = b2bOrderId.ToString();
+        var orderAggId = order.Id.Value.ToString();
+
+        var b2bEvents = await db.DomainEvents
+            .Where(e => e.AggregateId == b2bOrderAggId)
+            .ToListAsync();
+
+        var orderEvents = await db.DomainEvents
+            .Where(e => e.AggregateId == orderAggId)
+            .ToListAsync();
+
+        b2bEvents.Should().HaveCountGreaterThan(1, "B2BOrder should have StartedEvent + FinalizedEvent");
+        orderEvents.Should().HaveCountGreaterThan(0, "Order should have CreatedEvent");
+    }
+
+    [Fact]
+    public async Task FinalizeB2BOrderAsync_ShouldUpdateB2BOrderStatus_ToFinalized()
+    {
+        await using var scope = _fixture.CreateScope();
+        var b2bSvc = scope.ServiceProvider.GetRequiredService<IB2BOrderPersistenceService>();
+
+        var b2bOrder = BuildOrderWithItem();
+        var b2bOrderId = b2bOrder.Id.Value;
+        await b2bSvc.StartB2BOrderAsync(b2bOrder, Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var beforeFinalize = await b2bSvc.LoadB2BOrderAsync(b2bOrderId, CancellationToken.None);
+        beforeFinalize!.Status.Should().Be(B2BOrderStatus.Draft);
+        beforeFinalize.FinalizedOrderId.Should().BeNull();
+
+        var orderItems = b2bOrder.ActiveItems
+            .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
+            .ToList();
+        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+
+        await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var afterFinalize = await b2bSvc.LoadB2BOrderAsync(b2bOrderId, CancellationToken.None);
+        afterFinalize.Should().NotBeNull();
+        afterFinalize!.Status.Should().Be(B2BOrderStatus.Finalized);
+        afterFinalize.FinalizedOrderId.Should().Be(order.Id.Value);
+    }
+
+    [Fact]
+    public async Task FinalizeB2BOrderAsync_ShouldCreateOutboxMessagesForBothAggregates()
+    {
+        await using var scope = _fixture.CreateScope();
+        var b2bSvc = scope.ServiceProvider.GetRequiredService<IB2BOrderPersistenceService>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var b2bOrder = BuildOrderWithItem();
+        var b2bOrderId = b2bOrder.Id.Value;
+        await b2bSvc.StartB2BOrderAsync(b2bOrder, Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var orderItems = b2bOrder.ActiveItems
+            .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
+            .ToList();
+        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+
+        await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var b2bOrderAggId = b2bOrderId.ToString();
+        var orderAggId = order.Id.Value.ToString();
+
+        var allOutbox = await db.OutboxMessages.ToListAsync();
+        var b2bOutbox = allOutbox.Where(m => m.AggregateId == b2bOrderAggId).ToList();
+        var orderOutbox = allOutbox.Where(m => m.AggregateId == orderAggId).ToList();
+
+        b2bOutbox.Should().HaveCountGreaterThan(0, "B2BOrder events should be in outbox");
+        orderOutbox.Should().HaveCountGreaterThan(0, "Order events should be in outbox");
+    }
+
+    [Fact]
+    public async Task FinalizeB2BOrderAsync_ShouldSaveIdempotencyRecord()
+    {
+        await using var scope = _fixture.CreateScope();
+        var b2bSvc = scope.ServiceProvider.GetRequiredService<IB2BOrderPersistenceService>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var b2bOrder = BuildOrderWithItem();
+        var b2bOrderId = b2bOrder.Id.Value;
+        await b2bSvc.StartB2BOrderAsync(b2bOrder, Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var orderItems = b2bOrder.ActiveItems
+            .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
+            .ToList();
+        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+        var idempotencyKey = $"finalize-{Guid.NewGuid()}";
+
+        await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, idempotencyKey, CancellationToken.None);
+
+        var record = await db.IdempotencyRecords
+            .SingleOrDefaultAsync(r => r.Key == idempotencyKey);
+
+        record.Should().NotBeNull();
+        record!.ResultId.Should().Be(order.Id.Value);
+    }
+
+    [Fact]
+    public async Task FinalizeB2BOrderAsync_ShouldFail_WhenB2BOrderNotFound()
+    {
+        await using var scope = _fixture.CreateScope();
+        var b2bSvc = scope.ServiceProvider.GetRequiredService<IB2BOrderPersistenceService>();
+
+        var fakeBb2OrderId = Guid.NewGuid();
+        var orderItems = new List<OrderItem>();
+        var order = Domain.Entities.Order.Order.Create(
+            CustomerId.CreateUnique(),
+            TestAddress,
+            orderItems);
+
+        var act = async () => await b2bSvc.FinalizeB2BOrderAsync(
+            fakeBb2OrderId,
+            order,
+            Guid.NewGuid().ToString(),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<DomainException>()
+            .WithMessage($"*not found*");
+    }
+
+    [Fact]
+    public async Task FinalizeB2BOrderAsync_ShouldIdempotencyCheckOnSecondCall_ReturnSameOrderId()
+    {
+        await using var scope = _fixture.CreateScope();
+        var b2bSvc = scope.ServiceProvider.GetRequiredService<IB2BOrderPersistenceService>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var b2bOrder = BuildOrderWithItem();
+        var b2bOrderId = b2bOrder.Id.Value;
+        await b2bSvc.StartB2BOrderAsync(b2bOrder, Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var idempotencyKey = $"finalize-dup-{Guid.NewGuid()}";
+
+        var orderItems = b2bOrder.ActiveItems
+            .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
+            .ToList();
+        var order1 = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+        var orderId1 = order1.Id.Value;
+
+        await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order1, idempotencyKey, CancellationToken.None);
+
+        var record = await db.IdempotencyRecords
+            .SingleOrDefaultAsync(r => r.Key == idempotencyKey);
+        record.Should().NotBeNull();
+        record!.ResultId.Should().Be(orderId1);
+
+        var orderItems2 = b2bOrder.ActiveItems
+            .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
+            .ToList();
+        var order2 = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems2);
+
+        await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order2, idempotencyKey, CancellationToken.None);
+
+        var recordAfter = await db.IdempotencyRecords
+            .SingleOrDefaultAsync(r => r.Key == idempotencyKey);
+        recordAfter!.ResultId.Should().Be(orderId1, "idempotency key should return same result");
     }
 }

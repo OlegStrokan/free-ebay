@@ -11,8 +11,6 @@ namespace Application.Commands.FinalizeQuote;
 
 public class FinalizeQuoteCommandHandler(
     IB2BOrderPersistenceService b2bPersistenceService,
-    IOrderPersistenceService orderPersistenceService,
-    IIdempotencyRepository idempotencyRepository,
     ILogger<FinalizeQuoteCommandHandler> logger)
     : IRequestHandler<FinalizeQuoteCommand, Result<Guid>>
 {
@@ -20,15 +18,6 @@ public class FinalizeQuoteCommandHandler(
     {
         try
         {
-            var existing = await idempotencyRepository.GetByKeyAsync(request.IdempotencyKey, cancellationToken);
-            if (existing is not null)
-            {
-                logger.LogInformation(
-                    "Duplicate FinalizeQuote for key {Key}. Returning {OrderId}",
-                    request.IdempotencyKey, existing.ResultId);
-                return Result<Guid>.Success(existing.ResultId);
-            }
-
             var b2bOrder = await b2bPersistenceService.LoadB2BOrderAsync(
                 request.B2BOrderId, cancellationToken);
 
@@ -45,18 +34,10 @@ public class FinalizeQuoteCommandHandler(
 
             var order = Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
 
-
-            await orderPersistenceService.CreateOrderAsync(order, request.IdempotencyKey, cancellationToken);
-
-            // @think: this probably should be a transaction. but i can't import transaction into handler layer
-            // should we create persistence method which have transaction inside?
-            await b2bPersistenceService.UpdateB2BOrderAsync(
+         await b2bPersistenceService.FinalizeB2BOrderAsync(
                 request.B2BOrderId,
-                q =>
-                {
-                    q.Finalize(order.Id.Value);
-                    return Task.CompletedTask;
-                },
+                order,
+                request.IdempotencyKey,
                 cancellationToken);
 
             logger.LogInformation(
