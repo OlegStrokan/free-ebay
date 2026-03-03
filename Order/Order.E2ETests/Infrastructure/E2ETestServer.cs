@@ -139,6 +139,15 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         return new B2BOrderService.B2BOrderServiceClient(channel);
     }
 
+    public RecurringOrderService.RecurringOrderServiceClient CreateRecurringOrderClient()
+    {
+        var httpClient = CreateClient();
+        var channel = GrpcChannel.ForAddress(
+            httpClient.BaseAddress!,
+            new GrpcChannelOptions { HttpClient = httpClient });
+        return new RecurringOrderService.RecurringOrderServiceClient(channel);
+    }
+
     public T GetService<T>() where T : notnull
     {
         using var scope = Services.CreateScope();

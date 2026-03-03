@@ -140,4 +140,33 @@ public static class E2ETestServerExtensions
 
         return null;
     }
+
+    public static async Task<RecurringOrderReadModel?> GetRecurringOrderReadModelAsync(
+        this E2ETestServer server,
+        Guid recurringOrderId)
+    {
+        using var scope = server.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
+        return await db.RecurringOrderReadModels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == recurringOrderId);
+    }
+
+    public static async Task<RecurringOrderReadModel?> WaitForRecurringOrderReadModelStatusAsync(
+        this E2ETestServer server,
+        Guid recurringOrderId,
+        string expectedStatus,
+        int timeoutSeconds = 30)
+    {
+        for (var i = 0; i < timeoutSeconds; i++)
+        {
+            var model = await server.GetRecurringOrderReadModelAsync(recurringOrderId);
+            if (model?.Status == expectedStatus)
+                return model;
+
+            await Task.Delay(1000);
+        }
+
+        return null;
+    }
 }
