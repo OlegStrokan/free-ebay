@@ -4,7 +4,6 @@ using System.Reflection;
 
 namespace Domain.Common;
 
-// For Event Sourcing aggregates, no need for separate domain events collection
 // Events are stored in event store and replayed to rebuild state
 public abstract class AggregateRoot<TId> : Entity<TId>
 {

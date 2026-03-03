@@ -22,6 +22,15 @@ service B2BOrderService {
   rpc GetB2BOrder(GetB2BOrderRequest) returns(GetB2BOrderResponse);
 }
 
+service RecurringOrderService {
+  rpc CreateRecurringOrder(CreateRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc PauseRecurringOrder(PauseRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc ResumeRecurringOrder(ResumeRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc CancelRecurringOrder(CancelRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc GetRecurringOrder(GetRecurringOrderRequest) returns (GetRecurringOrderResponse);
+  rpc GetCustomerRecurringOrders(GetCustomerRecurringOrdersRequest) returns (GetCustomerRecurringOrdersResponse);
+}
+
 message CreateOrderRequest {
   string customer_id = 1;
   repeated OrderItem items = 2;
@@ -125,8 +134,6 @@ message OrderItemDetail {
   string currency = 4;
 }
 
-// ─── B2B / Quote messages ─────────────────────────────────────────────────────
-
 message StartB2BOrderRequest {
   string customer_id = 1;
   string company_name = 2;
@@ -134,8 +141,6 @@ message StartB2BOrderRequest {
   string idempotency_key = 4;
 }
 
-// Describes a single atomic mutation to a quote line-item.
-// The UpdateQuoteDraft RPC carries a repeated list of these.
 message QuoteItemChange {
   string change_type = 1;    // "AddItem" | "RemoveItem" | "ChangeQuantity" | "AdjustItemPrice"
   string product_id = 2;
@@ -211,17 +216,6 @@ message B2BLineItemDetail {
   common.DecimalValue adjusted_unit_price = 5;
   string currency = 6;
   bool is_removed = 7;
-}
-
-// ─── Recurring Order / Subscription messages ──────────────────────────────────
-
-service RecurringOrderService {
-  rpc CreateRecurringOrder(CreateRecurringOrderRequest) returns (RecurringOrderResponse);
-  rpc PauseRecurringOrder(PauseRecurringOrderRequest) returns (RecurringOrderResponse);
-  rpc ResumeRecurringOrder(ResumeRecurringOrderRequest) returns (RecurringOrderResponse);
-  rpc CancelRecurringOrder(CancelRecurringOrderRequest) returns (RecurringOrderResponse);
-  rpc GetRecurringOrder(GetRecurringOrderRequest) returns (GetRecurringOrderResponse);
-  rpc GetCustomerRecurringOrders(GetCustomerRecurringOrdersRequest) returns (GetCustomerRecurringOrdersResponse);
 }
 
 message RecurringItem {

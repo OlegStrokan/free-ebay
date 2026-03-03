@@ -5,7 +5,7 @@ using Domain.ValueObjects;
 
 namespace Domain.Tests.Common;
 
-// this  is abstract class. okay?. so we test its behavior through the concrete Order aggregate
+// this is abstract class. okay?. so we test its behavior through the concrete Order aggregate
 
 public class AggregateRootTests
 {
