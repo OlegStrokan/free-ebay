@@ -62,13 +62,17 @@ public sealed class AwaitReturnShipmentStep(
                 cancellationToken);
             
             
-            return StepResult.SuccessResult(new Dictionary<string, object>
-            {
-                ["ReturnShipmentId"] = returnShipmentId,
-                ["Status"] = "WaitingForDelivery",
-                ["SagaState"] = "WaitingForEvent",
-                ["Message"] = "Return label created. Waiting for customer to ship package."
-            });
+            return StepResult.SuccessResult(
+                data: new Dictionary<string, object>
+                {
+                    ["ReturnShipmentId"] = returnShipmentId,
+                    ["Status"] = "WaitingForDelivery",
+                    ["Message"] = "Return label created. Waiting for customer to ship package."
+                },
+                metadata: new Dictionary<string, object>
+                {
+                    ["SagaState"] = "WaitingForEvent"
+                });
         }
         catch (Exception ex)
         {

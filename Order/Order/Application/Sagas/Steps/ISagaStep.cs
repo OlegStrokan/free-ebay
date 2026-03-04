@@ -32,8 +32,10 @@ public sealed class StepResult
 
     }
 
-    public static StepResult SuccessResult(Dictionary<string, object>? data = null)
-        => new(true, null, data);
+    public static StepResult SuccessResult(
+        Dictionary<string, object>? data = null,
+        Dictionary<string, object>? metadata = null)
+        => new(true, null, data, metadata);
 
     public static StepResult Failure(string errorMessage)
         => new(false, errorMessage);

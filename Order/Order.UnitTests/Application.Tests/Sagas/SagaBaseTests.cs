@@ -89,7 +89,8 @@ public class SagaBaseTests
         _step1.Order.Returns(1);
         _step1.StepName.Returns("Step1");
         _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult(new Dictionary<string, object> { ["SagaState"] = "WaitingForEvent" }));
+            .Returns(StepResult.SuccessResult(metadata: new Dictionary<string, object> { ["SagaState"] = "WaitingForEvent" } ));
+        
 
         _step2.Order.Returns(2);
         _step2.StepName.Returns("Step2");
