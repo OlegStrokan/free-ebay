@@ -87,7 +87,7 @@ public class RequestReturnCommandHandler(
                 var returnWindow = returnPolicyService.CalculateReturnWindow(policyContext);
 
             
-                var returnRequest = ReturnRequest.Create(
+                var returnRequest = Domain.Entities.RequestReturn.RequestReturn.Create(
                     OrderId.From(request.OrderId),
                     order.CustomerId,
                     request.Reason,

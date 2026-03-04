@@ -1,12 +1,12 @@
-﻿using Domain.Entities;
+﻿using Domain.Entities.RequestReturn;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Persistence.Configurations;
 
-public class ReturnRequestLookupConfiguration : IEntityTypeConfiguration<ReturnRequestLookup>
+public class ReturnRequestLookupConfiguration : IEntityTypeConfiguration<RequestReturnLookup>
 {
-    public void Configure(EntityTypeBuilder<ReturnRequestLookup> builder)
+    public void Configure(EntityTypeBuilder<RequestReturnLookup> builder)
     {
         builder.ToTable("ReturnRequestLookups");
 

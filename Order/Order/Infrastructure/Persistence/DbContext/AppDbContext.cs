@@ -1,6 +1,7 @@
 using Application.Models;
 using Application.Sagas.Persistence;
 using Domain.Entities;
+using Domain.Entities.RequestReturn;
 using Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 using IdempotencyRecord = Application.Interfaces.IdempotencyRecord;
@@ -18,7 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
     public DbSet<DeadLetterMessage> DeadLetterMessages => Set<DeadLetterMessage>();
     public DbSet<AggregateSnapshot> AggregateSnapshots => Set<AggregateSnapshot>();
-    public DbSet<ReturnRequestLookup> ReturnRequestLookups => Set<ReturnRequestLookup>();
+    public DbSet<RequestReturnLookup> ReturnRequestLookups => Set<RequestReturnLookup>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

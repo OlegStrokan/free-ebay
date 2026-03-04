@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces;
 using Domain.Entities;
+using Domain.Entities.RequestReturn;
 using Infrastructure.Persistence.DbContext;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +10,7 @@ public class ReturnRequestLookupRepository(AppDbContext dbContext) : IReturnRequ
 {
     public Task AddAsync(Guid orderId, Guid returnRequestId, CancellationToken cancellationToken)
     {
-        dbContext.ReturnRequestLookups.Add(ReturnRequestLookup.Create(orderId, returnRequestId));
+        dbContext.ReturnRequestLookups.Add(RequestReturnLookup.Create(orderId, returnRequestId));
         return Task.CompletedTask;
     }
 

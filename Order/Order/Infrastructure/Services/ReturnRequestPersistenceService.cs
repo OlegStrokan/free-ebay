@@ -3,6 +3,7 @@ using System.Text.Json;
 using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
+using Domain.Entities.RequestReturn;
 using Domain.Exceptions;
 using Domain.Interfaces;
 using Domain.ValueObjects;
@@ -26,7 +27,7 @@ public class ReturnRequestPersistenceService(
 {
     public async Task UpdateReturnRequestAsync(
         Guid orderId,
-        Func<ReturnRequest, Task> action,
+        Func<RequestReturn, Task> action,
         CancellationToken cancellationToken)
     {
         const int maxRetries = 3;
@@ -51,7 +52,7 @@ public class ReturnRequestPersistenceService(
 
     private async Task TryUpdateReturnRequestAsync(
         Guid orderId,
-        Func<ReturnRequest, Task> action,
+        Func<RequestReturn, Task> action,
         CancellationToken cancellationToken)
     {
         var strategy = dbContext.Database.CreateExecutionStrategy();
@@ -106,7 +107,7 @@ public class ReturnRequestPersistenceService(
     }
 
     public async Task<Guid> CreateReturnRequestAsync(
-        ReturnRequest returnRequest,
+        RequestReturn requestReturn,
         string? idempotencyKey = null,
         Guid? resultIdForIdempotency = null,
         CancellationToken cancellationToken = default)
@@ -121,20 +122,20 @@ public class ReturnRequestPersistenceService(
             try
             {
                 await eventStore.SaveEventsAsync(
-                    returnRequest.Id.Value.ToString(),
+                    requestReturn.Id.Value.ToString(),
                     AggregateTypes.ReturnRequest,
-                    returnRequest.UncommitedEvents,
+                    requestReturn.UncommitedEvents,
                     expectedVersion: -1,
                     cancellationToken);
                 
-                foreach (var domainEvent in returnRequest.UncommitedEvents)
+                foreach (var domainEvent in requestReturn.UncommitedEvents)
                 {
                     await outboxRepository.AddAsync(
                         domainEvent.EventId,
                         domainEvent.GetType().Name,
                         JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
                         domainEvent.OccurredOn,
-                        returnRequest.Id.Value.ToString(),
+                        requestReturn.Id.Value.ToString(),
                         cancellationToken);
                 }
 
@@ -149,20 +150,20 @@ public class ReturnRequestPersistenceService(
 
                 // this is done for strict consistency which we need in requestReturn
                    await lookupRepository.AddAsync(
-                    returnRequest.OrderId.Value,
-                    returnRequest.Id.Value,
+                    requestReturn.OrderId.Value,
+                    requestReturn.Id.Value,
                     cancellationToken);
 
-                returnRequest.ClearUncommittedEvents();
+                requestReturn.ClearUncommittedEvents();
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 
                 logger.LogInformation(
                     "Created ReturnRequest {ReturnRequestId} for Order {OrderId} with {EventCount} events",
-                    returnRequest.Id.Value,
-                    returnRequest.OrderId.Value,
-                    returnRequest.Version + 1);
+                    requestReturn.Id.Value,
+                    requestReturn.OrderId.Value,
+                    requestReturn.Version + 1);
                 
             }
             catch (Exception ex)
@@ -173,10 +174,10 @@ public class ReturnRequestPersistenceService(
             }
         });
 
-        return resultIdForIdempotency ?? returnRequest.OrderId.Value;
+        return resultIdForIdempotency ?? requestReturn.OrderId.Value;
     }
 
-    private async Task<ReturnRequest?> LoadReturnRequestAsync(
+    private async Task<RequestReturn?> LoadReturnRequestAsync(
         Guid returnRequestId,
         CancellationToken cancellationToken)
     {
@@ -188,13 +189,13 @@ public class ReturnRequestPersistenceService(
         if (!events.Any())
             return null;
 
-        return ReturnRequest.FromHistory(events);
+        return RequestReturn.FromHistory(events);
         
     }
 
     // why we call lookup repo, and then eventStore? 
     // because caller dont have returnRequestId, only orderId
-    public async Task<ReturnRequest?> LoadByOrderIdAsync(
+    public async Task<RequestReturn?> LoadByOrderIdAsync(
         Guid orderId, CancellationToken cancellationToken)
     {
         // Lookup was written in the same transaction as creation — no eventual consistency gap.

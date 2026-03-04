@@ -219,7 +219,7 @@ public class OrderPersistenceService(
             var order = Order.FromSnapshot(snapshotState);
 
             var deltaEvents = await eventStore.GetEventsAfterVersionAsync(
-                orderId.ToString(), AggregateTypes.Order, snapshot.Version + 1, cancellationToken);
+                orderId.ToString(), AggregateTypes.Order, snapshot.Version, cancellationToken);
 
             order.LoadFromHistory(deltaEvents);
 

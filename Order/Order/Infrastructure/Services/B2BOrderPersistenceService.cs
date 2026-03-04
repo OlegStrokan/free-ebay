@@ -256,7 +256,7 @@ public class B2BOrderPersistenceService(
         var order = B2BOrder.FromSnapshot(state);
 
         var delta = await eventStore.GetEventsAfterVersionAsync(
-            b2bOrderId.ToString(), AggregateTypes.B2BOrder, snapshot.Version + 1, ct);
+            b2bOrderId.ToString(), AggregateTypes.B2BOrder, snapshot.Version, ct);
 
         order.LoadFromHistory(delta);
 

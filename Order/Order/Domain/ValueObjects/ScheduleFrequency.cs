@@ -35,7 +35,16 @@ public sealed class ScheduleFrequency
         _ => throw new ArgumentException($"Unknown ScheduleFrequency: '{name}'", nameof(name))
     };
 
-    public DateTime CalculateNextRunAt(DateTime from) => from.AddDays(IntervalDays);
+    public static DateTime CalculateNextRunAt(DateTime from, string frequency) => frequency switch
+    {
+        "Weekly" => from.AddDays(7),
+        "BiWeekly" => from.AddDays(14),
+        "Monthly" => from.AddMonths(1),
+        "Quarterly" => from.AddMonths(3),
+        _ when frequency.StartsWith("Every", StringComparison.Ordinal) => 
+            from.AddDays(int.Parse(frequency[5..^4])),
+        _ => throw new InvalidOperationException($"Unknown frequency: {frequency}")
+    };
 
     public override string ToString() => Name;
 }

@@ -8,7 +8,7 @@ namespace Domain.Common;
 public abstract class AggregateRoot<TId> : Entity<TId>
 {
     private readonly List<IDomainEvent> _uncommitedEvents = new();
-    public int Version { get; private set; } = -1;
+    public int Version { get; private set; } = 0;
     private static readonly ConcurrentDictionary<(Type, Type), MethodInfo> _applyMethodCache = new();
 
     public IReadOnlyList<IDomainEvent> UncommitedEvents => _uncommitedEvents.AsReadOnly();

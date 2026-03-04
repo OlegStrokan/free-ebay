@@ -47,7 +47,6 @@ public sealed class OutboxProcessor(
     {
         using var scope = serviceProvider.CreateScope();
         var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
-        var deadLetterRepository = scope.ServiceProvider.GetRequiredService<IDeadLetterRepository>();
 
         var messages = await outboxRepository.GetUnprocessedMessagesAsync(_batchSize, stoppingToken);
 
@@ -69,11 +68,16 @@ public sealed class OutboxProcessor(
             CancellationToken = stoppingToken
         };
 
+        // Create a scope for each parallel group to avoid sharing DbContext across threads
         await Parallel.ForEachAsync(groups, options, async (group, ct) =>
         {
+            using var groupScope = serviceProvider.CreateScope();
+            var groupOutboxRepository = groupScope.ServiceProvider.GetRequiredService<IOutboxRepository>();
+            var groupDeadLetterRepository = groupScope.ServiceProvider.GetRequiredService<IDeadLetterRepository>();
+
             foreach (var message in group)
             {
-                await ProcessMessageAsync(message, outboxRepository, deadLetterRepository, ct);
+                await ProcessMessageAsync(message, groupOutboxRepository, groupDeadLetterRepository, ct);
             }
         });
     }

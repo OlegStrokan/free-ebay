@@ -1,7 +1,5 @@
 namespace Domain.Entities;
 
-// represents a message that failed to process after maximum retries
-// purpose: Katka can check proc se to kurva stalo
 public class DeadLetterMessage
 {
     public Guid Id { get; private set; }

@@ -19,16 +19,19 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
     private readonly IConsumer<string, string> consumer;
     private readonly List<string> topics;
     private readonly IDomainEventTypeRegistry eventTypeRegistry;
+    private readonly IReadModelHandlerRegistry handlerRegistry;
 
     public KafkaReadModelSynchronizer(
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         IDomainEventTypeRegistry eventTypeRegistry,
+        IReadModelHandlerRegistry handlerRegistry,
         ILogger<KafkaReadModelSynchronizer> logger)
     {
         this.serviceProvider = serviceProvider;
         this.logger = logger;
         this.eventTypeRegistry = eventTypeRegistry;
+        this.handlerRegistry = handlerRegistry;
 
         var kafkaConfig = new ConsumerConfig
         {
@@ -195,7 +198,10 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
     }
     
-    // route events to appropriate handlers using reflection
+    /// <summary>
+    /// Route events to appropriate handlers using cached handler registry (no reflection).
+    /// Each updater type gets cached delegates for each event type on first use.
+    /// </summary>
     private async Task RouteEventHandlerAsync(
         IDomainEvent domainEvent,
         IServiceScope scope,
@@ -214,27 +220,9 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
                 eventType.Name);
             return;
         }
-        
-        // findHandleAsync method
-        // VOODOO
-        var handleMethod = updater.GetType()
-            .GetMethod("HandleAsync", new[] { eventType, typeof(CancellationToken) });
 
-        if (handleMethod == null)
-        {
-            logger.LogWarning(
-                "No HandleAsync method found for event type {EventType} of updater {Updater}",
-                eventType.Name,
-                updater.GetType().Name);
-            return;
-        }
-
-        var task = handleMethod.Invoke(updater, new object?[] { domainEvent, cancellationToken }) as Task;
-
-        if (task != null)
-        {
-            await task;
-        }
+        // Use cached handler registry instead of reflection
+        await handlerRegistry.HandleAsync(domainEvent, updater, cancellationToken);
 
         logger.LogDebug(
             "Event {EventType} handled by {Updater}",

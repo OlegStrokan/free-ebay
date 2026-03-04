@@ -209,7 +209,7 @@ public class RecurringOrderPersistenceService(
         var order = RecurringOrder.FromSnapshot(state);
 
         var delta = await eventStore.GetEventsAfterVersionAsync(
-            recurringOrderId.ToString(), AggregateTypes.RecurringOrder, snapshot.Version + 1, ct);
+            recurringOrderId.ToString(), AggregateTypes.RecurringOrder, snapshot.Version, ct);
 
         order.LoadFromHistory(delta);
         return order;

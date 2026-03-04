@@ -1,7 +1,7 @@
 using Application.Interfaces;
 using Application.Sagas.Steps;
-using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Entities.RequestReturn;
 using Domain.Services;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -100,7 +100,7 @@ public sealed class ValidateReturnRequestStep(
             var returnWindow = returnPolicyService.CalculateReturnWindow(policyContext);
 
             
-            var returnRequest = ReturnRequest.Create(
+            var returnRequest = RequestReturn.Create(
                 orderId: OrderId.From(data.CorrelationId),
                 customerId: CustomerId.From(data.CustomerId),
                 reason: data.ReturnReason,

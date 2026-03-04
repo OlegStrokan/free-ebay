@@ -112,7 +112,7 @@ public sealed class RecurringOrder : AggregateRoot<RecurringOrderId>
         if (maxExecutions.HasValue && maxExecutions.Value <= 0)
             throw new DomainException("MaxExecutions must be positive if specified");
 
-        var nextRunAt = firstRunAt ?? frequency.CalculateNextRunAt(DateTime.UtcNow);
+        var nextRunAt = firstRunAt ?? ScheduleFrequency.CalculateNextRunAt(DateTime.UtcNow, frequency.Name);
         var order = new RecurringOrder();
 
         order.RaiseEvent(new RecurringOrderCreatedEvent(
@@ -138,7 +138,7 @@ public sealed class RecurringOrder : AggregateRoot<RecurringOrderId>
     public void Resume()
     {
         _status.ValidateTransitionTo(RecurringOrderStatus.Active);
-        var nextRunAt = _frequency.CalculateNextRunAt(DateTime.UtcNow);
+        var nextRunAt = ScheduleFrequency.CalculateNextRunAt(DateTime.UtcNow, _frequency.Name);
         RaiseEvent(new RecurringOrderResumedEvent(Id, nextRunAt, DateTime.UtcNow));
     }
 
@@ -157,7 +157,7 @@ public sealed class RecurringOrder : AggregateRoot<RecurringOrderId>
             throw new DomainException("Cannot record execution on a non-active recurring order");
 
         var executionNumber = _totalExecutions + 1;
-        var nextRunAt       = _frequency.CalculateNextRunAt(DateTime.UtcNow);
+        var nextRunAt = ScheduleFrequency.CalculateNextRunAt(DateTime.UtcNow, _frequency.Name);
 
         RaiseEvent(new RecurringOrderExecutedEvent(
             Id, createdOrderId, executionNumber, nextRunAt, DateTime.UtcNow));

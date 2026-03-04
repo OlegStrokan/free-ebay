@@ -27,6 +27,23 @@ public class EventIdempotencyChecker(
     {
         try
         {
+            // Use SERIALIZABLE isolation to prevent concurrent duplicate processing
+            using var tx = await dbContext.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable, ct);
+
+            // Double-check that event hasn't been processed since our check
+            var alreadyProcessed = await dbContext.ProcessedEvents
+                .AnyAsync(e => e.EventId == eventId, ct);
+
+            if (alreadyProcessed)
+            {
+                logger.LogInformation(
+                    "Event {EventId} was marked between check and insert. Skipping.",
+                    eventId);
+                await tx.RollbackAsync(ct);
+                return;
+            }
+
             var processedEvent = ProcessedEvent.Create(
                 eventId,
                 eventType,
@@ -34,6 +51,7 @@ public class EventIdempotencyChecker(
 
             dbContext.ProcessedEvents.Add(processedEvent);
             await dbContext.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
 
             logger.LogDebug(
                 "Marked event {EventId} ({EventType}) as processed",

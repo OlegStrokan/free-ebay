@@ -114,7 +114,7 @@ public class SagaWatchdogService : BackgroundService
 
         catch (Exception ex)
         {
-            _logger.LogError("Failed to handle stuck saga {SagaId}", saga.Id);
+            _logger.LogError(ex, "Failed to handle stuck saga {SagaId}", saga.Id);
         }
     }
 

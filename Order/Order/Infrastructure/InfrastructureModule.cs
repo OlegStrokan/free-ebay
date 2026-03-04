@@ -59,6 +59,7 @@ public static class InfrastructureModule
         services.AddScoped<ISagaHandlerFactory, SagaHandlerFactory>();
         services.AddScoped<IEventPublisher, KafkaEventPublisher>();
         services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
+        services.AddSingleton<IReadModelHandlerRegistry, ReadModelHandlerRegistry>();
         services.AddScoped<IReadModelUpdater, OrderReadModelUpdater>();
         services.AddScoped<IReadModelUpdater, ReturnRequestReadModelUpdater>();
         // register as concrete (for direct test resolution) AND as IReadModelUpdater (for routing)
@@ -81,6 +82,7 @@ public static class InfrastructureModule
         services.AddHostedService<SagaOrchestrationService>();
         services.AddHostedService<KafkaReadModelSynchronizer>();
         services.AddHostedService<SagaWatchdogService>();
+        services.AddHostedService<ProcessedEventsCleanupService>();
 
         return services;
         

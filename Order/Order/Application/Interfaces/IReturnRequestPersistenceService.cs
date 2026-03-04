@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Entities.RequestReturn;
 
 namespace Application.Interfaces;
 
@@ -6,16 +7,16 @@ public interface IReturnRequestPersistenceService
 {
     Task UpdateReturnRequestAsync(
         Guid orderId,
-        Func<ReturnRequest, Task> action,
+        Func<RequestReturn, Task> action,
         CancellationToken cancellationToken);
 
     Task<Guid> CreateReturnRequestAsync(
-        ReturnRequest returnRequest,
+        RequestReturn requestReturn,
         string? idempotencyKey = null,
         Guid? orderIdForIdempotency = null,
         CancellationToken cancellationToken = default);
 
-    Task<ReturnRequest?> LoadByOrderIdAsync(
+    Task<RequestReturn?> LoadByOrderIdAsync(
         Guid orderId,
         CancellationToken cancellationToken);
 }
