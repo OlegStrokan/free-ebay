@@ -1,0 +1,72 @@
+# ── PostgreSQL Write Instance (primary - all writes, event store, outbox)
+# StatefulSet gives stable pod identity and stable PVC names.
+# For HA add a PgBouncer sidecar and configure streaming replication to
+# postgres-read below.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-write
+  namespace: free-ebay
+spec:
+  serviceName: postgres-write
+  replicas: 1                      # scale via streaming replication, not replicas
+  selector:
+    matchLabels:
+      app: postgres-write
+  template:
+    metadata:
+      labels:
+        app: postgres-write
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-write-secret
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          resources:
+            requests:
+              cpu:    "500m"
+              memory: "512Mi"
+            limits:
+              cpu:    "2"
+              memory: "2Gi"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "order"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "order"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-write
+  namespace: free-ebay
+spec:
+  selector:
+    app: postgres-write
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None   # headless - StatefulSet pods are addressed by stable DNS

@@ -27,3 +27,9 @@ TestResults/
 
 # Rider
 *.DotSettings.user
+Auth/.idea
+User/.idea
+Order/.idea
+Order.UnitTests/.idea
+Order.IntegrationTests/.idea
+Order.E2ETests/.idea

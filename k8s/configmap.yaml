@@ -1,0 +1,20 @@
+# Secrets, never commit real values type shit
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-config
+  namespace: free-ebay
+data:
+  Kafka__BootstrapServers: "kafka:9092"
+  Kafka__OrderEventsTopic:  "order.events"
+  Kafka__ReturnEventsTopic: "return.events"
+  Kafka__SagaTopic:         "order.events"
+  Kafka__ConsumerGroupId:   "read-model-updater"
+
+  Otel__Endpoint: "http://jaeger:4317"
+
+  Outbox__BatchSize:      "20"
+  Outbox__MaxRetries:     "5"
+  Outbox__MaxAgeDays:     "7"
+  Outbox__PollIntervalMs: "2000"
+  Outbox__MaxParallelism: "5"
