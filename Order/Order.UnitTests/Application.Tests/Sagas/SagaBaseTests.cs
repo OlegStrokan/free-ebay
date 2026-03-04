@@ -82,6 +82,7 @@ public class SagaBaseTests
             Arg.Any<CancellationToken>());
     }
 
+    // @todo: something wrong with this test
     [Fact]
     public async Task ExecuteAsync_ShouldPauseSaga_WhenStepReturnsWaitingForEventMetadata()
     {
@@ -93,6 +94,20 @@ public class SagaBaseTests
         _step2.Order.Returns(2);
         _step2.StepName.Returns("Step2");
 
+        // Mock both SaveAsync and GetByIdAsync
+        _repository.SaveAsync(Arg.Any<SagaState>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        
+        _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(args => new SagaState
+            {
+                Id = (Guid)args[0],
+                Status = SagaStatus.Running,
+                Payload = JsonSerializer.Serialize(new TestSagaData()),
+                Context = JsonSerializer.Serialize(new TestSagaContext()),
+                Steps = new List<SagaStepLog>()
+            });
+
         var result = await Build(_step1, _step2)
             .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -100,7 +115,7 @@ public class SagaBaseTests
         Assert.True(result.IsSuccess);
         Assert.Equal(SagaStatus.Completed, result.Status);
 
-        // saga state persisted as WaitingForEvent
+        // saga state persisted as WaitingForEvent after Step1 completes
         await _repository.Received().SaveAsync(
             Arg.Is<SagaState>(s => s.Status == SagaStatus.WaitingForEvent && s.CurrentStep == "Step1"),
             Arg.Any<CancellationToken>());
@@ -168,21 +183,33 @@ public class SagaBaseTests
         _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
             .Returns(StepResult.SuccessResult());
 
+        // Capture the state of each SaveAsync call at the time it's made
+        var capturedStates = new List<(string? CurrentStep, SagaStatus Status)>();
+        _repository
+            .SaveAsync(Arg.Do<SagaState>(s => capturedStates.Add((s.CurrentStep, s.Status))), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
         await Build(_step1, _step2)
             .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
 
-        await _repository.Received().SaveAsync(
-            Arg.Is<SagaState>(s => s.CurrentStep == "Step1" && s.Status == SagaStatus.Running),
-            Arg.Any<CancellationToken>());
+        // Verify SaveAsync was called exactly 4 times
+        Assert.Equal(4, capturedStates.Count);
 
-        //  still Running (final save below sets Completed)
-        await _repository.Received().SaveAsync(
-            Arg.Is<SagaState>(s => s.CurrentStep == "Step2" && s.Status == SagaStatus.Running),
-            Arg.Any<CancellationToken>());
+        // First save: initial saga creation (CurrentStep should be empty string or null, Status = Running)
+        Assert.True(string.IsNullOrEmpty(capturedStates[0].CurrentStep), $"Expected null or empty at index 0, got '{capturedStates[0].CurrentStep}'");
+        Assert.Equal(SagaStatus.Running, capturedStates[0].Status);
 
-        await _repository.Received().SaveAsync(
-            Arg.Is<SagaState>(s => s.Status == SagaStatus.Completed),
-            Arg.Any<CancellationToken>());
+        // Second save: after Step1 completes
+        Assert.Equal("Step1", capturedStates[1].CurrentStep);
+        Assert.Equal(SagaStatus.Running, capturedStates[1].Status);
+
+        // Third save: after Step2 completes
+        Assert.Equal("Step2", capturedStates[2].CurrentStep);
+        Assert.Equal(SagaStatus.Running, capturedStates[2].Status);
+
+        // Fourth save: final completed state - CurrentStep remains Step2 (not changed)
+        Assert.Equal("Step2", capturedStates[3].CurrentStep);
+        Assert.Equal(SagaStatus.Completed, capturedStates[3].Status);
     }
 
     [Fact]

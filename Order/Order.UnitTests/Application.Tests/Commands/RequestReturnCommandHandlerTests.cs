@@ -1,8 +1,8 @@
 using Application.Commands.RequestReturn;
 using Application.DTOs;
 using Application.Interfaces;
-using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Entities.RequestReturn;
 using Domain.Services;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -65,7 +65,7 @@ public class RequestReturnCommandHandlerTest
 
         _returnRequestPersistenceService
             .CreateReturnRequestAsync(
-                Arg.Any<ReturnRequest>(),
+                Arg.Any<RequestReturn>(),
                 Arg.Any<string?>(),
                 Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
@@ -78,7 +78,7 @@ public class RequestReturnCommandHandlerTest
         Assert.True(result.IsSuccess);
 
         await _returnRequestPersistenceService.Received(1).CreateReturnRequestAsync(
-            Arg.Any<ReturnRequest>(),
+            Arg.Any<RequestReturn>(),
             Arg.Is<string?>(k => k == "idempotency-key"),
             Arg.Is<Guid?>(id => id == order.Id.Value),
             Arg.Any<CancellationToken>());
@@ -101,7 +101,7 @@ public class RequestReturnCommandHandlerTest
 
         // persistence must NOT be called
         await _returnRequestPersistenceService.DidNotReceive().CreateReturnRequestAsync(
-            Arg.Any<ReturnRequest>(),
+            Arg.Any<RequestReturn>(),
             Arg.Any<string?>(),
             Arg.Any<Guid?>(),
             Arg.Any<CancellationToken>());
@@ -170,7 +170,7 @@ public class RequestReturnCommandHandlerTest
 
         _returnRequestPersistenceService
             .CreateReturnRequestAsync(
-                Arg.Any<ReturnRequest>(),
+                Arg.Any<RequestReturn>(),
                 Arg.Any<string?>(),
                 Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())

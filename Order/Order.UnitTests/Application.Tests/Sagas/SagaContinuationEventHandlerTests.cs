@@ -375,7 +375,8 @@ public class SagaContinuationEventHandlerTests
 
         await BuildSut().HandleAsync(payload, CancellationToken.None);
 
-        _logger.Received(1).Log(
+        // Should log multiple warnings (retries) and a final warning when lock cannot be acquired
+        _logger.Received(4).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
             Arg.Any<object>(),

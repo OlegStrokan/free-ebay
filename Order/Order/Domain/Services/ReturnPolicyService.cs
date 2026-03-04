@@ -10,16 +10,14 @@ public record ReturnPolicyContext(
 
 public class ReturnPolicyService
 {
-    // @todo: you can do better my boy. In 1.0 version of this app
-    // we should have more clever approach to handle return window
     private static readonly HashSet<string> EuCountries = new() { "DE", "FR", "PL", "ES", "IT", "CZ", "NL", "AT" };
 
     public TimeSpan CalculateReturnWindow(ReturnPolicyContext context)
     {
-        var window = TimeSpan.FromDays(14);
+        var window = TimeSpan.FromDays(7);
 
         if (EuCountries.Contains(context.CountryCode.ToUpper()))
-            window = Max(window, TimeSpan.FromDays(30));
+            window = Max(window, TimeSpan.FromDays(14));
 
         if (context.CustomerTier == "Subscriber")
             window = Max(window, TimeSpan.FromDays(21));

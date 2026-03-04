@@ -4,6 +4,7 @@ using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Entities.RequestReturn;
 using Domain.Services;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,8 @@ public class ValidateReturnRequestStepTests
     public async Task ExecuteAsync_ShouldReturnSuccess_WhenOrderIsCompletedAndEligible()
     {
         var order = CreateCompleteOrder();
-        var data = CreateSampleData(order.Id.Value);
+        var productId = order.Items.First().ProductId.Value;
+        var data = CreateSampleData(order.Id.Value, productId);
 
         _orderPersistenceService
             .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
@@ -42,7 +44,7 @@ public class ValidateReturnRequestStepTests
 
         _returnRequestPersistenceService
             .LoadByOrderIdAsync(data.CorrelationId, Arg.Any<CancellationToken>())
-            .Returns((ReturnRequest?)null);
+            .Returns((RequestReturn?)null);
 
         var context = new ReturnSagaContext();
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
@@ -52,7 +54,7 @@ public class ValidateReturnRequestStepTests
         Assert.True(context.ReturnRequestValidated);
 
         await _returnRequestPersistenceService.Received(1).CreateReturnRequestAsync(
-            Arg.Any<ReturnRequest>(),
+            Arg.Any<RequestReturn>(),
             Arg.Any<string?>(),
             Arg.Any<Guid?>(),
             Arg.Any<CancellationToken>());
@@ -96,7 +98,7 @@ public class ValidateReturnRequestStepTests
         Assert.True(context.ReturnRequestValidated);
 
         await _returnRequestPersistenceService.DidNotReceive().CreateReturnRequestAsync(
-            Arg.Any<ReturnRequest>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<RequestReturn>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -143,7 +145,7 @@ public class ValidateReturnRequestStepTests
 
         _returnRequestPersistenceService
             .LoadByOrderIdAsync(data.CorrelationId, Arg.Any<CancellationToken>())
-            .Returns((ReturnRequest?)null);
+            .Returns((RequestReturn?)null);
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
@@ -176,16 +178,16 @@ public class ValidateReturnRequestStepTests
         await _orderPersistenceService.DidNotReceive()
             .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await _returnRequestPersistenceService.DidNotReceive()
-            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>());
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<RequestReturn, Task>>(), Arg.Any<CancellationToken>());
     }
 
-    private static ReturnSagaData CreateSampleData(Guid correlationId) => new()
+    private static ReturnSagaData CreateSampleData(Guid correlationId, Guid? productId = null) => new()
     {
         CorrelationId = correlationId,
         Currency = "USD",
         CustomerId = Guid.NewGuid(),
         RefundAmount = 100m,
-        ReturnedItems = new List<OrderItemDto> { new(Guid.NewGuid(), 1, 100m, "USD") },
+        ReturnedItems = new List<OrderItemDto> { new(productId ?? Guid.NewGuid(), 1, 100m, "USD") },
         ReturnReason = "Defective item"
     };
 
@@ -215,8 +217,8 @@ public class ValidateReturnRequestStepTests
         return order;
     }
 
-    private static ReturnRequest CreateReturnRequest(Order order) =>
-        ReturnRequest.Create(
+    private static RequestReturn CreateReturnRequest(Order order) =>
+        RequestReturn.Create(
             orderId: order.Id,
             customerId: CustomerId.CreateUnique(),
             reason: "Defective",

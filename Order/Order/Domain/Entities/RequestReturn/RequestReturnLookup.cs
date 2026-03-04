@@ -1,15 +1,15 @@
-﻿namespace Domain.Entities;
+﻿namespace Domain.Entities.RequestReturn;
 
 // synchronous projection: OrderId => ReturnRequestId
-public class ReturnRequestLookup
+public class RequestReturnLookup
 {
     public Guid OrderId { get; private set; }
     public Guid ReturnRequestId { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
-    private ReturnRequestLookup() { }
+    private RequestReturnLookup() { }
 
-    public static ReturnRequestLookup Create(Guid orderId, Guid returnRequestId) =>
+    public static RequestReturnLookup Create(Guid orderId, Guid returnRequestId) =>
         new()
         {
             OrderId = orderId,

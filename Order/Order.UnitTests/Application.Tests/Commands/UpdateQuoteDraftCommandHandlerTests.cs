@@ -64,7 +64,7 @@ public class UpdateQuoteDraftCommandHandlerTests
     {
         _persistenceService
             .UpdateB2BOrderAsync(Arg.Any<Guid>(), Arg.Any<Func<Domain.Entities.B2BOrder.B2BOrder, Task>>(), Arg.Any<CancellationToken>())
-            .Throws(new Exception("Kafka on fire"));
+            .Throws(new Exception("Kafka on fire, me too"));
 
         var result = await BuildHandler().Handle(ValidCommand(), CancellationToken.None);
 

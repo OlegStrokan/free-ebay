@@ -42,7 +42,7 @@ public class OrderItemTests
         var exception =
             Assert.Throws<DomainException>(() => OrderItem.Create(_testProductId, ValidQuantity, Money.Default()));
 
-        Assert.Contains("price should be greater then zero", exception.Message);
+        Assert.Contains("price should be greater than zero", exception.Message);
     }
 
     [Fact]

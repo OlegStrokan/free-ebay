@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
+using Domain.Entities.RequestReturn;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -37,7 +38,7 @@ public class ConfirmReturnReceivedStepTests
 
         await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
             data.CorrelationId,
-            Arg.Any<Func<ReturnRequest, Task>>(),
+            Arg.Any<Func<RequestReturn, Task>>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -47,7 +48,7 @@ public class ConfirmReturnReceivedStepTests
         var data = CreateSampleData();
 
         _returnRequestPersistenceService
-            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>())
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<RequestReturn, Task>>(), Arg.Any<CancellationToken>())
             .Throws(new OrderNotFoundException(data.CorrelationId));
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
@@ -62,7 +63,7 @@ public class ConfirmReturnReceivedStepTests
         var data = CreateSampleData();
 
         _returnRequestPersistenceService
-            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>())
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<RequestReturn, Task>>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("Database Error"));
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
@@ -80,7 +81,7 @@ public class ConfirmReturnReceivedStepTests
 
         await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
             Arg.Is<Guid>(id => id == data.CorrelationId),
-            Arg.Any<Func<ReturnRequest, Task>>(),
+            Arg.Any<Func<RequestReturn, Task>>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -94,7 +95,7 @@ public class ConfirmReturnReceivedStepTests
         Assert.Null(exception);
 
         await _returnRequestPersistenceService.DidNotReceive().UpdateReturnRequestAsync(
-            Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>());
+            Arg.Any<Guid>(), Arg.Any<Func<RequestReturn, Task>>(), Arg.Any<CancellationToken>());
     }
 
     private static ReturnSagaData CreateSampleData() => new()

@@ -4,9 +4,9 @@ using Domain.Events.OrderReturn;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
-namespace Domain.Entities;
+namespace Domain.Entities.RequestReturn;
 
-public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
+public sealed class RequestReturn : AggregateRoot<ReturnRequestId>
 {
     private OrderId _orderId;
     private CustomerId _customerId;
@@ -30,9 +30,9 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public DateTime? ReceivedAt => _receivedAt;
     public string? RefundId => _refundId;
 
-    private ReturnRequest() { }
+    private RequestReturn() { }
     
-    public static ReturnRequest Create(
+    public static RequestReturn Create(
         OrderId orderId,
         CustomerId customerId,
         string reason,
@@ -63,7 +63,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
         }
 
         // raise event (the command phase)
-        var returnRequest = new ReturnRequest();
+        var returnRequest = new RequestReturn();
         returnRequest.RaiseEvent(new ReturnRequestCreatedEvent(
             ReturnRequestId.CreateUnique(),
             orderId,
@@ -79,7 +79,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public void MarkAsReceived()
     {
         if (_status != ReturnStatus.Pending)
-            throw new DomainException($"Cannot mark as received in {_status} status");
+            throw new DomainException($"Cannot mark as received in {_status.Name} status");
 
         RaiseEvent(new ReturnItemsReceivedEvent(
             Id,
@@ -91,7 +91,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public void ProcessRefund(string refundId)
     {
         if (_status != ReturnStatus.Received)
-            throw new DomainException($"Cannot process refund in {_status} status");
+            throw new DomainException($"Cannot process refund in {_status.Name} status");
 
         if (string.IsNullOrWhiteSpace(refundId))
             throw new DomainException("Refund ID is required");
@@ -108,7 +108,7 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
     public void Complete()
     {
         if (_status != ReturnStatus.Refunded)
-            throw new DomainException($"Cannot complete return in {_status} status");
+            throw new DomainException($"Cannot complete return in {_status.Name} status");
 
         RaiseEvent(new ReturnCompletedEvent(
             Id,
@@ -152,9 +152,9 @@ public sealed class ReturnRequest : AggregateRoot<ReturnRequestId>
 
     // --- rebuild ---
 
-    public static ReturnRequest FromHistory(IEnumerable<IDomainEvent> history)
+    public static RequestReturn FromHistory(IEnumerable<IDomainEvent> history)
     {
-        var request = new ReturnRequest();
+        var request = new RequestReturn();
         request.LoadFromHistory(history);
         return request;
     }

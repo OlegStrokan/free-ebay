@@ -1,13 +1,13 @@
 using Domain.Common;
-using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Entities.RequestReturn;
 using Domain.Events.OrderReturn;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Tests.Entities;
 
-public class ReturnRequestTests
+public class RequestReturnTests
 {
     private readonly OrderId _orderId = OrderId.CreateUnique();
     private readonly CustomerId _customerId = CustomerId.CreateUnique();
@@ -23,10 +23,10 @@ public class ReturnRequestTests
         return new List<OrderItem> { item };
     }
 
-    private ReturnRequest CreatePendingReturnRequest()
+    private RequestReturn CreatePendingReturnRequest()
     {
         var items = CreateOrderItems();
-        return ReturnRequest.Create(
+        return RequestReturn.Create(
             orderId: _orderId,
             customerId: _customerId,
             reason: "Defective product",
@@ -43,7 +43,7 @@ public class ReturnRequestTests
     {
         var items = CreateOrderItems();
 
-        var returnRequest = ReturnRequest.Create(
+        var returnRequest = RequestReturn.Create(
             orderId: _orderId,
             customerId: _customerId,
             reason: "Damaged box",
@@ -73,7 +73,7 @@ public class ReturnRequestTests
         var items = CreateOrderItems();
 
         var ex = Assert.Throws<DomainException>(() =>
-            ReturnRequest.Create(_orderId, _customerId, "", items, _refundAmount,
+            RequestReturn.Create(_orderId, _customerId, "", items, _refundAmount,
                 _recentCompletedAt, items, _returnWindow));
 
         Assert.Contains("Return reason is required", ex.Message);
@@ -85,7 +85,7 @@ public class ReturnRequestTests
         var items = CreateOrderItems();
 
         var ex = Assert.Throws<DomainException>(() =>
-            ReturnRequest.Create(_orderId, _customerId, "   ", items, _refundAmount,
+            RequestReturn.Create(_orderId, _customerId, "   ", items, _refundAmount,
                 _recentCompletedAt, items, _returnWindow));
 
         Assert.Contains("Return reason is required", ex.Message);
@@ -97,7 +97,7 @@ public class ReturnRequestTests
         var items = CreateOrderItems();
 
         var ex = Assert.Throws<DomainException>(() =>
-            ReturnRequest.Create(_orderId, _customerId, "Reason", new List<OrderItem>(), _refundAmount,
+            RequestReturn.Create(_orderId, _customerId, "Reason", new List<OrderItem>(), _refundAmount,
                 _recentCompletedAt, items, _returnWindow));
 
         Assert.Contains("Must specify at least one item", ex.Message);
@@ -109,7 +109,7 @@ public class ReturnRequestTests
         var items = CreateOrderItems();
 
         var ex = Assert.Throws<DomainException>(() =>
-            ReturnRequest.Create(_orderId, _customerId, "Reason", items, Money.Default("USD"),
+            RequestReturn.Create(_orderId, _customerId, "Reason", items, Money.Default("USD"),
                 _recentCompletedAt, items, _returnWindow));
 
         Assert.Contains("Refund amount must be greater than zero", ex.Message);
@@ -122,7 +122,7 @@ public class ReturnRequestTests
         var expiredCompletedAt = DateTime.UtcNow.AddDays(-20); // beyond 14-day window
 
         var ex = Assert.Throws<DomainException>(() =>
-            ReturnRequest.Create(_orderId, _customerId, "Reason", items, _refundAmount,
+            RequestReturn.Create(_orderId, _customerId, "Reason", items, _refundAmount,
                 expiredCompletedAt, items, _returnWindow));
 
         Assert.Contains("Return window expired", ex.Message);
@@ -136,7 +136,7 @@ public class ReturnRequestTests
         foreignItem.InitializeOrderItem(_orderId, OrderItemId.From(99));
 
         var ex = Assert.Throws<DomainException>(() =>
-            ReturnRequest.Create(_orderId, _customerId, "Reason",
+            RequestReturn.Create(_orderId, _customerId, "Reason",
                 new List<OrderItem> { foreignItem },
                 _refundAmount, _recentCompletedAt, orderItems, _returnWindow));
 
@@ -274,7 +274,7 @@ public class ReturnRequestTests
                 "REF-XYZ", _refundAmount, now.AddDays(2))
         };
 
-        var returnRequest = ReturnRequest.FromHistory(history);
+        var returnRequest = RequestReturn.FromHistory(history);
 
         Assert.Equal(returnRequestId, returnRequest.Id);
         Assert.Equal(ReturnStatus.Refunded, returnRequest.Status);

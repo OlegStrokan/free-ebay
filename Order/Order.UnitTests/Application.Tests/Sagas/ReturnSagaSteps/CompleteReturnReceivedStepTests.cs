@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Application.Sagas.ReturnSaga;
 using Application.Sagas.ReturnSaga.Steps;
 using Domain.Entities;
+using Domain.Entities.RequestReturn;
 using Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -36,7 +37,7 @@ public class CompleteReturnReceivedStepTests
 
         await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
             data.CorrelationId,
-            Arg.Any<Func<ReturnRequest, Task>>(),
+            Arg.Any<Func<RequestReturn, Task>>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -58,7 +59,7 @@ public class CompleteReturnReceivedStepTests
         var data = CreateSampleData();
 
         _returnRequestPersistenceService
-            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>())
+            .UpdateReturnRequestAsync(Arg.Any<Guid>(), Arg.Any<Func<RequestReturn, Task>>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("DB connection lost"));
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
@@ -76,7 +77,7 @@ public class CompleteReturnReceivedStepTests
 
         await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
             Arg.Is<Guid>(id => id == data.CorrelationId),
-            Arg.Any<Func<ReturnRequest, Task>>(),
+            Arg.Any<Func<RequestReturn, Task>>(),
             Arg.Any<CancellationToken>());
     }
     
@@ -90,7 +91,7 @@ public class CompleteReturnReceivedStepTests
         Assert.Null(exception);
 
         await _returnRequestPersistenceService.DidNotReceive().UpdateReturnRequestAsync(
-            Arg.Any<Guid>(), Arg.Any<Func<ReturnRequest, Task>>(), Arg.Any<CancellationToken>());
+            Arg.Any<Guid>(), Arg.Any<Func<RequestReturn, Task>>(), Arg.Any<CancellationToken>());
     }
     
     private static ReturnSagaData CreateSampleData() => new()
