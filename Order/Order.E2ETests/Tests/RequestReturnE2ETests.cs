@@ -2,7 +2,7 @@ using Application.Sagas;
 using Application.Sagas.Persistence;
 using Confluent.Kafka;
 using Domain.Common;
-using Domain.Entities;
+using Domain.Entities.RequestReturn;
 using Domain.ValueObjects;
 using FluentAssertions;
 using Infrastructure.Extensions;
@@ -21,10 +21,10 @@ namespace Order.E2ETests.Tests;
 /// E2E tests for Return Request flow.
 /// 
 /// Flow:
-/// 1. RequestReturn gRPC → ReturnRequestCreatedEvent
-/// 2. ReturnSaga starts: Validate → AwaitReturnShipment (webhook) → [PAUSE: WaitingForEvent]
-/// 3. Webhook: ReturnShipmentDeliveredEvent → Resume saga
-/// 4. ConfirmReturnReceived → ProcessRefund → UpdateAccounting → CompleteReturn
+/// 1. RequestReturn gRPC => ReturnRequestCreatedEvent
+/// 2. ReturnSaga starts: Validate → AwaitReturnShipment (webhook) => [PAUSE: WaitingForEvent]
+/// 3. Webhook: ReturnShipmentDeliveredEvent => Resume saga
+/// 4. ConfirmReturnReceived => ProcessRefund => UpdateAccounting → CompleteReturn
 /// 
 /// Tests:
 /// - Happy path with webhook continuation
@@ -194,7 +194,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine($"✅ ReturnRequest events: {string.Join(", ", eventTypes)}");
 
         // Rebuild aggregate from events
-        var returnRequestAggregate = ReturnRequest.FromHistory(events);
+        var returnRequestAggregate = RequestReturn.FromHistory(events);
         returnRequestAggregate.Status.Should().Be(ReturnStatus.Completed);
         returnRequestAggregate.RefundId.Should().Be(refundId);
 

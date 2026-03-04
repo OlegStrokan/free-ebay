@@ -22,6 +22,6 @@ public class OrderItemIdTests
         
         var exception = Assert.Throws<ArgumentException>(() => OrderItemId.From((nonValidId)));
 
-        Assert.Contains("OrderItemId must be greater then", exception.Message);
+        Assert.Contains("OrderItemId must be greater or equal 0", exception.Message);
     }
 }

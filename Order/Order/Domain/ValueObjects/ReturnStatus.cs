@@ -11,7 +11,7 @@ public sealed class ReturnStatus
     public int Value { get;  }
     private readonly HashSet<ReturnStatus> _allowedTransitions;
 
-    public IReadOnlyCollection<ReturnStatus> AllowedTransitions => _allowedTransitions;
+    public IReadOnlyCollection<ReturnStatus> AllowedTransitions => _allowedTransitions.ToList().AsReadOnly();
 
     private ReturnStatus(string name, int value)
     {

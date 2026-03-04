@@ -1,6 +1,6 @@
 using Application.Interfaces;
-using Domain.Entities;
 using Domain.Entities.Order;
+using Domain.Entities.RequestReturn;
 using Domain.ValueObjects;
 using FluentAssertions;
 using Infrastructure.Persistence.DbContext;
@@ -18,7 +18,7 @@ public sealed class ReturnRequestPersistenceServiceTests : IClassFixture<Integra
 
     public ReturnRequestPersistenceServiceTests(IntegrationFixture fixture) => _fixture = fixture;
     
-    private static (ReturnRequest Request, OrderId OrderId, CustomerId CustomerId) BuildReturnRequest()
+    private static (RequestReturn Request, OrderId OrderId, CustomerId CustomerId) BuildReturnRequest()
     {
         var productId   = ProductId.CreateUnique();
         var orderItem   = OrderItem.Create(productId, 1, Money.Create(80, "USD"));
@@ -26,7 +26,7 @@ public sealed class ReturnRequestPersistenceServiceTests : IClassFixture<Integra
         var orderId     = OrderId.CreateUnique();
         var customerId  = CustomerId.CreateUnique();
 
-        var request = ReturnRequest.Create(
+        var request = RequestReturn.Create(
             orderId,
             customerId,
             reason: "Item arrived damaged",
