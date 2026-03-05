@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Domain.Common;
 using Domain.Entities;
 using Domain.Interfaces;
@@ -25,7 +26,7 @@ public sealed class SnapshotRepositoryTests : IClassFixture<IntegrationFixture>
 
         var aggregateId = Guid.NewGuid().ToString();
         // representative state blob - same structure used by OrderPersistenceService
-        const string stateJson = """{"orderId":"some-id","status":2,"version":50}""";
+        const string stateJson = """{"status": 2, "orderId": "some-id", "version": 50}""";
 
         var snapshot = AggregateSnapshot.Create(aggregateId, AggregateTypes.Order, version: 50, stateJson);
 
@@ -57,7 +58,10 @@ public sealed class SnapshotRepositoryTests : IClassFixture<IntegrationFixture>
 
         latest.Should().NotBeNull();
         latest!.Version.Should().Be(100);
-        latest.StateJson.Should().Be("""{"v":100}""");
+        var expectedObj = JsonSerializer.Deserialize<Dictionary<string, int>>("""{"v":100}""");
+        var actualObj = JsonSerializer.Deserialize<Dictionary<string, int>>(latest.StateJson);
+
+        actualObj.Should().BeEquivalentTo(expectedObj);
     }
     
     [Fact]

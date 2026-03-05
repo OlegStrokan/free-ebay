@@ -8,6 +8,7 @@ using Domain.Interfaces;
 using Domain.ValueObjects;
 using FluentAssertions;
 using Infrastructure.Persistence.DbContext;
+using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Order.IntegrationTests.Infrastructure;
@@ -102,10 +103,19 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
         order.Pay(PaymentId.From("PAY-2"));
 
+        var options = new JsonSerializerOptions { 
+            Converters =
+            {
+                new StronglyTypedIdConverter<OrderId>(), 
+                new StronglyTypedIdConverter<CustomerId>(),
+                new StronglyTypedIdConverter<PaymentId>()
+            } 
+        };
+        
         var createdJson = JsonSerializer.Serialize(
-            order.UncommitedEvents[0], order.UncommitedEvents[0].GetType());
+            order.UncommitedEvents[0], order.UncommitedEvents[0].GetType(), options);
         var paidJson = JsonSerializer.Serialize(
-            order.UncommitedEvents[1], order.UncommitedEvents[1].GetType());
+            order.UncommitedEvents[1], order.UncommitedEvents[1].GetType(), options);
 
         // insert deliberately in WRONG insertion order: Paid(v1) before Created(v0)
         db.DomainEvents.Add(DomainEvent.Create(aggregateId, AggregateTypes.Order, nameof(OrderPaidEvent),    paidJson,    version: 1));
