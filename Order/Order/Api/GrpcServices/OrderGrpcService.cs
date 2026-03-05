@@ -42,7 +42,7 @@ public class OrderGrpcService(
             {
                 Success = result.IsSuccess,
                 OrderId = result.IsSuccess ? result.Value.ToString() : string.Empty,
-                ErrorMessage = result.Error
+                ErrorMessage = result.Error ?? string.Empty
             };
         }
         catch (Exception ex) when (ex is not RpcException)
@@ -82,7 +82,8 @@ public class OrderGrpcService(
             {
                 Success = result.IsSuccess,
                 ReturnRequestId = result.IsSuccess ? result.Value.ToString() : string.Empty,
-                ErrorMessage = result.Error
+                // @todo: update proto and make errorMessage non-required
+                ErrorMessage = result.Error ?? string.Empty
             };
         }
         catch (Exception ex) when (ex is not RpcException)

@@ -60,7 +60,7 @@ public class SagaOrchestrationService(
 
                    // restore trace context propagated from the publisher
                    Activity? activity = null;
-                   var traceHeader = consumeResult.Message.Headers
+                   var traceHeader = consumeResult.Message.Headers?
                        .FirstOrDefault(h => h.Key == "traceparent");
                    if (traceHeader != null)
                    {

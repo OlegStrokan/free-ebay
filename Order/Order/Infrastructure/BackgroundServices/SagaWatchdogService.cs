@@ -26,18 +26,25 @@ public class SagaWatchdogService : BackgroundService
             "Saga Watchdog started. Poll interval: {PollInterval}, Stuck threshold: {StuckThreshold}",
             _checkInterval, _stuckThreshold);
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await CheckAndRecoverStuckSagaAsync(stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in Saga Watchdog execution");
-            }
+                try
+                {
+                    await CheckAndRecoverStuckSagaAsync(stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in Saga Watchdog execution");
+                }
 
-            await Task.Delay(_checkInterval, stoppingToken);
+                await Task.Delay(_checkInterval, stoppingToken);
+            }
+        } 
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Saga Watchdog cancellation requested.");
         }
 
         _logger.LogInformation("Saga Watchdog stopped");

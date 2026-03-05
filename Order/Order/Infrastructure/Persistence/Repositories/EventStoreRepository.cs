@@ -3,6 +3,7 @@ using Domain.Common;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Interfaces;
+using Domain.ValueObjects;
 using Infrastructure.Persistence.DbContext;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -129,7 +130,7 @@ public class EventStoreRepository(
             }
             
             var domainEvent = (IDomainEvent?)JsonSerializer.Deserialize(
-                storedEvent.EventData, eventType);
+                storedEvent.EventData, eventType, SerializerOptions);
 
             if (domainEvent is null)
             {
@@ -144,4 +145,21 @@ public class EventStoreRepository(
 
         return domainEvents;
     }
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = 
+        { 
+            // @think: should we have some factory, where we loop up for file<ID> name and add it type shit?
+            new StronglyTypedIdConverter<OrderId>(),
+            new StronglyTypedIdConverter<OrderItemId>(),
+            new StronglyTypedIdConverter<PaymentId>(),
+            new StronglyTypedIdConverter<CustomerId>(),
+            new StronglyTypedIdConverter<TrackingId>(),
+            new StronglyTypedIdConverter<ReturnRequestId>(),
+            new StronglyTypedIdConverter<RecurringOrderId>(),
+            new StronglyTypedIdConverter<QuoteLineItemId>(),
+            new StronglyTypedIdConverter<B2BOrderId>(),
+        }
+    };
 }

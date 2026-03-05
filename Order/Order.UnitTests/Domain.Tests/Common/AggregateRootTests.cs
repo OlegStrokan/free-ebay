@@ -45,8 +45,8 @@ public class AggregateRootTests
 
         var order = Order.FromHistory(history);
 
-        // after one event applied via LoadFromHistory, Version should be 0
-        Assert.Equal(0, order.Version);
+        // after one event applied via LoadFromHistory, Version should be 1
+        Assert.Equal(1, order.Version);
     }
 
     [Fact]
@@ -54,8 +54,8 @@ public class AggregateRootTests
     {
         var order = Order.Create(_customerId, _address, _items);
 
-        // create raises one event => version goes from -1 to 0
-        Assert.Equal(0, order.Version);
+        // create raises one event => version goes from 0 to 1
+        Assert.Equal(1, order.Version);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class AggregateRootTests
 
         var order = Order.FromHistory(history);
 
-        Assert.Equal(2, order.Version); // 3 events => versions 0, 1, 2
+        Assert.Equal(3, order.Version); // 3 events => versions 1,2,3
     }
 
     [Fact]

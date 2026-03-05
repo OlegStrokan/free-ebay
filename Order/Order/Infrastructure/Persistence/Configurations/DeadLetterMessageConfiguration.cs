@@ -31,7 +31,7 @@ public class DeadLetterMessageConfiguration : IEntityTypeConfiguration<DeadLette
             .HasDatabaseName("IX_DeadLetterMessages_Type");
 
         builder.HasIndex(d => d.MovedToDeadLetterAt)
-            .HasDatabaseName("IX_DeadLetterMessages_IsResolved");
+            .HasDatabaseName("IX_DeadLetterMessages_MovedToDeadLetterAt");
 
         builder.HasIndex(d => d.IsResolved)
             .HasDatabaseName("IX_DeadLetterMessages_IsResolved");
