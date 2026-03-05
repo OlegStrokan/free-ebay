@@ -157,6 +157,6 @@ public sealed class ReturnRequestPersistenceServiceTests : IClassFixture<Integra
         var assertSvc = assertScope.ServiceProvider.GetRequiredService<IReturnRequestPersistenceService>();
         var finalRr = await assertSvc.LoadByOrderIdAsync(orderId.Value, CancellationToken.None);
 
-        finalRr!.Version.Should().Be(1, "only one MarkAsReceived event committed - by Task B");
+        finalRr!.Version.Should().Be(2, "ReturnRequestCreated(v=0) + B's MarkAsReceived(v=1) = 2 committed events");
     }
 }

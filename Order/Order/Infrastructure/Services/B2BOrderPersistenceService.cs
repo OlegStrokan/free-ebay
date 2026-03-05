@@ -112,7 +112,10 @@ public class B2BOrderPersistenceService(
                 var order = await LoadB2BOrderAsync(b2bOrderId, ct)
                     ?? throw new DomainException($"B2BOrder {b2bOrderId} not found");
 
-                var expectedVersion = order.Version;
+                // @todo: make sure what we have consistency between all tests
+                // Version is 1-indexed (count of applied events); DB stores events 0-indexed
+                // (first event at version 0), so the last committed version = Version - 1 type shit
+                var expectedVersion = order.Version - 1;
 
                 await action(order);
 
@@ -168,10 +171,19 @@ public class B2BOrderPersistenceService(
 
             try
             {
+                // idempotency guard: if this key was already processed, skip silently
+                var existing = await idempotencyRepository.GetByKeyAsync(idempotencyKey, ct);
+                if (existing is not null)
+                {
+                    await transaction.CommitAsync(ct);
+                    return;
+                }
+
                 var b2bOrder = await LoadB2BOrderAsync(b2bOrderId, ct)
                     ?? throw new DomainException($"B2BOrder {b2bOrderId} not found");
 
-                var b2bOrderExpectedVersion = b2bOrder.Version;
+                // Capture expected version before mutating the aggregate (same 0-indexed offset).
+                var b2bOrderExpectedVersion = b2bOrder.Version - 1;
 
                 b2bOrder.Finalize(orderToCreate.Id.Value);
 
@@ -285,7 +297,7 @@ public class B2BOrderPersistenceService(
             var snapshot = AggregateSnapshot.Create(
                 order.Id.Value.ToString(),
                 AggregateTypes.B2BOrder,
-                order.Version,
+                order.Version - 1, // store last committed event version (0-indexed)
                 JsonSerializer.Serialize(state));
 
             await snapshotRepository.SaveAsync(snapshot, ct);

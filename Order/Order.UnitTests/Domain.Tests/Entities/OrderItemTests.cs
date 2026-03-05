@@ -59,7 +59,7 @@ public class OrderItemTests
     }
 
     [Fact]
-    public void InitializeOrderItem_ShouldThrowException_WhenOrderItemAlreadyInitialize()
+    public void InitializeOrderItem_ShouldNotOverwriteFields_WhenAlreadyInitialized()
     {
         var orderItem = OrderItem.Create(_testProductId, ValidQuantity, _validPrice);
 
@@ -67,9 +67,16 @@ public class OrderItemTests
         var orderItemId = OrderItemId.From(10);
         orderItem.InitializeOrderItem(orderId, orderItemId);
 
-        var exception = Assert.Throws<DomainException>(() => orderItem.InitializeOrderItem(orderId, orderItemId));
+        var orderId2 = OrderId.CreateUnique();
+        var orderItemId2 = OrderItemId.From(20);
+        orderItem.InitializeOrderItem(orderId2, orderItemId2);
 
-        Assert.Contains("already initialized", exception.Message);
+        Assert.NotEqual(orderId2, orderItem.OrderId);
+        Assert.NotEqual(orderItemId2, orderItem.Id);
+        
+        Assert.Equal(orderId, orderItem.OrderId);
+        Assert.Equal(orderItemId, orderItem.Id);
+
     }
 
     // state updates 

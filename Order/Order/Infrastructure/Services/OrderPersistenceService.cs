@@ -68,7 +68,7 @@ public class OrderPersistenceService(
 
                 if (order is null) throw new OrderNotFoundException(orderId);
 
-                var expectedVersion = order.Version;
+                var expectedVersion = order.Version - 1;
                 
                 /* 
                  * you can argue what we can't retry "action" here: UpdateOrderAsync, BUT:
@@ -110,7 +110,7 @@ public class OrderPersistenceService(
                         var snapshot = AggregateSnapshot.Create(
                             order.Id.Value.ToString(),
                             AggregateTypes.Order,
-                            order.Version,
+                            order.Version - 1, // 0-indexed last committed event version
                             JsonSerializer.Serialize(snapshotState));
 
                         await snapshotRepository.SaveAsync(snapshot, cancellationToken);

@@ -17,12 +17,12 @@ public sealed class OrderItem : Entity<OrderItemId>
         OrderId? orderId,
         ProductId productId,
         int quantity,
-        Money price) : base(id)
+        Money priceAtPurchase) : base(id)
     {
         OrderId = orderId;
         ProductId = productId;
         Quantity = quantity;
-        PriceAtPurchase = price;
+        PriceAtPurchase = priceAtPurchase;
         _isInitialized = orderId is not null;
     }
 
@@ -45,8 +45,10 @@ public sealed class OrderItem : Entity<OrderItemId>
 
     internal void InitializeOrderItem(OrderId orderId, OrderItemId orderItemId)
     {
+        // When the item was re-hydrated from JSON via [JsonConstructor], it is already
+        // initialised with the correct values; skip the assignment to preserve them.
         if (_isInitialized)
-            throw new DomainException("OrderItem is already initialized");
+            return;
 
         Id = orderItemId;
         OrderId = orderId;
@@ -56,10 +58,10 @@ public sealed class OrderItem : Entity<OrderItemId>
     internal static OrderItem FromSnapshot(OrderItemSnapshotState state) =>
         new OrderItem(
             id: OrderItemId.From(state.ItemId),
-            orderId: OrderId.From(state.OrderId),
+            orderId: state.OrderId.HasValue ? OrderId.From(state.OrderId.Value) : null,
             productId: ProductId.From(state.ProductId),
             quantity: state.Quantity,
-            price: Money.Create(state.Price, state.Currency)
+            priceAtPurchase: Money.Create(state.Price, state.Currency)
         );
     
     

@@ -68,8 +68,9 @@ public class ReturnRequestPersistenceService(
                 if (returnRequest is null)
                     throw new ReturnRequestNotFoundException(orderId);
 
-                // Capture version before action(). action() calls RaiseEvent() which increments Version => inconsistency
-                var expectedVersion = returnRequest.Version;
+                // Version is count-based (1 after 1 event); DB stores events 0-indexed,
+                // so last committed DB version = Version - 1.
+                var expectedVersion = returnRequest.Version - 1;
 
                 await action(returnRequest);
 

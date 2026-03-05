@@ -35,7 +35,8 @@ public class DomainEvent : IDomainEvent
         string aggregateType,
         string eventType,
         string eventData,
-        int version)
+        int version,
+        Guid eventId)
     {
         if (string.IsNullOrWhiteSpace(aggregateId))
             throw new ArgumentException("AggregateId is required", nameof(aggregateId));
@@ -47,7 +48,7 @@ public class DomainEvent : IDomainEvent
             throw new ArgumentException("EventType is required", nameof(eventType));
 
         return new DomainEvent(
-            Guid.NewGuid(),
+            eventId,
             aggregateId,
             aggregateType,
             eventType,

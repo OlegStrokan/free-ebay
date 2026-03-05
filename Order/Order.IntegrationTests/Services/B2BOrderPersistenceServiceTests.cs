@@ -132,7 +132,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var final = await assertSvc.LoadB2BOrderAsync(orderId, CancellationToken.None);
 
         final.Should().NotBeNull();
-        final!.Version.Should().Be(1, "only B's comment was committed");
+        final!.Version.Should().Be(2, "StartedEvent + B's comment = 2 committed events");
         final.Comments.Should().Contain(c => c.Contains("AuthorB"));
     }
 
@@ -156,7 +156,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
 
             var snapshotJson = JsonSerializer.Serialize(loaded!.ToSnapshotState());
             await snapshotRepo.SaveAsync(
-                AggregateSnapshot.Create(orderId.ToString(), AggregateTypes.B2BOrder, loaded.Version, snapshotJson),
+                AggregateSnapshot.Create(orderId.ToString(), AggregateTypes.B2BOrder, loaded.Version - 1, snapshotJson),
                 CancellationToken.None);
 
             await svc.UpdateB2BOrderAsync(orderId, o =>
@@ -330,7 +330,10 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var b2bSvc = scope.ServiceProvider.GetRequiredService<IB2BOrderPersistenceService>();
 
         var fakeBb2OrderId = Guid.NewGuid();
-        var orderItems = new List<OrderItem>();
+        var productId = ProductId.CreateUnique();
+        var item = OrderItem.Create(productId, 2, Money.Create(100, "USD"));
+        var orderItems  = new List<OrderItem> { item };
+        
         var order = Domain.Entities.Order.Order.Create(
             CustomerId.CreateUnique(),
             TestAddress,

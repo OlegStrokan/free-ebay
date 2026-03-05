@@ -115,7 +115,7 @@ public class RecurringOrderPersistenceService(
                     throw new DomainException(
                         $"RecurringOrder {recurringOrderId} is not Active or not yet due");
 
-                var expectedVersion = recurring.Version;
+                var expectedVersion = recurring.Version - 1;
 
                 var orderItems = recurring.Items.Select(i =>
                     OrderItem.Create(i.ProductId, i.Quantity, i.Price)).ToList();
@@ -232,7 +232,7 @@ public class RecurringOrderPersistenceService(
                 var order = await LoadAsync(recurringOrderId, ct)
                     ?? throw new DomainException($"RecurringOrder {recurringOrderId} not found");
 
-                var expectedVersion = order.Version;
+                var expectedVersion = order.Version - 1;
                 await action(order);
 
                 if (!order.UncommitedEvents.Any())
@@ -291,7 +291,7 @@ public class RecurringOrderPersistenceService(
             var snapshot = AggregateSnapshot.Create(
                 order.Id.Value.ToString(),
                 AggregateTypes.RecurringOrder,
-                order.Version,
+                order.Version - 1, // 0-indexed last committed event version
                 JsonSerializer.Serialize(order.ToSnapshotState()));
 
             await snapshotRepository.SaveAsync(snapshot, ct);

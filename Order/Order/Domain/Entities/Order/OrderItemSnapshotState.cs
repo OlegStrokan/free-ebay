@@ -2,7 +2,7 @@
 
 public record OrderItemSnapshotState(
     long ItemId,
-    Guid OrderId,
+    Guid? OrderId,
     Guid ProductId,
     int Quantity,
     decimal Price,

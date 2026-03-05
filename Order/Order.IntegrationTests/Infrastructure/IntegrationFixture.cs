@@ -70,6 +70,7 @@ public sealed class IntegrationFixture : IAsyncLifetime
         services.AddScoped<IRecurringOrderReadRepository, RecurringOrderReadRepository>();
         services.AddScoped<ISagaRepository, SagaRepository>();
         services.AddSingleton<IDomainEventTypeRegistry, DomainEventTypeRegistry>();
+        services.AddScoped<IReturnRequestLookupRepository, ReturnRequestLookupRepository>();
         // register as concrete (for direct test resolution) AND as IReadModelUpdater (for routing)
         services.AddScoped<OrderReadModelUpdater>();
         services.AddScoped<ReturnRequestReadModelUpdater>();

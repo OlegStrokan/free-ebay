@@ -131,7 +131,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
         var assertSvc = assertScope.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
         var finalOrder = await assertSvc.LoadOrderAsync(orderId, CancellationToken.None);
 
-        finalOrder!.Version.Should().Be(1, "only one Pay event committed - by Task B");
+        finalOrder!.Version.Should().Be(2, "OrderCreated(v=0) + B's Pay(v=1) = 2 committed events");
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
         var result = await assertSvc.LoadOrderAsync(orderId, CancellationToken.None);
 
         result.Should().NotBeNull();
-        result!.Version.Should().Be(1, "snapshot at v=0 plus one delta event yields version 1");
+        result!.Version.Should().Be(2, "OrderCreated(v=0) in snapshot + Pay delta(v=1) = 2 events total");
     }
 
     [Fact]
@@ -209,6 +209,6 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
             .LoadOrderAsync(orderId, CancellationToken.None);
 
         result.Should().NotBeNull();
-        result!.Version.Should().Be(1, "full-replay of OrderCreated(v=0) + OrderPaid(v=1) yields version 1");
+        result!.Version.Should().Be(2, "full-replay of OrderCreated(v=0) + OrderPaid(v=1) = 2 events");
     }
 }
