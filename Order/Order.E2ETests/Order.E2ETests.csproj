@@ -39,6 +39,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Order\Api\Api.csproj" />
       <ProjectReference Include="..\Order\Application\Application.csproj" />
       <ProjectReference Include="..\Order\Domain\Domain.csproj" />
       <ProjectReference Include="..\Order\Infrastructure\Infrastructure.csproj" />

@@ -17,6 +17,15 @@ public class EventStoreRepository(
     ILogger<EventStoreRepository> logger
 ) : IEventStoreRepository
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Converters =
+        {
+            new StronglyTypedIdConverterFactory(),
+            new AddressJsonConverter(),
+            new OrderItemJsonConverter()
+        }
+    };
     // optimistic concurrency type shit: checks expected version against DB, increments per event,
     // throw ex on mismatch (no auto-retry; caller must reload aggregate and retry)
     public async Task SaveEventsAsync(
@@ -44,8 +53,9 @@ public class EventStoreRepository(
             dbContext.DomainEvents.Add(DomainEvent.Create(
                 aggregateId, aggregateType,
                 domainEvent.GetType().Name,
-                JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
-                nextVersion++));
+                JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), JsonOptions),
+                nextVersion++,
+                domainEvent.EventId));
         }
 
         try
@@ -130,7 +140,7 @@ public class EventStoreRepository(
             }
             
             var domainEvent = (IDomainEvent?)JsonSerializer.Deserialize(
-                storedEvent.EventData, eventType, SerializerOptions);
+                storedEvent.EventData, eventType, JsonOptions);
 
             if (domainEvent is null)
             {
@@ -145,21 +155,4 @@ public class EventStoreRepository(
 
         return domainEvents;
     }
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        Converters = 
-        { 
-            // @think: should we have some factory, where we loop up for file<ID> name and add it type shit?
-            new StronglyTypedIdConverter<OrderId>(),
-            new StronglyTypedIdConverter<OrderItemId>(),
-            new StronglyTypedIdConverter<PaymentId>(),
-            new StronglyTypedIdConverter<CustomerId>(),
-            new StronglyTypedIdConverter<TrackingId>(),
-            new StronglyTypedIdConverter<ReturnRequestId>(),
-            new StronglyTypedIdConverter<RecurringOrderId>(),
-            new StronglyTypedIdConverter<QuoteLineItemId>(),
-            new StronglyTypedIdConverter<B2BOrderId>(),
-        }
-    };
 }

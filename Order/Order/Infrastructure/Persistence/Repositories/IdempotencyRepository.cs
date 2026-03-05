@@ -24,6 +24,13 @@ public sealed class IdempotencyRepository(AppDbContext dbContext) : IIdempotency
         DateTime createdAt,
         CancellationToken ct)
     {
+        // why we dont have for another events? because idempotency entity use eventId which is not generated
+        var existingEntry = dbContext.ChangeTracker
+            .Entries<IdempotencyRecord>()
+            .FirstOrDefault(e => e.Entity.Key == idempotencyKey);
+        if (existingEntry is not null)
+            existingEntry.State = EntityState.Detached;
+
         var record = new IdempotencyRecord(idempotencyKey, orderId, createdAt);
 
         await dbContext.IdempotencyRecords.AddAsync(record, ct);
