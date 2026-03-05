@@ -1,13 +1,8 @@
-# [TO fucking DO]
 
-- register all shit
-- create shitty ci/cd
-- finish all tests type shit
-- fix all shit in code (@think, @todo comments)
 
 # Gabriela
 
-2 apps, one extremely complicated ebay with crypto support + public api, and second one is less complicated but also stupidly complex xiaoping-express
+Plan: 2 apps, one extremely complicated microservice zoo ebay with crypto support + public api, and second one is less complicated but also stupidly complex xiaoping-express
 
 ebay stack:
 
@@ -20,38 +15,18 @@ i prefer consistency to logic. user-service will be grpc microservice, yes it's 
 
 auth service
 
-some auth stuff. also grpc
+some auth stuff. simple as fuck
 
 order service:
-i am idiot so i admire complexity: saga based transaction with sprinkle of outbox transactions, kafka workers, ddd aggregates, event sourcing and cqrs. 
+saga based transaction with sprinkle of outbox transactions, kafka workers, ddd aggregates, distributed locking, watchdogs, event sourcing and cqrs, and ALMOST exactly-once processing
 
-8 fucking layers to create order
-
-Internal IDs: Use Guid (OrderId, CustomerId, ProductId)
+Internal IDs: Strongly typed Ids based on Guid (OrderId, CustomerId, ProductId)
 External IDs: Use string (PaymentId, TrackingId, ShipmentId, RefundId)
 
-// ❌ BAD: Step modifies saga state directly
-public async Task<StepResult> ExecuteAsync(...)
-{
-await RegisterWebhook();
-
-    // Step shouldn't do this!
-    sagaState.Status = SagaStatus.WaitingForEvent;  
-    
-    return StepResult.Success();
-}
-
-// ✅ GOOD: Step communicates via result
-public async Task<StepResult> ExecuteAsync(...)
-{
-await RegisterWebhook();
-
-    // Step signals its intent
-    return StepResult.SuccessResult(new Dictionary {
-        ["SagaState"] = "WaitingForEvent"
-    });
-}
-```
+We use Metadata object in saga step result as communication protocol so we can
+communicate between steps and saga without need access to saga state (which is violation).
+ => Step (child) => we need to wait for webhook, sir
+ => Saga () => i will pause for you next step, my boy
 
 ### Metadata is a Communication Protocol
 ```
