@@ -2,6 +2,7 @@
 using Application.Interfaces;
 using Application.Sagas;
 using Application.Sagas.Persistence;
+using Confluent.Kafka;
 using Domain.Interfaces;
 using Infrastructure.BackgroundServices;
 using Infrastructure.Gateways;
@@ -22,6 +23,26 @@ public static class InfrastructureModule
         IConfiguration configuration)
     {
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
+
+        services.AddSingleton<IConsumer<string, string>>(sp =>
+        {
+            var kafkaConfig = new ConsumerConfig
+            {
+                BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
+                GroupId           = configuration["Kafka:ConsumerGroupId"] ?? "order-service",
+                AutoOffsetReset   = AutoOffsetReset.Earliest,
+                EnableAutoCommit  = false,
+                EnableAutoOffsetStore = false,
+                IsolationLevel    = IsolationLevel.ReadCommitted
+            };
+            return new ConsumerBuilder<string, string>(kafkaConfig)
+                .SetErrorHandler((_, error) =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<SagaOrchestrationService>>();
+                    logger.LogError("Kafka saga consumer error: {Reason}", error.Reason);
+                })
+                .Build();
+        });
 
         var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
         services.AddSingleton<IConnectionMultiplexer>(

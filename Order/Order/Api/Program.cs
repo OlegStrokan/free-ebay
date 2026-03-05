@@ -41,3 +41,6 @@ app.MapGrpcHealthChecksService();
 
 
 app.Run();
+
+// Make Program accessible to WebApplicationFactory in test projects
+public partial class Program { }

@@ -1,6 +1,5 @@
 using Application.Gateways;
 using Confluent.Kafka;
-using DotNet.Testcontainers.Builders;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Infrastructure.Messaging;
@@ -15,8 +14,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Order.E2ETests.Infrastructure.Mocks;
 using ProtoBuf.Meta;
 using Protos.Order;
+using StackExchange.Redis;
 using Testcontainers.Kafka;
 using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 using WireMock.Server;
 using Xunit;
 
@@ -29,6 +30,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private PostgreSqlContainer _postgreSqlContainer = null!;
     private KafkaContainer _kafkaContainer = null!;
+    private RedisContainer _redisContainer = null!;
     private WireMockServer _wireMockServer = null!;
 
     private FakePaymentGrpcServer _paymentService = null!;
@@ -50,17 +52,20 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
             .WithUsername("test")
             .WithPassword("admin")
             .WithImage("postgres:16-alpine")
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
             .Build();
         
         _kafkaContainer = new KafkaBuilder()
             .WithImage("confluentinc/cp-kafka:7.7.7")
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(9092))
+            .Build();
+
+        _redisContainer = new RedisBuilder()
+            .WithImage("redis:7-alpine")
             .Build();
 
         await Task.WhenAll(
             _postgreSqlContainer.StartAsync(),
-            _kafkaContainer.StartAsync());
+            _kafkaContainer.StartAsync(),
+            _redisContainer.StartAsync());
 
         KafkaBootstrapServers = _kafkaContainer.GetBootstrapAddress();
 
@@ -72,10 +77,35 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         Console.WriteLine("✅ E2E infra ready");
         Console.WriteLine($"   Postgres   : {_postgreSqlContainer.GetConnectionString()}");
         Console.WriteLine($"   Kafka      : {KafkaBootstrapServers}");
+        Console.WriteLine($"   Redis      : {_redisContainer.GetConnectionString()}");
         Console.WriteLine($"   Shipping   : {_wireMockServer.Urls[0]}  ← WireMock REST");
         Console.WriteLine($"   Payment    : {_paymentService.Address}");
         Console.WriteLine($"   Inventory  : {_inventoryService.Address}");
         Console.WriteLine($"   Accounting : {_accountingService.Address}");
+
+        // Build the DB schema before the host starts so that background services
+        // (OutboxProcessor, RecurringOrderSchedulerService, …) find the tables ready.
+        await CreateSchemaAsync();
+    }
+
+    private async Task CreateSchemaAsync()
+    {
+        var connStr = _postgreSqlContainer.GetConnectionString();
+
+        var writeOpts = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(connStr)
+            .Options;
+        var readOpts = new DbContextOptionsBuilder<ReadDbContext>()
+            .UseNpgsql(connStr)
+            .Options;
+
+        await using var appDb  = new AppDbContext(writeOpts);
+        await using var readDb = new ReadDbContext(readOpts);
+        await Task.WhenAll(
+            appDb.Database.EnsureCreatedAsync(),
+            readDb.Database.EnsureCreatedAsync());
+
+        Console.WriteLine("✅ Schema ready");
 
     }
 
@@ -101,6 +131,25 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
             services.Configure<KafkaOptions>(options =>
             {
                 options.BootstrapServers = KafkaBootstrapServers;
+            });
+
+            services.RemoveAll<IConnectionMultiplexer>();
+            services.AddSingleton<IConnectionMultiplexer>(
+                _ => ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString()));
+
+            services.RemoveAll<IConsumer<string, string>>();
+            services.AddSingleton<IConsumer<string, string>>(_ =>
+            {
+                var config = new ConsumerConfig
+                {
+                    BootstrapServers      = KafkaBootstrapServers,
+                    GroupId               = "order-service",
+                    AutoOffsetReset       = AutoOffsetReset.Earliest,
+                    EnableAutoCommit      = false,
+                    EnableAutoOffsetStore = false,
+                    IsolationLevel        = IsolationLevel.ReadCommitted
+                };
+                return new ConsumerBuilder<string, string>(config).Build();
             });
 
             services.RemoveAll<IPaymentGateway>();
@@ -156,11 +205,9 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
 
     public async Task MigrateDatabaseAsync()
     {
-        using var scope = Services.CreateScope();
-        var dbContext  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var readDb     = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
-        await dbContext.Database.EnsureCreatedAsync();
-        await readDb.Database.EnsureCreatedAsync();
+        // Schema is already created in InitializeAsync before the host started.
+        // This method is kept for call-site compatibility.
+        await Task.CompletedTask;
     }
 
     public void ResetAll()
@@ -175,6 +222,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
     {
         await _postgreSqlContainer.DisposeAsync();
         await _kafkaContainer.DisposeAsync();
+        await _redisContainer.DisposeAsync();
         await _paymentService.DisposeAsync();
         await _inventoryService.DisposeAsync();
         await _accountingService.DisposeAsync();
