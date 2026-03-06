@@ -39,7 +39,8 @@ public class SagaHandlerFactory : ISagaHandlerFactory
         if (!_handlerMapping.TryGetValue(eventType, out var handleType))
             return null;
 
-        return serviceProvider.GetServices<ISagaEventHandler>()
-            .FirstOrDefault(h => h.GetType() == handleType);
+        // Resolve only the concrete type we need — avoids instantiating every other handler
+        // (and their entire dependency chains) just to find one by type comparison.
+        return serviceProvider.GetService(handleType) as ISagaEventHandler;
     }
 }

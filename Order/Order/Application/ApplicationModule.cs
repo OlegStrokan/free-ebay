@@ -43,9 +43,16 @@ public static class ApplicationModule
         services.AddScoped<ISagaStep<ReturnSagaData, ReturnSagaContext>, UpdateAccountingRecordsStep>();
 
         // saga event handlers - consumed by kafka consumer
-        services.AddScoped<ISagaEventHandler, OrderCreatedEventHandler>();
-        services.AddScoped<ISagaEventHandler, ReturnRequestCreatedEventHandler>();
-        services.AddScoped<ISagaEventHandler, ReturnShipmentDeliveredEventHandler>();
+        // registered both as interface (for GetServices<ISagaEventHandler>) and as concrete
+        // type (for SagaHandlerFactory.GetHandler which resolves by concrete type directly)
+        services.AddScoped<OrderCreatedEventHandler>();
+        services.AddScoped<ISagaEventHandler>(sp => sp.GetRequiredService<OrderCreatedEventHandler>());
+
+        services.AddScoped<ReturnRequestCreatedEventHandler>();
+        services.AddScoped<ISagaEventHandler>(sp => sp.GetRequiredService<ReturnRequestCreatedEventHandler>());
+
+        services.AddScoped<ReturnShipmentDeliveredEventHandler>();
+        services.AddScoped<ISagaEventHandler>(sp => sp.GetRequiredService<ReturnShipmentDeliveredEventHandler>());
 
         // lightweight type-only descriptors used by SagaHandlerFactory (singleton).
         // these carry just EventType string + handler .NET Type - no DI chains involved.
