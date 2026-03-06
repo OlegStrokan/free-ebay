@@ -56,6 +56,8 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+        
         consumer.Subscribe(topics);
 
         logger.LogInformation("Kafka read model synchronizer started. Subscribed to topics: {Topics}",

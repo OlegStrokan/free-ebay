@@ -18,6 +18,8 @@ public sealed class OutboxProcessor(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+        
         logger.LogInformation(
             "OutboxProcessor started with BatchSize={BatchSize}, MaxParallelism={Parallelism}",
             _batchSize,

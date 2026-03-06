@@ -17,6 +17,8 @@ public sealed class RecurringOrderSchedulerService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+        
         logger.LogInformation(
             "RecurringOrderSchedulerService started. PollInterval={PollInterval}s, BatchSize={BatchSize}",
             _pollIntervalSeconds, _batchSize);

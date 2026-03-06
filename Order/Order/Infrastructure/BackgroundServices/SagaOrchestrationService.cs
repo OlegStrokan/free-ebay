@@ -24,6 +24,8 @@ public class SagaOrchestrationService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+        
        logger.LogInformation("SagaOrchestrationService started");
        
        kafkaConsumer.Subscribe(_topic);

@@ -22,6 +22,8 @@ public class SagaWatchdogService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+        
         _logger.LogInformation(
             "Saga Watchdog started. Poll interval: {PollInterval}, Stuck threshold: {StuckThreshold}",
             _checkInterval, _stuckThreshold);

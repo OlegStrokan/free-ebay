@@ -30,6 +30,8 @@ public class ProcessedEventsCleanupService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+        
         logger.LogInformation(
             "Processed events cleanup service started. " +
             "Retention: {Retention} days, Clenup interval: {Interval} hours",
