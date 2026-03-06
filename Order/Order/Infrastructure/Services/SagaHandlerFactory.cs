@@ -3,13 +3,29 @@ using Application.Sagas.Handlers;
 
 namespace Infrastructure.Services;
 
-// updated version: instead of looking for all services under the ISagaEventHandler
-// then locally find correct implementation. It's OK our case, but if in future we will 
-// process millions of events per seconds we probably need to find another solution
+// EventType → handler .NET Type mapping built at startup, NOT per-scope.
+// Previously the factory took IEnumerable<ISagaEventHandler> which forced the ENTIRE
+// dependency graph of every saga handler (steps, gateways, repos) to be instantiated
+// just to read a string property — causing DI resolution failures on every Kafka message
+// when any leaf gateway/client was missing from the DI container.
+//
+// The descriptor-based constructor (used in production DI) avoids all of that.
+// The handler-instance constructor is kept for unit tests that pass concrete stubs directly.
 public class SagaHandlerFactory : ISagaHandlerFactory
 {
     private readonly IReadOnlyDictionary<string, Type> _handlerMapping;
 
+    // Production constructor: takes lightweight descriptors, no saga chains instantiated.
+    // Register the factory as AddSingleton when using this path.
+    public SagaHandlerFactory(IEnumerable<SagaHandlerDescriptor> descriptors)
+    {
+        _handlerMapping = descriptors.ToDictionary(
+            d => d.EventType,
+            d => d.HandlerType
+        );
+    }
+
+    // Kept for unit tests that supply concrete ISagaEventHandler stubs directly.
     public SagaHandlerFactory(IEnumerable<ISagaEventHandler> handlers)
     {
         _handlerMapping = handlers.ToDictionary(

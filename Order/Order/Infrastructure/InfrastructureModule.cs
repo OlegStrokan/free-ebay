@@ -1,6 +1,7 @@
 ﻿using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas;
+using Application.Sagas.Handlers;
 using Application.Sagas.Persistence;
 using Confluent.Kafka;
 using Domain.Interfaces;
@@ -78,7 +79,10 @@ public static class InfrastructureModule
         services.AddScoped<IB2BOrderPersistenceService, B2BOrderPersistenceService>();
         services.AddScoped<IRecurringOrderPersistenceService, RecurringOrderPersistenceService>();
         services.AddScoped<ISagaErrorClassifier, PostgresSagaErrorClassifier>();
-        services.AddScoped<ISagaHandlerFactory, SagaHandlerFactory>();
+        // Singleton: the event-type → handler-type mapping is static; no saga chains are
+        // instantiated here, so this is safe to hold for the lifetime of the application.
+        services.AddSingleton<ISagaHandlerFactory>(sp =>
+            new SagaHandlerFactory(sp.GetServices<SagaHandlerDescriptor>()));
         services.AddScoped<IEventPublisher, KafkaEventPublisher>();
         services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
         services.AddSingleton<IReadModelHandlerRegistry, ReadModelHandlerRegistry>();

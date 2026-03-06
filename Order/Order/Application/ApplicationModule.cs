@@ -47,6 +47,12 @@ public static class ApplicationModule
         services.AddScoped<ISagaEventHandler, ReturnRequestCreatedEventHandler>();
         services.AddScoped<ISagaEventHandler, ReturnShipmentDeliveredEventHandler>();
 
+        // lightweight type-only descriptors used by SagaHandlerFactory (singleton).
+        // these carry just EventType string + handler .NET Type - no DI chains involved.
+        services.AddSingleton(new SagaHandlerDescriptor("OrderCreatedEvent",              typeof(OrderCreatedEventHandler)));
+        services.AddSingleton(new SagaHandlerDescriptor("ReturnRequestCreatedEvent",      typeof(ReturnRequestCreatedEventHandler)));
+        services.AddSingleton(new SagaHandlerDescriptor("ReturnShipmentDeliveredEvent",   typeof(ReturnShipmentDeliveredEventHandler)));
+
         return services;
     }
 }
