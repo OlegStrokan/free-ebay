@@ -8,6 +8,7 @@ using Org.BouncyCastle.Bcpg;
 using Protos.Accounting;
 using Protos.Inventory;
 using Protos.Payment;
+using Protos.Product;
 
 namespace Order.E2ETests.Infrastructure.Mocks;
 
@@ -308,4 +309,32 @@ public class WireMockShippingGateway : IShippingGateway
         string ReturnShipmentId,
         string ReturnTrackingNumber,
         DateTime ExpectedPickupDate);
+}
+
+public class FakeGrpcProductGateway : IProductGateway
+{
+    private readonly ProductService.ProductServiceClient _client;
+
+    public FakeGrpcProductGateway(string serverAddress)
+    {
+        var channel = GrpcChannel.ForAddress(serverAddress);
+        _client = new ProductService.ProductServiceClient(channel);
+    }
+
+    public async Task<IReadOnlyList<ProductPriceDto>> GetCurrentPricesAsync(
+        IEnumerable<Guid> productIds,
+        CancellationToken cancellationToken)
+    {
+        var request = new GetProductPricesRequest();
+        request.ProductIds.AddRange(productIds.Select(id => id.ToString()));
+
+        var response = await _client.GetProductPricesAsync(request, cancellationToken: cancellationToken);
+
+        if (response.NotFoundIds.Count > 0)
+            throw new ProductNotFoundException(response.NotFoundIds);
+
+        return response.Prices
+            .Select(p => new ProductPriceDto(Guid.Parse(p.ProductId), (decimal)p.Price, p.Currency))
+            .ToList();
+    }
 }

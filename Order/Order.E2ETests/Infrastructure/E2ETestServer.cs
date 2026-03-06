@@ -36,10 +36,12 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
     private FakePaymentGrpcServer _paymentService = null!;
     private FakeInventoryGrpcServer _inventoryService = null!;
     private FakeAccountingGrpcServer _accountingService = null!;
+    private FakeProductGrpcServer _productService = null!;
 
     public FakePaymentGrpcServer PaymentService => _paymentService;
     public FakeInventoryGrpcServer InventoryService => _inventoryService;
     public FakeAccountingGrpcServer AccountingServer => _accountingService;
+    public FakeProductGrpcServer ProductService => _productService;
     public WireMockServer ShipmentServer => _wireMockServer;
 
     public string KafkaBootstrapServers { get; private set; } = string.Empty;
@@ -73,6 +75,13 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         _paymentService = new FakePaymentGrpcServer();
         _inventoryService = new FakeInventoryGrpcServer();
         _accountingService = new FakeAccountingGrpcServer();
+        _productService = new FakeProductGrpcServer();
+
+        await Task.WhenAll(
+            _paymentService.StartAsync(),
+            _inventoryService.StartAsync(),
+            _accountingService.StartAsync(),
+            _productService.StartAsync());
         
         Console.WriteLine("✅ E2E infra ready");
         Console.WriteLine($"   Postgres   : {_postgreSqlContainer.GetConnectionString()}");
@@ -82,6 +91,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         Console.WriteLine($"   Payment    : {_paymentService.Address}");
         Console.WriteLine($"   Inventory  : {_inventoryService.Address}");
         Console.WriteLine($"   Accounting : {_accountingService.Address}");
+        Console.WriteLine($"   Product    : {_productService.Address}");
 
         // Build the DB schema before the host starts so that background services
         // (OutboxProcessor, RecurringOrderSchedulerService, …) find the tables ready.
@@ -164,6 +174,10 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddScoped<IAccountingGateway>(_ =>
                 new FakeGrpcAccountingGateway(_accountingService.Address));
 
+            services.RemoveAll<IProductGateway>();
+            services.AddScoped<IProductGateway>(_ =>
+                new FakeGrpcProductGateway(_productService.Address));
+
             services.RemoveAll<IShippingGateway>();
             services.AddScoped<IShippingGateway>(_ =>
                 new WireMockShippingGateway(_wireMockServer.Urls[0]));
@@ -219,6 +233,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         _paymentService.Reset();
         _accountingService.Reset();
         _inventoryService.Reset();
+        _productService.Reset();
         _wireMockServer.Reset();
     }
 
@@ -230,6 +245,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         await _paymentService.DisposeAsync();
         await _inventoryService.DisposeAsync();
         await _accountingService.DisposeAsync();
+        await _productService.DisposeAsync();
         _wireMockServer.Dispose();
         await base.DisposeAsync();
     }

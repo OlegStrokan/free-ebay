@@ -52,10 +52,7 @@ public class CreateOrderCommandHandler
                 request.DeliveryAddress.PostalCode
             );
 
-            // Fetch authoritative prices from the Product Service.
-            // Client-supplied prices in OrderItemDto are intentionally ignored here:
-            // we never trust the caller to dictate what they pay.
-            var productIds = request.Items.Select(i => i.ProductId);
+           var productIds = request.Items.Select(i => i.ProductId);
             var authorizedPrices = await productGateway.GetCurrentPricesAsync(
                 productIds, cancellationToken);
 

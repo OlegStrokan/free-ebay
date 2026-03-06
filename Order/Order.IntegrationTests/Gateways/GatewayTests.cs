@@ -6,6 +6,7 @@ using Infrastructure.Gateways;
 using Microsoft.Extensions.Logging.Abstractions;
 using Protos.Inventory;
 using Protos.Payment;
+using Protos.Product;
 using Xunit;
 
 namespace Order.IntegrationTests.Gateways;
@@ -66,5 +67,21 @@ public sealed class GatewayTests
         await act.Should()
             .ThrowAsync<GatewayUnavailableException>(
                 "an unreachable inventory service must yield GatewayUnavailableException, not a raw RpcException");
+    }
+
+    [Fact]
+    public async Task ProductGateway_ShouldThrowGatewayUnavailableException_OnGrpcUnavailable()
+    {
+        using var channel = UnreachableChannel();
+        var grpcClient    = new ProductService.ProductServiceClient(channel);
+        var gateway       = new ProductGateway(grpcClient, NullLogger<ProductGateway>.Instance);
+
+        Func<Task> act = () => gateway.GetCurrentPricesAsync(
+            productIds:        new[] { Guid.NewGuid() },
+            cancellationToken: CancellationToken.None);
+
+        await act.Should()
+            .ThrowAsync<GatewayUnavailableException>(
+                "an unreachable product service must yield GatewayUnavailableException, not a raw RpcException");
     }
 }

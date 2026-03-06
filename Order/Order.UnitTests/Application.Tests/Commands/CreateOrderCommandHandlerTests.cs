@@ -1,5 +1,7 @@
 using Application.Commands.CreateOrder;
 using Application.DTOs;
+using Application.Gateways;
+using Application.Gateways.Exceptions;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Entities.Order;
@@ -11,21 +13,36 @@ namespace Application.Tests.Commands;
 
 public class CreateOrderCommandHandlerTests
 {
+    private static readonly Guid ProductId = Guid.Parse("11111111-0000-0000-0000-000000000001");
+
     private readonly IOrderPersistenceService _orderPersistenceService =
         Substitute.For<IOrderPersistenceService>();
 
     private readonly IIdempotencyRepository _idempotencyRepository =
         Substitute.For<IIdempotencyRepository>();
 
+    private readonly IProductGateway _productGateway =
+        Substitute.For<IProductGateway>();
+
     private readonly ILogger<CreateOrderCommandHandler> _logger =
         Substitute.For<ILogger<CreateOrderCommandHandler>>();
 
     private CreateOrderCommandHandler BuildHandler() =>
-        new(_orderPersistenceService, _idempotencyRepository, _logger);
+        new(_orderPersistenceService, _idempotencyRepository, _productGateway, _logger);
+
+    // default setup: gateway returns 99.50 USD - intentionally different from the
+    // 200 USD baked into CreateValidCommand() so tests can verify the override
+    private void SetupProductGateway(decimal price = 99.50m, string currency = "USD")
+    {
+        _productGateway
+            .GetCurrentPricesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ProductPriceDto> { new(ProductId, price, currency) });
+    }
 
     [Fact]
     public async Task Handle_ShouldReturnSuccess_AndCallPersistence_WhenOrderIsCreated()
     {
+        SetupProductGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -54,16 +71,20 @@ public class CreateOrderCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Equal(existingOrderId, result.Value);
 
-        // persistence must NOT be called - idempotency short-circuits
         await _orderPersistenceService.DidNotReceive().CreateOrderAsync(
             Arg.Any<Order>(),
             Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+
+        await _productGateway.DidNotReceive().GetCurrentPricesAsync(
+            Arg.Any<IEnumerable<Guid>>(),
             Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenPersistenceThrows()
     {
+        SetupProductGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -78,12 +99,86 @@ public class CreateOrderCommandHandlerTests
         Assert.Contains("DB is on fire", result.Error);
     }
 
+    [Fact]
+    public async Task Handle_ShouldUseGatewayPrice_NotClientSuppliedPrice()
+    {
+        // command sends 200 USD; gateway returns 99.50 USD
+        // the order aggregate must be built with 99.50, proving price manipulation is blocked
+        const decimal clientPrice  = 200m;
+        const decimal gatewayPrice = 99.50m;
+
+        SetupProductGateway(price: gatewayPrice);
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        Order? savedOrder = null;
+        await _orderPersistenceService
+            .CreateOrderAsync(
+                Arg.Do<Order>(o => savedOrder = o),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>());
+
+        var command = new CreateOrderCommand(
+            Guid.NewGuid(),
+            new List<OrderItemDto> { new(ProductId, 2, clientPrice, "USD") },
+            new AddressDto("Baker St", "London", "UK", "NW1"),
+            "Cart",
+            "idempotency-key");
+
+        var result = await BuildHandler().Handle(command, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(savedOrder);
+        // 2 units × 99.50 = 199.00 (NOT 2 × 200 = 400)
+        Assert.Equal(199.00m, savedOrder!.TotalPrice.Amount);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenProductGatewayThrowsProductNotFoundException()
+    {
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        _productGateway
+            .GetCurrentPricesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Throws(new ProductNotFoundException(["11111111-0000-0000-0000-000000000001"]));
+
+        var result = await BuildHandler().Handle(CreateValidCommand(), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
+
+        await _orderPersistenceService.DidNotReceive().CreateOrderAsync(
+            Arg.Any<Order>(),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenProductGatewayThrowsGatewayUnavailable()
+    {
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        _productGateway
+            .GetCurrentPricesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Throws(new GatewayUnavailableException("Product Service is down"));
+
+        var result = await BuildHandler().Handle(CreateValidCommand(), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Product Service is down", result.Error);
+    }
+
     // -------------------------------------------------------------------------
 
     private static CreateOrderCommand CreateValidCommand() =>
         new(
             Guid.NewGuid(),
-            new List<OrderItemDto> { new(Guid.NewGuid(), 2, 200, "USD") },
+            new List<OrderItemDto> { new(ProductId, 2, 200, "USD") },
             new AddressDto("Baker St", "London", "UK", "NW1"),
             "Cart",
             "idempotency-key");

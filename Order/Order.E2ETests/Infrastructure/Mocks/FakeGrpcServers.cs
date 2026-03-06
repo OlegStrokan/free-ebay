@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Protos.Accounting;
 using Protos.Inventory;
 using Protos.Payment;
+using Protos.Product;
 
 namespace Order.E2ETests.Infrastructure.Mocks;
 
@@ -243,6 +244,68 @@ public class FakeAccountingServiceImpl : AccountingService.AccountingServiceBase
             TransactionId = _cfg.ShouldSucceed ? _cfg.TransactionIdToReturn : string.Empty,
             ErrorMessage = _cfg.ShouldSucceed ? string.Empty : "RecordRefund failed"
         });
+    }
+}
+
+
+//---------Product Server---------//
+
+public class FakeProductGrpcServer : FakeGrpcServerBase
+{
+    // price returned for every requested product id
+    public bool ShouldSucceed { get; set; } = true;
+    public double PriceToReturn { get; set; } = 29.99;
+    public string CurrencyToReturn { get; set; } = "USD";
+    public string ErrorMessage { get; set; } = string.Empty;
+
+    public List<GetProductPricesRequest> GetPricesCalls { get; } = new();
+
+    public void Reset()
+    {
+        ShouldSucceed = true;
+        PriceToReturn = 29.99;
+        CurrencyToReturn = "USD";
+        ErrorMessage = string.Empty;
+        GetPricesCalls.Clear();
+    }
+
+    protected override void RegisterServices(IServiceCollection s) => s.AddSingleton(this);
+    protected override void MapServices(WebApplication app)
+    {
+        app.MapGrpcService<FakeProductGrpcServer>();
+    }
+}
+
+public class FakeProductServiceImpl : ProductService.ProductServiceBase
+{
+    private readonly FakeProductGrpcServer _cfg;
+    public FakeProductServiceImpl(FakeProductGrpcServer cfg) => _cfg = cfg;
+
+    public override Task<GetProductPricesResponse> GetProductPrices(
+        GetProductPricesRequest request,
+        ServerCallContext context)
+    {
+        _cfg.GetPricesCalls.Add(request);
+
+        if (!_cfg.ShouldSucceed)
+        {
+            var failResponse = new GetProductPricesResponse();
+            failResponse.NotFoundIds.AddRange(request.ProductIds);
+            return Task.FromResult(failResponse);
+        }
+
+        var response = new GetProductPricesResponse();
+        foreach (var productId in request.ProductIds)
+        {
+            response.Prices.Add(new ProductPrice
+            {
+                ProductId = productId,
+                Price     = _cfg.PriceToReturn,
+                Currency  = _cfg.CurrencyToReturn
+            });
+        }
+
+        return Task.FromResult(response);
     }
 }
 

@@ -53,6 +53,8 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReserveShouldSucceed = true;
         _server.InventoryService.ReservationIdToReturn = reservationId;
         _server.AccountingServer.ShouldSucceed = true;
+        _server.ProductService.ShouldSucceed = true;
+        _server.ProductService.PriceToReturn = 29.99; // 2 units × 29.99 = 59.98
 
         // shipping wire mock - rest
         var shipmentId = "shipmentId";
@@ -114,6 +116,10 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReserveCalls[0].OrderId.Should().Be(orderId.ToString());
         _server.InventoryService.ReserveCalls[0].Items.Should().HaveCount(1);
 
+        // product price fetch: one call, one product ID, authoritative price used
+        _server.ProductService.GetPricesCalls.Should().HaveCount(1);
+        _server.ProductService.GetPricesCalls[0].ProductIds.Should().HaveCount(1, "one distinct product in the order");
+
         // assert shipping rest calls
         _server.ShipmentServer.LogEntries.Should().ContainSingle(e => e.RequestMessage.Path == "/api/shipping/create");
         
@@ -139,6 +145,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
 
         _server.PaymentService.ProcessShouldSucceed = true;
         _server.InventoryService.ReserveShouldSucceed = true;
+        _server.ProductService.ShouldSucceed = true;
 
         _server.ShipmentServer
             .Given(Request.Create().WithBodyAsJson("/api/shipping/create").UsingPost())
@@ -187,6 +194,8 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.PaymentService.ProcessShouldSucceed = false;
         _server.PaymentService.ErrorCode = "PAYMENT_DECLINED";
         _server.PaymentService.ErrorMessage = "Card declined by issuer";
+
+        _server.ProductService.ShouldSucceed = true;
 
         var request = BuildCreateOrderRequest(Guid.NewGuid());
         var response = await _client.CreateOrderAsync(request);
@@ -241,6 +250,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
 
         _server.PaymentService.ProcessShouldSucceed = true;
         _server.InventoryService.ReserveShouldSucceed = true;
+        _server.ProductService.ShouldSucceed = true;
 
         _server.ShipmentServer
             .Given(Request.Create().WithBodyAsJson("/api/shipping/create").UsingPost())
