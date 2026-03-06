@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Application.Common;
 using Application.DTOs;
+using Application.Gateways;
 using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
@@ -17,6 +18,7 @@ public class CreateOrderCommandHandler
     (
         IOrderPersistenceService orderPersistenceService,
         IIdempotencyRepository idempotencyRepository,
+        IProductGateway productGateway,
         ILogger<CreateOrderCommandHandler> logger
         ) : IRequestHandler<CreateOrderCommand, Result<Guid>>
 {
@@ -50,11 +52,23 @@ public class CreateOrderCommandHandler
                 request.DeliveryAddress.PostalCode
             );
 
+            // Fetch authoritative prices from the Product Service.
+            // Client-supplied prices in OrderItemDto are intentionally ignored here:
+            // we never trust the caller to dictate what they pay.
+            var productIds = request.Items.Select(i => i.ProductId);
+            var authorizedPrices = await productGateway.GetCurrentPricesAsync(
+                productIds, cancellationToken);
+
+            var priceIndex = authorizedPrices.ToDictionary(p => p.ProductId);
+
             var orderItems = request.Items.Select(item =>
-                OrderItem.Create(
+            {
+                var canonical = priceIndex[item.ProductId];
+                return OrderItem.Create(
                     ProductId.From(item.ProductId),
                     item.Quantity,
-                    Money.Create(item.Price, item.Currency))).ToList();
+                    Money.Create(canonical.Price, canonical.Currency));
+            }).ToList();
 
             var order = Order.Create(customerId, address, orderItems);
 

@@ -30,7 +30,6 @@ flowchart LR
       FE_Catalog["🗂 Catalog Service\n(CQRS -> Elasticsearch)"]
       FE_Search["🔍 Search Service\n(Elasticsearch)"]
       FE_Inventory["🏬 Inventory Service"]
-      FE_Checkout["🛒 Checkout Service\n(validates & prepares orders)"]
       FE_Order["📃 Order Service\n(CQRS / Saga)"]
       FE_Payment["💳 Payment Service (Stripe wrapper)"]
       FE_Crypto["🪙 Crypto Service\n(gRPC streaming)"]
@@ -100,16 +99,13 @@ flowchart LR
   APIGW --> FE_Catalog
   APIGW --> FE_Search
   APIGW --> FE_User
-  APIGW --> FE_Checkout
   APIGW --> FE_Order
   APIGW --> FE_Payment
   APIGW --> FE_Crypto
   APIGW --> FE_Auth
 
-  %% Checkout & Order flow
-  FE_Checkout --> FE_Product
-  FE_Checkout --> FE_Inventory
-  FE_Checkout --> FE_Order
+  %% Order flow — Order Service directly validates prices with Product Service
+  FE_Order -->|validates prices| FE_Product
   FE_Order --> FE_Payment
   FE_Payment --> FE_Order
 
@@ -146,7 +142,6 @@ flowchart LR
   XI_Analytics -->|consumes events| KAFKA_XI
 
   %% Observability
-  FE_Checkout --> OTEL_FE
   FE_Order --> OTEL_FE
   FE_Product --> OTEL_FE
   FE_Inventory --> OTEL_FE
@@ -167,7 +162,6 @@ flowchart LR
   %% Databases & Storage
   FE_Search --> ES_FE
   FE_Product --> POSTGRES_FE
-  FE_Checkout --> POSTGRES_FE
   FE_Order --> POSTGRES_FE
   FE_User --> POSTGRES_FE
   FE_Inventory --> POSTGRES_FE

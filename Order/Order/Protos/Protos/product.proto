@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protos.Product";
+
+package product;
+
+service ProductService {
+  rpc GetProductPrices (GetProductPricesRequest) returns (GetProductPricesResponse);
+}
+
+message GetProductPricesRequest {
+  repeated string product_ids = 1;
+}
+
+message ProductPrice {
+  string product_id = 1;
+  double price      = 2;
+  string currency   = 3;
+}
+
+message GetProductPricesResponse {
+  repeated ProductPrice prices       = 1;
+  repeated string       not_found_ids = 2;
+}

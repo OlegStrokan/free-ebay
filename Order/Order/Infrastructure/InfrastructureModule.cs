@@ -95,6 +95,7 @@ public static class InfrastructureModule
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<RecurringOrderReadModelUpdater>());
 
         // Gateways
+        services.AddScoped<IProductGateway, ProductGateway>();
         services.AddScoped<IInventoryGateway, InventoryGateway>();
         services.AddScoped<IPaymentGateway, PaymentGateway>();
         services.AddHttpClient<IShippingGateway, ShippingGateway>();
