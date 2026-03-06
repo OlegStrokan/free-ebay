@@ -163,6 +163,10 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<IAccountingGateway>();
             services.AddScoped<IAccountingGateway>(_ =>
                 new FakeGrpcAccountingGateway(_accountingService.Address));
+
+            services.RemoveAll<IShippingGateway>();
+            services.AddScoped<IShippingGateway>(_ =>
+                new WireMockShippingGateway(_wireMockServer.Urls[0]));
             
             // email-service: not replaced, IEmailGateway published to kafka, tests verify the kafka message
         });

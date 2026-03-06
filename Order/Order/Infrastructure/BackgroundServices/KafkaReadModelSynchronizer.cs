@@ -3,8 +3,10 @@ using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using Domain.Common;
+using Infrastructure.Messaging;
 using Infrastructure.Services;
 using Infrastructure.Services.EventIdempotencyChecker;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.BackgroundServices;
 
@@ -23,7 +25,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
     public KafkaReadModelSynchronizer(
         IServiceProvider serviceProvider,
-        IConfiguration configuration,
+        IOptions<KafkaOptions> kafkaOptions,
         IDomainEventTypeRegistry eventTypeRegistry,
         IReadModelHandlerRegistry handlerRegistry,
         ILogger<KafkaReadModelSynchronizer> logger)
@@ -33,10 +35,12 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
         this.eventTypeRegistry = eventTypeRegistry;
         this.handlerRegistry = handlerRegistry;
 
+        var opts = kafkaOptions.Value;
+
         var kafkaConfig = new ConsumerConfig
         {
-            BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
-            GroupId = configuration["Kafka:ConsumerGroupId"] ?? "read-model-updater",
+            BootstrapServers = opts.BootstrapServers,
+            GroupId = "read-model-updater",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
@@ -49,8 +53,8 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
         topics = new List<string>
         {
-            configuration["Kafka:OrderEventsTopic"] ?? "order.events",
-            configuration["Kafka:ReturnEventsTopic"] ?? "return.events"
+            opts.OrderEventsTopic,
+            opts.ReturnEventsTopic
         };
     }
 

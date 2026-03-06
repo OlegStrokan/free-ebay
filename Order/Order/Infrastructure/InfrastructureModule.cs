@@ -23,6 +23,7 @@ public static class InfrastructureModule
         IConfiguration configuration)
     {
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
+        services.Configure<ShippingApiOptions>(configuration.GetSection("Shipping"));
 
         services.AddSingleton<IConsumer<string, string>>(sp =>
         {
@@ -92,7 +93,7 @@ public static class InfrastructureModule
         // Gateways
         services.AddScoped<IInventoryGateway, InventoryGateway>();
         services.AddScoped<IPaymentGateway, PaymentGateway>();
-        services.AddScoped<IShippingGateway, ShippingGateway>();
+        services.AddHttpClient<IShippingGateway, ShippingGateway>();
         services.AddScoped<IAccountingGateway, AccountingGateway>();
         services.AddScoped<IEmailGateway, EmailGateway>();
         services.AddScoped<IIncidentReporter, HelpDeskIncidentReporter>();
