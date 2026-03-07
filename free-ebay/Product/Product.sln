@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Product", "Product", "{4DB95EE6-8DC9-4254-8A2E-4CD3C2672207}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Product.UnitTests", "Product.UnitTests", "{67E35A76-DB7C-4B04-A1D1-C831F1F22430}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Product.IntegrationTests", "Product.IntegrationTests", "{805C5F3A-D189-453E-A147-F5C6FB0D4A2F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Product.E2ETests", "Product.E2ETests", "{97448CE8-F137-4048-A66D-D6C459975A74}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protos", "Protos\Protos.csproj", "{71E0F65B-C283-49AD-B596-5B5F6676DC98}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csproj", "{B7D778FF-498A-42A7-8AE1-FCA714BCFE8D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{71E0F65B-C283-49AD-B596-5B5F6676DC98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71E0F65B-C283-49AD-B596-5B5F6676DC98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71E0F65B-C283-49AD-B596-5B5F6676DC98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71E0F65B-C283-49AD-B596-5B5F6676DC98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7D778FF-498A-42A7-8AE1-FCA714BCFE8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7D778FF-498A-42A7-8AE1-FCA714BCFE8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7D778FF-498A-42A7-8AE1-FCA714BCFE8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7D778FF-498A-42A7-8AE1-FCA714BCFE8D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{71E0F65B-C283-49AD-B596-5B5F6676DC98} = {4DB95EE6-8DC9-4254-8A2E-4CD3C2672207}
+		{B7D778FF-498A-42A7-8AE1-FCA714BCFE8D} = {4DB95EE6-8DC9-4254-8A2E-4CD3C2672207}
+	EndGlobalSection
+EndGlobal
