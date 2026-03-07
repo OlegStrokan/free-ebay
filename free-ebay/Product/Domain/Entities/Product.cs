@@ -9,7 +9,7 @@ public sealed class Product : AggregateRoot<ProductId>
 {
     private string         _name          = null!;
     private string         _description   = null!;
-    private CategoryId     _categoryId    = null!;  // resolved to name by Application layer
+    private CategoryId     _categoryId    = null!;
     private Money          _price         = null!;
     private ProductStatus  _status        = null!;
     private SellerId       _sellerId      = null!;
@@ -33,14 +33,6 @@ public sealed class Product : AggregateRoot<ProductId>
 
     private Product() { }
 
-    // -------------------------------------------------------------------------
-    // Commands — mutate state directly, then register an outbox event.
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Creates a new product in Draft status. The seller must explicitly call
-    /// <see cref="Activate"/> to make it visible in search.
-    /// </summary>
     public static Product Create(
         SellerId               sellerId,
         string                 name,
@@ -87,7 +79,6 @@ public sealed class Product : AggregateRoot<ProductId>
         return product;
     }
 
-    /// <summary>Updates mutable product fields. Deleted products cannot be updated.</summary>
     public void Update(
         string                 name,
         string                 description,
@@ -121,10 +112,6 @@ public sealed class Product : AggregateRoot<ProductId>
             UpdatedAt:   _updatedAt.Value));
     }
 
-    /// <summary>
-    /// Sets stock to an absolute quantity. Automatically transitions between
-    /// Active ↔ OutOfStock when the quantity crosses zero.
-    /// </summary>
     public void UpdateStock(int newQuantity)
     {
         if (_status == ProductStatus.Deleted)
@@ -139,41 +126,33 @@ public sealed class Product : AggregateRoot<ProductId>
 
         AddDomainEvent(new ProductStockUpdatedEvent(Id, previous, newQuantity, _updatedAt.Value));
 
-        // auto-transition: stock depleted while active
         if (newQuantity == 0 && _status == ProductStatus.Active)
             ChangeStatus(ProductStatus.OutOfStock);
 
-        // auto-transition: stock restored while out-of-stock
         else if (newQuantity > 0 && _status == ProductStatus.OutOfStock)
             ChangeStatus(ProductStatus.Active);
     }
 
-    /// <summary>Publishes the product, making it visible in search results.</summary>
     public void Activate()
     {
         _status.ValidateTransitionTo(ProductStatus.Active);
         ChangeStatus(ProductStatus.Active);
     }
 
-    /// <summary>Hides the product from search without deleting it.</summary>
     public void Deactivate()
     {
         _status.ValidateTransitionTo(ProductStatus.Inactive);
         ChangeStatus(ProductStatus.Inactive);
     }
 
-    /// <summary>Soft-deletes the product. Terminal state — cannot be undone.</summary>
     public void Delete()
     {
         _status.ValidateTransitionTo(ProductStatus.Deleted);
         ChangeStatus(ProductStatus.Deleted);
         AddDomainEvent(new ProductDeletedEvent(Id, _updatedAt!.Value));
     }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
+    
+    
     private void ChangeStatus(ProductStatus newStatus)
     {
         var previous = _status;
