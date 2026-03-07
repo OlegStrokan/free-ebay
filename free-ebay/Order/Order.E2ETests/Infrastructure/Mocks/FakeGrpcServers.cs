@@ -30,6 +30,7 @@ public abstract class FakeGrpcServerBase : IAsyncDisposable
 
         _app = builder.Build();
         MapServices(_app);
+        await _app.StartAsync();
     }
 
     public async Task StopAsync()
@@ -69,10 +70,15 @@ public class FakePaymentGrpcServer : FakeGrpcServerBase
         RefundCalls.Clear();
     }
 
-    protected override void RegisterServices(IServiceCollection s) => s.AddSingleton(this);
+    protected override void RegisterServices(IServiceCollection s) 
+    {
+        s.AddSingleton(this);
+        s.AddScoped<FakePaymentServiceImpl>();
+    }
+    
     protected override void MapServices(WebApplication app)
     {
-        app.MapGrpcService<FakePaymentGrpcServer>();
+        app.MapGrpcService<FakePaymentServiceImpl>();
     }
 }
 
@@ -147,10 +153,15 @@ public class FakeInventoryGrpcServer : FakeGrpcServerBase
         ReleaseCalls.Clear();
     }
 
-    protected override void RegisterServices(IServiceCollection s) => s.AddSingleton(this);
+    protected override void RegisterServices(IServiceCollection s) 
+    {
+        s.AddSingleton(this);
+        s.AddScoped<FakeInventoryServiceImpl>();
+    }
+    
     protected override void MapServices(WebApplication app)
     {
-        app.MapGrpcService<FakeInventoryGrpcServer>();
+        app.MapGrpcService<FakeInventoryServiceImpl>();
     }
 }
 
@@ -218,10 +229,15 @@ public class FakeAccountingGrpcServer : FakeGrpcServerBase
         ReverseRevenueCalls.Clear();
     }
 
-    protected override void RegisterServices(IServiceCollection s) => s.AddSingleton(this);
+    protected override void RegisterServices(IServiceCollection s) 
+    {
+        s.AddSingleton(this);
+        s.AddScoped<FakeAccountingServiceImpl>();
+    }
+    
     protected override void MapServices(WebApplication app)
     {
-        app.MapGrpcService<FakeAccountingGrpcServer>();
+        app.MapGrpcService<FakeAccountingServiceImpl>();
     }
 }
 
@@ -269,10 +285,15 @@ public class FakeProductGrpcServer : FakeGrpcServerBase
         GetPricesCalls.Clear();
     }
 
-    protected override void RegisterServices(IServiceCollection s) => s.AddSingleton(this);
+    protected override void RegisterServices(IServiceCollection s) 
+    {
+        s.AddSingleton(this);
+        s.AddScoped<FakeProductServiceImpl>();
+    }
+    
     protected override void MapServices(WebApplication app)
     {
-        app.MapGrpcService<FakeProductGrpcServer>();
+        app.MapGrpcService<FakeProductServiceImpl>();
     }
 }
 
