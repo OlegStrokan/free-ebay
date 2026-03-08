@@ -2,21 +2,21 @@
 
 public sealed class ProductStatus
 {
-    public static readonly ProductStatus Draft      = new("Draft",      0);
-    public static readonly ProductStatus Active     = new("Active",     1);
-    public static readonly ProductStatus Inactive   = new("Inactive",   2);
+    public static readonly ProductStatus Draft = new("Draft", 0);
+    public static readonly ProductStatus Active = new("Active", 1);
+    public static readonly ProductStatus Inactive = new("Inactive", 2);
     public static readonly ProductStatus OutOfStock = new("OutOfStock", 3);
-    public static readonly ProductStatus Deleted    = new("Deleted",    4);
+    public static readonly ProductStatus Deleted = new("Deleted", 4);
 
-    public string Name  { get; }
-    public int    Value { get; }
+    public string Name { get; }
+    public int Value { get; }
 
     private readonly HashSet<ProductStatus> _allowedTransitions;
     public IReadOnlyCollection<ProductStatus> AllowedTransitions => _allowedTransitions;
 
     private ProductStatus(string name, int value)
     {
-        Name  = name;
+        Name = name;
         Value = value;
         _allowedTransitions = new HashSet<ProductStatus>();
     }
@@ -58,11 +58,11 @@ public sealed class ProductStatus
 
     public static ProductStatus FromName(string name) => name switch
     {
-        "Draft"      => Draft,
-        "Active"     => Active,
-        "Inactive"   => Inactive,
+        "Draft" => Draft,
+        "Active" => Active,
+        "Inactive" => Inactive,
         "OutOfStock" => OutOfStock,
-        "Deleted"    => Deleted,
+        "Deleted" => Deleted,
         _ => throw new ArgumentException($"Unknown ProductStatus name: {name}", nameof(name))
     };
 

@@ -1,5 +1,3 @@
-
-
 # Gabriela
 
 Plan: 2 apps, one extremely complicated microservice zoo ebay with crypto support + public api, and second one is less complicated but also stupidly complex xiaoping-express
