@@ -17,6 +17,16 @@ some auth stuff. simple as fuck
 
 order service:
 saga based transaction with sprinkle of outbox transactions, kafka workers, ddd aggregates, distributed locking, watchdogs, event sourcing and cqrs, and ALMOST exactly-once processing
+also suppoting b2b orders and subscription (recurring order)
+
+supraphysiological amount of lean unit tests, also some integration and e2e tests type shit
+
+
+product service: 
+internal kafka cqrs service. used by order (kafka) + REST APIcko for product-guy 
+
+AI: 
+...to be cont
 
 Internal IDs: Strongly typed Ids based on Guid (OrderId, CustomerId, ProductId)
 External IDs: Use string (PaymentId, TrackingId, ShipmentId, RefundId)
@@ -44,11 +54,10 @@ communicate between steps and saga without need access to saga state (which is v
 │ "OK, I'll pause │
 │ the saga for you│
 └─────────────────┘
+```
 
-for direct approach step whould need access to saga state, and this violates all shit
+for direct approach step should need access to saga state, and this violates all shit
 using metadata we signal about shit and saga base class will handle thi shit - event driven saga
-
-
 
 
 Isolation in domain entity: 
@@ -63,191 +72,6 @@ The Disaster: You try to load that $1200 order from 2024. The Apply method runs,
 
 By isolating the state change, you ensure that once an event is written to the store, the Apply method will always be able to rebuild that state, regardless of how business rules change in the future.
 
-
-
-question:
-where idempotency key comes from? form frontend or from gateway layer? 
-what it should be? is this good way to handle idempontecy?
-
-
-
-we had cool retry decorator 
-```
-using System.Net.Sockets;
-using System.Reflection;
-using Application.Common.Attributes;
-using Application.Gateways.Exceptions;
-using Microsoft.Extensions.Logging;
-
-namespace Application.Common.Decorators;
-
-// @think: too much voodoo. dispatch proxy is sync but so we spell a lot of magic 
-public class RetryGatewayDecorator<TGateway> : DispatchProxy
-{
-    private TGateway _decorated = default!;
-    private ILogger _logger = default!;
-
-    public static TGateway Create(TGateway decorated, ILogger logger)
-    {
-        var proxy = Create<TGateway, RetryGatewayDecorator<TGateway>>() as RetryGatewayDecorator<TGateway>;
-
-        proxy!._decorated = decorated;
-        proxy._logger = logger;
-
-        return (TGateway)(object)proxy;
-    }
-
-    protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-    {
-        if (targetMethod == null) throw new ArgumentNullException(nameof(targetMethod));
-
-        var retryAttr = targetMethod.GetCustomAttribute<RetryAttribute>();
-
-        if (retryAttr == null)
-            return targetMethod.Invoke(_decorated, args);
-        
-        // if it's not task
-        if (!typeof(Task).IsAssignableFrom(targetMethod.ReturnType))
-            return InvokeSyncWithRetry(targetMethod, args, retryAttr);
-        
-        
-        // if it's task
-        var returnType = targetMethod.ReturnType;
-        var taskResultType = returnType.IsGenericType
-            ? returnType.GetGenericArguments()[0]
-            : typeof(object);
-
-        var method = typeof(RetryGatewayDecorator<TGateway>)
-            .GetMethod(nameof(InvokeAsyncWithRetryInternal), BindingFlags.NonPublic | BindingFlags.Instance)
-            ?.MakeGenericMethod(taskResultType);
-
-        return method?.Invoke(this, new object?[] { targetMethod, args, retryAttr });
-    }
-
-    private async Task<T?> InvokeAsyncWithRetryInternal<T>(MethodInfo method, object?[]? args,
-        RetryAttribute? retryAttr)
-    {
-        var attempt = 0;
-        while (true)
-        {
-            try
-            {
-                var result = method.Invoke(_decorated, args);
-            
-                // If the method returns task<T>, await it
-                if (result is Task<T> task) return await task;
-            
-                // If the method returns a plain tak, await it and return default
-                if (result is Task plainTask)
-                {
-                    await plainTask;
-                    return default;
-                }
-
-                return (T?)result;
-            }
-            catch (TargetInvocationException ex) when (IsTransientException(ex.InnerException) && attempt < retryAttr?.MaxRetries)
-            {
-                attempt++;
-                var delay = CalculateDelay(attempt, retryAttr!);
-                _logger.LogWarning("Retry {Attempt} for {Method} after {Delay}ms", attempt, method.Name, delay);
-            
-                await Task.Delay(delay); // non-blocking 
-            }
-            catch (TargetInvocationException ex)
-            {
-                throw ex.InnerException ?? ex;
-            }
-        }
-    }
-
-
-
-    private object? InvokeSyncWithRetry(MethodInfo method, object?[]? args, RetryAttribute retryAttr)
-    {
-        var attempt = 0;
-        while (true)
-        {
-            try
-            {
-                return method.Invoke(_decorated, args);
-            }
-            catch (TargetInvocationException ex) when (IsTransientException(ex.InnerException) &&
-                                                       attempt < retryAttr.MaxRetries)
-            {
-                attempt++;
-                var delay = CalculateDelay(attempt, retryAttr);
-                _logger.LogWarning("Retry {Attempt} for {Method}", attempt, method.Name);
-                Thread.Sleep(delay);
-            }
-            catch (TargetInvocationException ex)
-            {
-                _logger.LogError(ex.InnerException, "Failed after {Attempt} attempts", attempt);
-                throw ex.InnerException ?? ex;
-            }
-        }
-    }
-
-    private bool IsTransientException(Exception? ex)
-    {
-        if (ex == null)
-            return false;
-
-        if (ex is PaymentDeclinedException
-            or InsufficientFundsException
-            or InsufficientInventoryException
-            or InvalidAddressException)
-        {
-            return false;
-        }
-
-        return ex is HttpRequestException
-            or TaskCanceledException
-            or TimeoutException
-            or SocketException
-            or IOException;
-    }
-
-    private int CalculateDelay(int attempt, RetryAttribute retryAttr)
-    {
-        if (!retryAttr.ExponentialBackoff)
-            return retryAttr.DelayMilliseconds;
-
-        // exponential backoff
-        var baseDelay = retryAttr.DelayMilliseconds + (int)Math.Pow(2, attempt - 1);
-
-        // randomness to prevent thundering herd
-        var jitter = Random.Shared.Next(0, 100);
-
-        return baseDelay + jitter;
-    }
-}
-```
-
-the problem what it's a fucking bomb so please use this:
-
-```
-static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-{
-    return HttpPolicyExtensions
-        .HandleTransientHttpError() // Automatically handles 5xx and 408 errors
-        .Or<SocketException>()      // Handles network connection issues
-        .Or<IOException>()
-        .WaitAndRetryAsync(3, retryAttempt => 
-            TimeSpan.FromMilliseconds(Math.Pow(2, retryAttempt) * 100 + Random.Shared.Next(0, 100))
-        );
-}
-// Gateway 1
-builder.Services.AddHttpClient<IPaymentGateway, PaymentGateway>(client => {
-    client.BaseAddress = new Uri("https://api.payments.com");
-}).AddPolicyHandler(GetRetryPolicy());
-
-// Gateway 2
-builder.Services.AddHttpClient<IInventoryGateway, InventoryGateway>(client => {
-    client.BaseAddress = new Uri("https://api.inventory.com");
-}).AddPolicyHandler(GetRetryPolicy());
-
-```
 
 T0: Customer in EU clicks "Place Order"
 → Request goes to EU-WEST-1
