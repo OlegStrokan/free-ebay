@@ -121,15 +121,16 @@ public sealed class Product : AggregateRoot<ProductId>
         if (newQuantity < 0)
             throw new DomainException("Stock quantity cannot be negative");
 
-        var previous = _stockQuantity;
+        var previousQuantity = _stockQuantity;
         _stockQuantity = newQuantity;
         _updatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new ProductStockUpdatedEvent(Id, previous, newQuantity, _updatedAt.Value));
+        AddDomainEvent(new ProductStockUpdatedEvent(Id, previousQuantity, newQuantity, _updatedAt.Value));
 
+        // i don't want to use switch for 2 cases
         if (newQuantity == 0 && _status == ProductStatus.Active)
             ChangeStatus(ProductStatus.OutOfStock);
-
+        
         else if (newQuantity > 0 && _status == ProductStatus.OutOfStock)
             ChangeStatus(ProductStatus.Active);
     }

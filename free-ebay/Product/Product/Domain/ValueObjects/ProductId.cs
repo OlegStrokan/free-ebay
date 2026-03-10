@@ -1,4 +1,6 @@
-﻿namespace Domain.ValueObjects;
+﻿using Domain.Exceptions;
+
+namespace Domain.ValueObjects;
 
 public sealed class ProductId
 {
@@ -7,7 +9,7 @@ public sealed class ProductId
     private ProductId(Guid value)
     {
         if (value == Guid.Empty)
-            throw new ArgumentException("ProductId cannot be empty", nameof(value));
+            throw new InvalidValueException("ProductId cannot be empty");
         Value = value;
     }
 

@@ -1,4 +1,6 @@
-﻿namespace Domain.ValueObjects;
+﻿using Domain.Exceptions;
+
+namespace Domain.ValueObjects;
 
 public sealed record Money
 {
@@ -8,12 +10,10 @@ public sealed record Money
     public Money(decimal amount, string currency)
     {
         if (amount < 0) 
-            throw new ArgumentException("Money amount cannot be negative", nameof(amount));
+            throw new InvalidValueException("Money amount cannot be negative");
 
         if (string.IsNullOrWhiteSpace(currency))
-        {
-            throw new ArgumentException("Currency cannot be empty", nameof(currency));
-        }
+            throw new InvalidValueException("Currency cannot be empty");
 
         Amount = amount;
         Currency = currency.ToUpperInvariant();
@@ -44,6 +44,6 @@ public sealed record Money
     private void CheckCurrency(Money other)
     {
         if (Currency != other.Currency)
-            throw new InvalidOperationException($"Currencies do not match: {Currency} vs {other.Currency}");
+            throw new DomainException($"Currencies do not match: {Currency} vs {other.Currency}");
     }
 }

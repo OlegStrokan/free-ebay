@@ -9,7 +9,7 @@ public sealed record SellerId
     private SellerId(Guid value)
     {
         if (value == Guid.Empty)
-            throw new DomainException("SellerId cannot be empty");
+            throw new InvalidValueException("SellerId cannot be empty");
         Value = value;
     }
 

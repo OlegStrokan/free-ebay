@@ -55,7 +55,7 @@ public sealed class ProductStatus
         2 => Inactive,
         3 => OutOfStock,
         4 => Deleted,
-        _ => throw new ArgumentException($"Unknown ProductStatus value: {value}", nameof(value))
+        _ => throw new InvalidValueException($"Unknown ProductStatus value: {value}")
     };
 
     public static ProductStatus FromName(string name) => name switch
@@ -65,7 +65,7 @@ public sealed class ProductStatus
         "Inactive" => Inactive,
         "OutOfStock" => OutOfStock,
         "Deleted" => Deleted,
-        _ => throw new ArgumentException($"Unknown ProductStatus name: {name}", nameof(name))
+        _ => throw new InvalidValueException($"Unknown ProductStatus name: {name}")
     };
 
     public override string ToString() => Name;

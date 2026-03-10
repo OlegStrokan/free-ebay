@@ -39,9 +39,7 @@ message GetProductRequest {
 }
 
 message GetProductResponse {
-  bool success = 1;
   ProductDetail product = 2;
-  string error_message = 3;
 }
 
 //-----------------items---------------------------//
