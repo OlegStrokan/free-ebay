@@ -1,3 +1,5 @@
+using Domain.Exceptions;
+
 namespace Domain.ValueObjects;
 
 public sealed record SellerId
@@ -7,7 +9,7 @@ public sealed record SellerId
     private SellerId(Guid value)
     {
         if (value == Guid.Empty)
-            throw new ArgumentException("SellerId cannot be empty", nameof(value));
+            throw new DomainException("SellerId cannot be empty");
         Value = value;
     }
 

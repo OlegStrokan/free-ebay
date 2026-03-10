@@ -38,5 +38,9 @@ internal sealed class DeleteProductCommandHandler : IRequestHandler<DeleteProduc
         {
             return Result.Failure(ex.Message);
         }
+        catch (Exception ex)
+        {
+            return Result.Failure(ex.Message);
+        }
     }
 }

@@ -45,5 +45,9 @@ internal sealed class CreateProductCommandHandler : IRequestHandler<CreateProduc
         {
             return Result<Guid>.Failure(ex.Message);
         }
+        catch (Exception ex)
+        {
+            return Result<Guid>.Failure(ex.Message);
+        }
     }
 }

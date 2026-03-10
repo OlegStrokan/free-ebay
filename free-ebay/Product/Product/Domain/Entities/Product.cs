@@ -9,6 +9,7 @@ public sealed class Product : AggregateRoot<ProductId>
 {
     private string _name = null!;
     private string _description = null!;
+    // @think: should we add advance category path? probably yes....in 2.0 version
     private CategoryId _categoryId = null!;
     private Money _price = null!;
     private ProductStatus  _status = null!;

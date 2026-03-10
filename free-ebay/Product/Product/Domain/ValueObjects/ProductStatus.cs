@@ -1,4 +1,6 @@
-﻿namespace Domain.ValueObjects;
+﻿using Domain.Exceptions;
+
+namespace Domain.ValueObjects;
 
 public sealed class ProductStatus
 {
@@ -41,7 +43,7 @@ public sealed class ProductStatus
     public void ValidateTransitionTo(ProductStatus target)
     {
         if (!CanTransitionTo(target))
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"Cannot transition from {Name} to {target.Name}. "
                 + $"Allowed transitions: {string.Join(", ", _allowedTransitions.Select(t => t.Name))}");
     }

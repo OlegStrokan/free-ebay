@@ -5,7 +5,7 @@ namespace Domain.Events;
 
 public sealed record ProductDeletedEvent(
     ProductId ProductId,
-    DateTime  OccurredOn) : IDomainEvent
+    DateTime OccurredOn) : IDomainEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();
 }

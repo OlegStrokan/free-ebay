@@ -55,7 +55,7 @@ message ProductDetail {
   string product_id   = 1;
   string name         = 2;
   string description  = 3;
-  string category_id  = 4;   // UUID — authoritative domain reference
+  string category_id  = 4;   // UUID - authoritative domain reference
   string category_name = 5;  // resolved by Application layer for display; not stored in domain
   DecimalValue price  = 6;
   string currency     = 7;

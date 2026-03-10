@@ -40,5 +40,9 @@ internal sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProduc
         {
             return Result.Failure(ex.Message);
         }
+        catch (Exception ex)
+        {
+            return Result.Failure(ex.Message);
+        }
     }
 }

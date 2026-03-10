@@ -1,5 +1,6 @@
 ﻿namespace Domain.Common;
 
+// could be record, but i need to use it in entities as father
 public abstract class Entity<TId>
 {
     public TId Id { get; protected set; }
