@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Tests.ValueObjects;
@@ -79,7 +80,7 @@ public class ProductStatusTests
     [Test]
     public void ValidateTransitionTo_WithInvalidTransition_ShouldThrowInvalidOperationException()
     {
-        var ex = Assert.Throws<InvalidOperationException>(() =>
+        var ex = Assert.Throws<DomainException>(() =>
             ProductStatus.Draft.ValidateTransitionTo(ProductStatus.Inactive));
 
         Assert.That(ex!.Message, Does.Contain("Cannot transition from Draft to Inactive"));
@@ -88,7 +89,7 @@ public class ProductStatusTests
     [Test]
     public void ValidateTransitionTo_FromDeleted_ShouldThrowInvalidOperationException()
     {
-        var ex = Assert.Throws<InvalidOperationException>(() =>
+        var ex = Assert.Throws<DomainException>(() =>
             ProductStatus.Deleted.ValidateTransitionTo(ProductStatus.Active));
 
         Assert.That(ex!.Message, Does.Contain("Cannot transition from Deleted to Active"));

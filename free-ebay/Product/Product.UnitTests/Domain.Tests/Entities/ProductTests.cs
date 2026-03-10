@@ -329,7 +329,7 @@ public class ProductTests
         var product = CreateActiveProduct();
         product.Delete();
 
-        Assert.Throws<InvalidOperationException>(() => product.Activate());
+        Assert.Throws<DomainException>(() => product.Activate());
     }
 
     [Test]
@@ -337,7 +337,7 @@ public class ProductTests
     {
         var product = CreateActiveProduct();
 
-        Assert.Throws<InvalidOperationException>(() => product.Activate());
+        Assert.Throws<DomainException>(() => product.Activate());
     }
 
     #endregion
@@ -371,7 +371,7 @@ public class ProductTests
     {
         var product = CreateDraftProduct();
 
-        Assert.Throws<InvalidOperationException>(() => product.Deactivate());
+        Assert.Throws<DomainException>(() => product.Deactivate());
     }
 
     [Test]
@@ -380,7 +380,7 @@ public class ProductTests
         var product = CreateActiveProduct();
         product.Delete();
 
-        Assert.Throws<InvalidOperationException>(() => product.Deactivate());
+        Assert.Throws<DomainException>(() => product.Deactivate());
     }
 
     #endregion
@@ -452,7 +452,7 @@ public class ProductTests
         var product = CreateActiveProduct();
         product.Delete();
 
-        Assert.Throws<InvalidOperationException>(() => product.Delete());
+        Assert.Throws<DomainException>(() => product.Delete());
     }
 
     #endregion

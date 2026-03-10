@@ -1,0 +1,105 @@
+using Application.Commands.UpdateProductStock;
+using Application.Interfaces;
+using Domain.Entities;
+using Domain.ValueObjects;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+
+namespace Application.Tests.Commands;
+
+[TestFixture]
+public class UpdateProductStockCommandHandlerTests
+{
+    private IProductPersistenceService _persistence = null!;
+    private UpdateProductStockCommandHandler _handler = null!;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _persistence = Substitute.For<IProductPersistenceService>();
+        _handler = new UpdateProductStockCommandHandler(_persistence);
+    }
+
+    private static Product CreateActiveProduct()
+    {
+        var p = Product.Create(
+            SellerId.CreateUnique(), "Product", "Desc",
+            CategoryId.CreateUnique(), Money.Create(50m, "USD"), 10, [], []);
+        p.Activate();
+        p.ClearDomainEvents();
+        return p;
+    }
+
+    [Test]
+    public async Task Handle_ShouldReturnSuccess_WhenProductExists()
+    {
+        var product = CreateActiveProduct();
+        _persistence.GetByIdAsync(Arg.Any<ProductId>(), Arg.Any<CancellationToken>()).Returns(product);
+        var command = new UpdateProductStockCommand(product.Id.Value, 25);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.True);
+        await _persistence.Received(1).UpdateProductAsync(product, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Handle_ShouldUpdateStockOnAggregate()
+    {
+        var product = CreateActiveProduct();
+        _persistence.GetByIdAsync(Arg.Any<ProductId>(), Arg.Any<CancellationToken>()).Returns(product);
+
+        await _handler.Handle(new UpdateProductStockCommand(product.Id.Value, 99), CancellationToken.None);
+
+        Assert.That(product.StockQuantity, Is.EqualTo(99));
+    }
+
+    [Test]
+    public async Task Handle_ShouldReturnFailure_WhenProductNotFound()
+    {
+        _persistence.GetByIdAsync(Arg.Any<ProductId>(), Arg.Any<CancellationToken>()).Returns((Product?)null);
+
+        var result = await _handler.Handle(new UpdateProductStockCommand(Guid.NewGuid(), 5), CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.Errors[0], Does.Contain("was not found"));
+    }
+
+    [Test]
+    public async Task Handle_WithNegativeQuantity_ShouldReturnDomainFailure()
+    {
+        var product = CreateActiveProduct();
+        _persistence.GetByIdAsync(Arg.Any<ProductId>(), Arg.Any<CancellationToken>()).Returns(product);
+
+        var result = await _handler.Handle(new UpdateProductStockCommand(product.Id.Value, -1), CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.False);
+        await _persistence.DidNotReceive().UpdateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Handle_ShouldReturnFailure_WhenPersistenceThrows()
+    {
+        var product = CreateActiveProduct();
+        _persistence.GetByIdAsync(Arg.Any<ProductId>(), Arg.Any<CancellationToken>()).Returns(product);
+        _persistence
+            .UpdateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>())
+            .Throws(new Exception("DB error"));
+
+        var result = await _handler.Handle(new UpdateProductStockCommand(product.Id.Value, 5), CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.False);
+    }
+
+    [Test]
+    public async Task Handle_SetToZero_OnActiveProduct_ShouldSucceed()
+    {
+        var product = CreateActiveProduct();
+        _persistence.GetByIdAsync(Arg.Any<ProductId>(), Arg.Any<CancellationToken>()).Returns(product);
+
+        var result = await _handler.Handle(new UpdateProductStockCommand(product.Id.Value, 0), CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(product.Status, Is.EqualTo(ProductStatus.OutOfStock));
+    }
+}
