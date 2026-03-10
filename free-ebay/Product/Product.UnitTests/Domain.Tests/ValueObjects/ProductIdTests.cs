@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Tests.ValueObjects;
@@ -35,7 +36,7 @@ public class ProductIdTests
     [Test]
     public void From_WithEmptyGuid_ShouldThrowArgumentException()
     {
-        var ex = Assert.Throws<ArgumentException>(() => ProductId.From(Guid.Empty));
+        var ex = Assert.Throws<InvalidValueException>(() => ProductId.From(Guid.Empty));
 
         Assert.That(ex!.Message, Does.Contain("ProductId cannot be empty"));
     }

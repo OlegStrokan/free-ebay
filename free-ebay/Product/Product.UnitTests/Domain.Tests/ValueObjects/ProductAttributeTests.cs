@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Tests.ValueObjects;
@@ -33,14 +34,14 @@ public class ProductAttributeTests
     [TestCase("   ")]
     public void Constructor_WithEmptyKey_ShouldThrowArgumentException(string key)
     {
-        Assert.Throws<ArgumentException>(() => new ProductAttribute(key, "Red"));
+        Assert.Throws<InvalidValueException>(() => new ProductAttribute(key, "Red"));
     }
 
     [TestCase("")]
     [TestCase("   ")]
     public void Constructor_WithEmptyValue_ShouldThrowArgumentException(string value)
     {
-        Assert.Throws<ArgumentException>(() => new ProductAttribute("color", value));
+        Assert.Throws<InvalidValueException>(() => new ProductAttribute("color", value));
     }
 
     [Test]

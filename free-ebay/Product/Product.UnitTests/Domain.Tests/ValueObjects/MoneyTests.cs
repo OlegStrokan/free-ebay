@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Tests.ValueObjects;
@@ -11,7 +12,7 @@ public class MoneyTests
     [TestCase(-100, "CZK")]
     public void Constructor_WithNegativeAmount_ShouldThrowArgumentException(decimal amount, string currency)
     {
-        Assert.Throws<ArgumentException>(() => Money.Create(amount, currency));
+        Assert.Throws<InvalidValueException>(() => Money.Create(amount, currency));
     }
 
     [TestCase(100, "")]
@@ -19,7 +20,7 @@ public class MoneyTests
     [TestCase(100, null)]
     public void Constructor_WithEmptyCurrency_ShouldThrowArgumentException(decimal amount, string? currency)
     {
-        Assert.Throws<ArgumentException>(() => Money.Create(amount, currency!));
+        Assert.Throws<InvalidValueException>(() => Money.Create(amount, currency!));
     }
 
     [Test]
@@ -60,7 +61,7 @@ public class MoneyTests
         var m1 = Money.Create(100, "USD");
         var m2 = Money.Create(100, "EUR");
 
-        var ex = Assert.Throws<InvalidOperationException>(() => m1.Add(m2));
+        var ex = Assert.Throws<DomainException>(() => m1.Add(m2));
 
         Assert.That(ex!.Message, Does.Contain("Currencies do not match"));
     }
@@ -83,7 +84,7 @@ public class MoneyTests
         var m1 = Money.Create(100, "USD");
         var m2 = Money.Create(50, "EUR");
 
-        Assert.Throws<InvalidOperationException>(() => m1.Subtract(m2));
+        Assert.Throws<DomainException>(() => m1.Subtract(m2));
     }
 
     [TestCase(10, 2, 20)]

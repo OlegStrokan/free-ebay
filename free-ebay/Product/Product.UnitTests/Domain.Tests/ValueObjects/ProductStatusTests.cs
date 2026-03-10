@@ -120,7 +120,7 @@ public class ProductStatusTests
     [Test]
     public void FromValue_WithUnknownValue_ShouldThrowArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => ProductStatus.FromValue(99));
+        Assert.Throws<InvalidValueException>(() => ProductStatus.FromValue(99));
     }
 
     [TestCase("Draft")]
@@ -138,7 +138,7 @@ public class ProductStatusTests
     [Test]
     public void FromName_WithUnknownName_ShouldThrowArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => ProductStatus.FromName("Unknown"));
+        Assert.Throws<InvalidValueException>(() => ProductStatus.FromName("Unknown"));
     }
 
     #endregion

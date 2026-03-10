@@ -36,7 +36,7 @@ public class SellerIdTests
     [Test]
     public void From_WithEmptyGuid_ShouldThrowArgumentException()
     {
-        var ex = Assert.Throws<DomainException>(() => SellerId.From(Guid.Empty));
+        var ex = Assert.Throws<InvalidValueException>(() => SellerId.From(Guid.Empty));
 
         Assert.That(ex!.Message, Does.Contain("SellerId cannot be empty"));
     }

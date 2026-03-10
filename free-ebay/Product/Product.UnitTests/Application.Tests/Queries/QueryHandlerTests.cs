@@ -4,6 +4,7 @@ using Application.Queries.GetProduct;
 using Application.Queries.GetProductPrices;
 using Application.Queries.GetProducts;
 using Application.Queries.GetSellerProducts;
+using Domain.Exceptions;
 using NSubstitute;
 
 namespace Application.Tests.Queries;
@@ -26,26 +27,24 @@ public class GetProductQueryHandlerTests
         99m, "USD", 5, "Active", Guid.NewGuid(), [], [], DateTime.UtcNow, null);
 
     [Test]
-    public async Task Handle_ShouldReturnSuccess_WhenProductFound()
+    public async Task Handle_ShouldReturnProduct_WhenFound()
     {
         var id = Guid.NewGuid();
         _readRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(SampleDto(id));
 
         var result = await _handler.Handle(new GetProductQuery(id), CancellationToken.None);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value!.ProductId, Is.EqualTo(id));
+        Assert.That(result.ProductId, Is.EqualTo(id));
     }
 
     [Test]
-    public async Task Handle_ShouldReturnFailure_WhenProductNotFound()
+    public void Handle_ShouldThrowProductNotFoundException_WhenNotFound()
     {
-        _readRepo.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((ProductDetailDto?)null);
+        var id = Guid.NewGuid();
+        _readRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns((ProductDetailDto?)null);
 
-        var result = await _handler.Handle(new GetProductQuery(Guid.NewGuid()), CancellationToken.None);
-
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Errors[0], Does.Contain("was not found"));
+        Assert.ThrowsAsync<ProductNotFoundException>(() =>
+            _handler.Handle(new GetProductQuery(id), CancellationToken.None));
     }
 }
 

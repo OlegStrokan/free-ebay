@@ -4,6 +4,7 @@ using Application.Queries.GetProduct;
 using Application.Queries.GetProductPrices;
 using Application.Queries.GetProducts;
 using Application.Queries.GetSellerProducts;
+using Domain.Exceptions;
 using FluentValidation;
 using Grpc.Core;
 using MediatR;
@@ -96,25 +97,14 @@ public class ProductGrpcService(
         {
             var validation = await getProductValidator.ValidateAsync(request, context.CancellationToken);
             if (!validation.IsValid)
-                return new GetProductResponse
-                {
-                    Success = false,
-                    ErrorMessage = string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))
-                };
+                throw new RpcException(new Status(StatusCode.InvalidArgument,
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
 
-            if (!Guid.TryParse(request.ProductId, out var productId))
-                return new GetProductResponse { Success = false, ErrorMessage = "Invalid product ID format." };
+            var productId = Guid.Parse(request.ProductId);
 
-            var result = await mediator.Send(new GetProductQuery(productId), context.CancellationToken);
+            var product = await mediator.Send(new GetProductQuery(productId), context.CancellationToken);
 
-            if (!result.IsSuccess)
-                return new GetProductResponse { Success = false, ErrorMessage = result.Errors[0] };
-
-            return new GetProductResponse
-            {
-                Success = true,
-                Product = MapToProductDetail(result.Value!)
-            };
+            return new GetProductResponse { Product = MapToProductDetail(product) };
         }
         catch (Exception ex) when (ex is not RpcException)
         {
@@ -125,6 +115,12 @@ public class ProductGrpcService(
 
     private void HandleException(Exception ex, string methodName)
     {
+        if (ex is ProductNotFoundException notFound)
+        {
+            logger.LogWarning(ex, "Product {ProductId} not found in {Method}", notFound.ProductId, methodName);
+            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+        }
+
         if (ex is FormatException)
         {
             logger.LogWarning(ex, "Invalid GUID format in {Method}", methodName);
