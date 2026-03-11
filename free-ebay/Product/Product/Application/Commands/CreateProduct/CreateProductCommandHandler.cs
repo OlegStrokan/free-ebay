@@ -20,9 +20,9 @@ internal sealed class CreateProductCommandHandler : IRequestHandler<CreateProduc
     {
         try
         {
-            var sellerId   = SellerId.From(request.SellerId);
+            var sellerId = SellerId.From(request.SellerId);
             var categoryId = CategoryId.From(request.CategoryId);
-            var price      = Money.Create(request.Price, request.Currency);
+            var price = Money.Create(request.Price, request.Currency);
             var attributes = request.Attributes
                 .Select(a => new ProductAttribute(a.Key, a.Value))
                 .ToList();

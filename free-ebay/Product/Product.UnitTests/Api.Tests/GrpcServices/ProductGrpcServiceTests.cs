@@ -40,9 +40,7 @@ public class ProductGrpcServiceTests
 
     private ProductGrpcService BuildService() =>
         new(_mediator, _logger, _getPricesValidator, _getProductsValidator, _getProductValidator);
-
-    // ─── GetProductPrices ────────────────────────────────────────────────────
-
+    
     [Test]
     public async Task GetProductPrices_ShouldReturnPrices_WhenQuerySucceeds()
     {
@@ -185,9 +183,7 @@ public class ProductGrpcServiceTests
 
         Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.Unavailable));
     }
-
-    // ─── GetProducts ─────────────────────────────────────────────────────────
-
+    
     [Test]
     public async Task GetProducts_ShouldReturnProducts_WhenQuerySucceeds()
     {
@@ -288,9 +284,7 @@ public class ProductGrpcServiceTests
         Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.Internal));
         Assert.That(ex.Status.Detail, Does.Contain("GetProducts"));
     }
-
-    // ─── GetProduct ──────────────────────────────────────────────────────────
-
+    
     [Test]
     public async Task GetProduct_ShouldReturnProduct_WhenQuerySucceeds()
     {
@@ -332,8 +326,7 @@ public class ProductGrpcServiceTests
     public void GetProduct_ShouldThrowRpcException_WhenGuidFormatIsInvalid()
     {
         var request = new GetProductRequest { ProductId = "not-a-guid" };
-
-        // validation mocked to pass — FormatException thrown inside handler by Guid.Parse
+        
         _getProductValidator
             .ValidateAsync(request, Arg.Any<CancellationToken>())
             .Returns(new ValidationResult());
@@ -426,24 +419,22 @@ public class ProductGrpcServiceTests
 
         Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.Unavailable));
     }
-
-    // ─── helpers ─────────────────────────────────────────────────────────────
-
+    
     private static ProductDetailDto SampleDetail(Guid id) => new(
-        ProductId:     id,
-        Name:          "Widget",
-        Description:   "A test widget",
-        CategoryId:    Guid.NewGuid(),
-        CategoryName:  "Tools",
-        Price:         19.99m,
-        Currency:      "USD",
+        ProductId: id,
+        Name:"Widget",
+        Description:"A test widget",
+        CategoryId: Guid.NewGuid(),
+        CategoryName: "Tools",
+        Price: 19.99m,
+        Currency: "USD",
         StockQuantity: 50,
-        Status:        "Active",
-        SellerId:      Guid.NewGuid(),
-        Attributes:    [],
-        ImageUrls:     [],
-        CreatedAt:     DateTime.UtcNow,
-        UpdatedAt:     null);
+        Status: "Active",
+        SellerId: Guid.NewGuid(),
+        Attributes: [],
+        ImageUrls: [],
+        CreatedAt: DateTime.UtcNow,
+        UpdatedAt: null);
 }
 
 

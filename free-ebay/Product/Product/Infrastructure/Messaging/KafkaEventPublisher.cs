@@ -35,7 +35,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
         _producer = new ProducerBuilder<string, string>(config).Build();
     }
 
-    // Constructor for testing — allows injecting a pre-built producer
+    // Constructor for testing
     internal KafkaEventPublisher(
         IProducer<string, string> producer,
         ILogger<KafkaEventPublisher> logger,

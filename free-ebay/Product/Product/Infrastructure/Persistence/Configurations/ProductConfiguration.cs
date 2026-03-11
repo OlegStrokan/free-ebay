@@ -13,13 +13,11 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
     {
         builder.ToTable("Products");
 
-        // Primary key with value converter: ProductId <-> Guid
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id)
             .HasConversion(id => id.Value, value => ProductId.From(value))
             .ValueGeneratedNever();
 
-        // Scalar properties
         builder.Property(x => x.Name)
             .IsRequired()
             .HasMaxLength(200);
@@ -36,25 +34,21 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(x => x.UpdatedAt);
 
-        // SellerId value object: record with Guid Value
         builder.Property(x => x.SellerId)
             .HasConversion(id => id.Value, value => SellerId.From(value))
             .HasColumnName("SellerId")
             .IsRequired();
 
-        // CategoryId value object: record with Guid Value
         builder.Property(x => x.CategoryId)
             .HasConversion(id => id.Value, value => CategoryId.From(value))
             .HasColumnName("CategoryId")
             .IsRequired();
 
-        // ProductStatus stored as int
         builder.Property(x => x.Status)
             .HasConversion(s => s.Value, v => ProductStatus.FromValue(v))
             .HasColumnName("Status")
             .IsRequired();
 
-        // Money as owned entity (two columns: Price, Currency)
         builder.OwnsOne(x => x.Price, priceBuilder =>
         {
             priceBuilder.Property(m => m.Amount)
@@ -68,7 +62,6 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                 .IsRequired();
         });
 
-        // Attributes as JSONB column via backing field
         var attributesComparer = new ValueComparer<List<ProductAttribute>>(
             (a, b) => JsonSerializer.Serialize(a, (JsonSerializerOptions?)null)
                    == JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
@@ -84,7 +77,6 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                 attributesComparer)
             .IsRequired();
 
-        // ImageUrls as JSONB column via backing field
         var imageUrlsComparer = new ValueComparer<List<string>>(
             (a, b) => (a ?? new List<string>()).SequenceEqual(b ?? new List<string>()),
             c => c.GetHashCode(),
@@ -99,7 +91,6 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                 imageUrlsComparer)
             .IsRequired();
 
-        // Indexes
         builder.HasIndex(x => x.SellerId);
         builder.HasIndex(x => x.CategoryId);
         builder.HasIndex(x => x.Status);

@@ -2,9 +2,6 @@ using Application.Interfaces;
 
 namespace Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Runs daily to delete outbox messages that were processed more than 7 days ago.
-/// </summary>
 public sealed class ProcessedOutboxCleanupService(
     IServiceProvider serviceProvider,
     ILogger<ProcessedOutboxCleanupService> logger) : BackgroundService
