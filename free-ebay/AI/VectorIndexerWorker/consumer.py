@@ -1,0 +1,54 @@
+﻿import structlog
+import json
+import asyncio
+from confluent_kafka import Consumer, Message, KafkaError
+from indexer import Indexer
+from config import settings
+
+log = structlog.get_logger()
+
+def make_consumer() -> Consumer:
+    return Consumer({
+        "bootstrap.servers": settings.kafka_bootstrap_server,
+        "group.id": settings.kafka_group_id,
+        "auto.offset.reset": "latest",
+        "enable.auto.commit": False,
+    })
+
+async def process_event(msg: Message, indexer: Indexer) -> None:
+    headers = dict(msg.headers() or [])
+    event_type = headers.get("EventType", b"").decode()
+    payload = json.loads(msg.value())
+
+    match event_type:
+        case "ProductCreateEvent" | "ProductUpdatedEvent":
+            await indexer.upsert(payload)
+        case "ProductDeletedEvent":
+            await indexer.delete(payload["product_id"])
+        case _:
+            log.warning("unknown_event_type", event_type=event_type)
+
+async def run_consumer(indexer: Indexer) -> None:
+    consumer = make_consumer();
+    consumer.subscribe(settings.kafka_topics)
+    log.info("consumer_started", topics=settings.kafka_topics)
+
+    loop = asyncio.get_event_loop()
+    try:
+        while True:
+            # pool() is blocking so we run in thread pool to not block the event loop
+            msg = await loop.run_in_executor(None, lambda: consumer.poll(timeout=1.0))
+            if msg in None:
+                continue
+            if msg.error():
+                if msg.error().code() == KafkaError.PARTITION_EOF:
+                    continue
+                log.error("kafka_error", error=str(msg.error()))
+                continue
+            try:
+                await process_event(msg, indexer)
+                consumer.commit(message=msg, asynchronous=False)
+            except Exception:
+                log.exception("event_processing_failed", offset=msg.offset())
+    finally:
+        consumer.close()

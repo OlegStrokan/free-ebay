@@ -1,0 +1,18 @@
+﻿from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="INDEXER_")
+
+    kafka_bootstrap_server: str = "locahost:9092"
+    kafka_group_id: str = "vector-indexer-worker"
+    kafka_topics: list[str] = ["product.created", "product.updated", "product.deleted"]
+
+    embedding_service_url: str = "http://localhost:8001"
+    embedding_model: str = "nomic-embed-text"
+
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_collection: str = "products"
+    vector_dimensions: int = 768
+
+settings = Settings()

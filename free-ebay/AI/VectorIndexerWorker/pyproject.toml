@@ -1,0 +1,13 @@
+[project]
+name = "vectorindexerworker"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.10"
+dependencies = [
+    "confluent-kafka>=2.13.2",
+    "httpx>=0.28.1",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "qdrant-client>=1.17.0",
+    "structlog>=25.5.0",
+]
