@@ -1,3 +1,4 @@
+using System.Net;
 using Grpc.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Protos.Accounting;
@@ -22,7 +23,8 @@ public abstract class FakeGrpcServerBase : IAsyncDisposable
 
         builder.WebHost.ConfigureKestrel(o =>
         {
-            o.ListenLocalhost(0, lo => lo.Protocols = HttpProtocols.Http2);
+            o.Listen(IPAddress.Loopback, 0, lo => lo.Protocols = HttpProtocols.Http2);
+            
         });
 
         builder.Services.AddGrpc();
@@ -31,6 +33,11 @@ public abstract class FakeGrpcServerBase : IAsyncDisposable
         _app = builder.Build();
         MapServices(_app);
         await _app.StartAsync();
+
+        var feature = _app.Services
+            .GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>()
+            .Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+        Address = feature!.Addresses.First();
     }
 
     public async Task StopAsync()
