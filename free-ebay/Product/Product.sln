@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "Product\Api\Api.cspr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Tests", "Product.UnitTests\Api.Tests\Api.Tests.csproj", "{68812763-926E-40AA-82CD-63957C1193CD}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Product.IntegrationTests", "Product.IntegrationTests", "{5FA78F6A-FD94-427D-94E4-90962F73F207}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
