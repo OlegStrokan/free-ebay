@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Test Framework -->
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+        <PackageReference Include="xunit" Version="2.7.0" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7" />
+
+        <!-- Test Infrastructure -->
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.2" />
+        <PackageReference Include="Testcontainers" Version="3.7.0" />
+        <PackageReference Include="Testcontainers.PostgreSql" Version="3.7.0" />
+        <PackageReference Include="Testcontainers.Kafka" Version="3.7.0" />
+
+        <!-- gRPC Client -->
+        <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+
+        <!-- Kafka Consumer (for Kafka event verification) -->
+        <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
+
+        <!-- Assertions -->
+        <PackageReference Include="FluentAssertions" Version="6.12.0" />
+
+        <!-- EF Core (for direct DB access in extensions) -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Product\Api\Api.csproj" />
+        <ProjectReference Include="..\Product\Application\Application.csproj" />
+        <ProjectReference Include="..\Product\Domain\Domain.csproj" />
+        <ProjectReference Include="..\Product\Infrastructure\Infrastructure.csproj" />
+        <ProjectReference Include="..\Product\Protos\Protos.csproj" />
+    </ItemGroup>
+
+</Project>
