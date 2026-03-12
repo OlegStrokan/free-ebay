@@ -94,5 +94,12 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasIndex(x => x.SellerId);
         builder.HasIndex(x => x.CategoryId);
         builder.HasIndex(x => x.Status);
+
+        // to prevent "productattribute" requires a primary key to be defined issue:
+        // "_attributes" and "_imageUrls" are mapped above as jsonb columns via their private
+        // backing fields; ignore the public read-only wrappers so EF Core does not try to
+        // discover ProductAttribute as an entity type
+        builder.Ignore(x => x.Attributes);
+        builder.Ignore(x => x.ImageUrls);
     }
 }
