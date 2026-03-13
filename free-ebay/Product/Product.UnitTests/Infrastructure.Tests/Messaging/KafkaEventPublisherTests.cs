@@ -121,7 +121,7 @@ public class KafkaEventPublisherTests
         Assert.That(wrapper, Is.Not.Null);
         Assert.That(wrapper!.EventType, Is.EqualTo(nameof(ProductCreatedEvent)));
         Assert.That(wrapper.EventId,    Is.EqualTo(evt.EventId));
-        Assert.That(wrapper.Payload,    Does.Contain("Widget"));
+        Assert.That(wrapper.Payload.GetProperty("Name").GetString(), Is.EqualTo("Widget"));
     }
 
     [Test]
@@ -236,7 +236,7 @@ public class KafkaEventPublisherTests
         await _sut.PublishRawAsync(Guid.NewGuid(), "ProductCreatedEvent", content, DateTime.UtcNow, "agg-1");
 
         var wrapper = JsonSerializer.Deserialize<EventWrapper>(captured!.Value);
-        Assert.That(wrapper!.Payload, Is.EqualTo(content));
+        Assert.That(wrapper!.Payload.GetProperty("ProductId").GetString(), Is.EqualTo("abc"));
         Assert.That(wrapper.EventType, Is.EqualTo("ProductCreatedEvent"));
     }
 

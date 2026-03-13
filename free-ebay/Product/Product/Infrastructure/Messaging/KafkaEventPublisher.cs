@@ -56,7 +56,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
             {
                 EventId    = @event.EventId,
                 EventType  = eventType,
-                Payload    = JsonSerializer.Serialize(@event, @event.GetType()),
+                Payload    = JsonSerializer.SerializeToElement(@event, @event.GetType()),
                 OccurredOn = @event.OccurredOn
             };
 
@@ -83,7 +83,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
             {
                 EventId    = id,
                 EventType  = typeName,
-                Payload    = content,
+                Payload    = JsonSerializer.Deserialize<JsonElement>(content),
                 OccurredOn = occurredOn
             };
 
