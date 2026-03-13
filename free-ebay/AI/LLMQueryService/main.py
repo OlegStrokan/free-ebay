@@ -13,7 +13,7 @@ log = structlog.get_logger()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     client = OllamaClient()
     app.dependency_overrides[get_ollama_client] = lambda: client
-    log.info("llm_query_service_started", model_settings.model)
+    log.info("llm_query_service_started", model=settings.model)
     yield
     await client.aclose()
 
