@@ -74,7 +74,7 @@ public sealed class ElasticsearchIndexInitializer(
         }
         catch (Exception ex)
         {
-            // Don't rethrow - let the app start; the health endpoint will signal not-ready
+            // Don't rethrow - let she do..... i mean the app start. the health endpoint will signal not-ready
             // and k8s will restart the pod when Elasticsearch comes up
             logger.LogError(ex,
                 "Error during Elasticsearch index initialisation for '{Index}'", indexName);

@@ -66,8 +66,7 @@ public sealed class KafkaConsumerBackgroundService(
                     continue;
                 }
 
-                // Restore the trace context propagated by the Product Service publisher
-                // Without this we will break the end-to-end trace.
+                // manually trace kafka
                 ActivityContext parentCtx = default;
                 var traceparent = GetHeader(result, "traceparent");
                 if (traceparent is not null)
@@ -79,7 +78,7 @@ public sealed class KafkaConsumerBackgroundService(
                 activity?.SetTag("messaging.destination", options.ProductEventsTopic);
                 activity?.SetTag("messaging.kafka.consumer.group", options.ConsumerGroupId);
 
-                await DispatchAsync(eventType, wrapper.Payload, stoppingToken); // wrapper.Payload is already a JsonElement — no second parse
+                await DispatchAsync(eventType, wrapper.Payload, stoppingToken);
 
                 consumer.StoreOffset(result);
                 consumer.Commit(result);
@@ -104,7 +103,7 @@ public sealed class KafkaConsumerBackgroundService(
         logger.LogInformation("Kafka consumer stopped");
     }
 
-    private async Task DispatchAsync(string eventType, JsonElement payload, CancellationToken ct)
+    internal async Task DispatchAsync(string eventType, JsonElement payload, CancellationToken ct)
     {
         using var scope = serviceProvider.CreateScope();
         var consumers = scope.ServiceProvider.GetRequiredService<IEnumerable<IProductEventConsumer>>();

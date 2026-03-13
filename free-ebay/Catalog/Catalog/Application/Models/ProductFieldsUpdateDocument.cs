@@ -1,7 +1,5 @@
 namespace Application.Models;
 
-// Sent as a partial document on ProductUpdatedEvent.
-// Stock and status fields in Elasticsearch are untouched by this update.
 public sealed class ProductFieldsUpdateDocument
 {
     public required string Name { get; init; }
