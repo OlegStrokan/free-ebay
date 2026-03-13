@@ -17,13 +17,13 @@ def build_product_corpus(event: ProductEvent) -> str:
 
 class Indexer:
     def __init__(self, embedding: EmbeddingClient, qdrant: QdrantIndexClient) -> None:
-        self.embedding = embedding
+        self._embedding = embedding
         self.qdrant = qdrant
 
     async def upsert(self, raw: dict) -> None:
         event = ProductEvent.model_validate(raw)
         corpus = build_product_corpus(event)
-        vectors = await self.embedding.embed_batch([corpus])
+        vectors = await self._embedding.embed_batch([corpus])
         vector = vectors[0]
 
         payload = {

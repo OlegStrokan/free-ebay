@@ -2,7 +2,7 @@
 from config import settings
 
 class EmbeddingClient:
-    def __int__(self) -> None:
+    def __init__(self) -> None:
         self._http = httpx.AsyncClient(
             base_url=settings.embedding_service_url,
             timeout=30.0,

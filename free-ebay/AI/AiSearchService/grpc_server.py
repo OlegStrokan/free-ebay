@@ -11,7 +11,7 @@ log = structlog.get_logger()
 class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
     def __init__(self, llm_client, embedding_client, qdrant, es):
         self._llm = llm_client
-        self.embedding = embedding_client
+        self._embedding = embedding_client
         self.qdrant = qdrant
         self._es = es
 

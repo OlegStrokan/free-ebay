@@ -38,7 +38,7 @@ async def run_consumer(indexer: Indexer) -> None:
         while True:
             # pool() is blocking so we run in thread pool to not block the event loop
             msg = await loop.run_in_executor(None, lambda: consumer.poll(timeout=1.0))
-            if msg in None:
+            if msg is None:
                 continue
             if msg.error():
                 if msg.error().code() == KafkaError.PARTITION_EOF:

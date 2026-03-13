@@ -2,7 +2,7 @@
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="EMPEDDING_")
+    model_config = SettingsConfigDict(env_prefix="EMBEDDING_")
 
     ollama_base_url: str = "http://localhost:11434"
     default_model: str = "nomic-embed-text"

@@ -53,7 +53,7 @@ async def run_search_pipeline(
 
 
     # embed the semantic query and run elastic keyword search in parallel, cool right?
-    embedding_task = asyncio.create_task(embedding_client.embed(parsed.semanic_query))
+    embedding_task = asyncio.create_task(embedding_client.embed(parsed.semantic_query))
     es_task = asyncio.create_task(es.search(parsed, top_k=top_k))
 
     vector = await embedding_task
