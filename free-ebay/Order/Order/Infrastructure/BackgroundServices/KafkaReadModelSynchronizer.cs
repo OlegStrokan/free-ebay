@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using Domain.Common;
+using Domain.Interfaces;
 using Infrastructure.Messaging;
 using Infrastructure.Services;
 using Infrastructure.Services.EventIdempotencyChecker;
@@ -143,6 +144,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
         var eventType = System.Text.Encoding.UTF8.GetString(eventTypeHeader.GetValueBytes());
         var eventData = consumeResult.Message.Value;
+        var aggregateId = consumeResult.Message.Key;
 
         logger.LogDebug(
             "Processing event {EventType} from topic {Topic} at offset {Offset}",
@@ -152,7 +154,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
         
         try
         {
-            await HandleEventDynamicallyAsync(eventType, eventData, cancellationToken);
+            await HandleEventDynamicallyAsync(eventType, aggregateId, eventData, cancellationToken);
             
             logger.LogInformation(
                 "Successfully processed event {EventType} at offset {Offset}", eventType, consumeResult.Offset);
@@ -169,6 +171,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
     private async Task HandleEventDynamicallyAsync(
         string eventType,
+        string aggregateId,
         string eventData,
         CancellationToken cancellationToken)
     {
@@ -185,23 +188,45 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
 
         if (!eventTypeRegistry.TryGetType(eventType, out var domainEventType))
         {
-            logger.LogWarning(
-                "Unknown event type {EventType}. Skipping.", eventType);
+            logger.LogWarning("Unknown event type {EventType}. Skipping.", eventType);
             return;
         }
 
-        var domainEvent = JsonSerializer.Deserialize(eventData, domainEventType) as IDomainEvent;
+        /*
+         * Load the properly-typed event from the event store.
+         * The event store uses custom JSON convertersso the deserialized event has fully-populated value objects
+         * This avoids trying to deserialize the Kafka payload directly, which uses DTO/raw formats
+         * that re incompatible with the domain event constructors.
+         */
+
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStoreRepository>();
+        var aggregateType = GetAggregateTypeFromEventType(domainEventType);
+        var allEvents = await eventStore.GetEventsAsync(aggregateId, aggregateType, cancellationToken);
+        var domainEvent = allEvents.FirstOrDefault(e => e.EventId == eventId);
 
         if (domainEvent == null)
         {
-            logger.LogError("Failed to deserialize event {EventType}", eventType);
+            logger.LogError(
+                "Event {EventId} ({EventType}) not found in event store for aggregate {AggregateId}",
+                eventId, eventType, aggregateId);
             return;
         }
 
         await RouteEventHandlerAsync(domainEvent, scope, cancellationToken);
-
         await idempotencyChecker.MarkAsProcessedAsync(eventId, eventType, cancellationToken);
+    }
 
+    private static string GetAggregateTypeFromEventType(Type domainEventType)
+    {
+        var name = domainEventType.Name;
+        var ns = domainEventType.Namespace ?? string.Empty;
+        if (name.StartsWith("Return") || ns.Contains("Return"))
+            return AggregateTypes.ReturnRequest;
+        if (name.StartsWith("B2BOrder") || ns.Contains("B2BOrder"))
+            return AggregateTypes.B2BOrder;
+        if (name.StartsWith("RecurringOrder") || ns.Contains("RecurringOrder"))
+            return AggregateTypes.RecurringOrder;
+        return AggregateTypes.Order;
     }
     
     /// <summary>

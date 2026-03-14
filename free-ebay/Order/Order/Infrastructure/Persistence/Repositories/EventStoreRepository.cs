@@ -23,7 +23,8 @@ public class EventStoreRepository(
         {
             new StronglyTypedIdConverterFactory(),
             new AddressJsonConverter(),
-            new OrderItemJsonConverter()
+            new OrderItemJsonConverter(),
+            new RecurringOrderItemJsonConverter()
         }
     };
     // optimistic concurrency type shit: checks expected version against DB, increments per event,
