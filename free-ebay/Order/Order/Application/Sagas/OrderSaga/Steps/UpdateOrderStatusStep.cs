@@ -78,42 +78,9 @@ public class UpdateOrderStatusStep(
         }
     }
 
-    public async Task CompensateAsync(
+    public Task CompensateAsync(
         OrderSagaData data,
-        OrderSagaContext context, 
+        OrderSagaContext context,
         CancellationToken cancellationToken)
-    {
-
-        try
-        {
-            logger.LogInformation(
-                "Cancelling order {OrderId}",
-                data.CorrelationId);
-
-            await orderPersistenceService.UpdateOrderAsync(
-                data.CorrelationId,
-                order =>
-                {
-                    var failureMessages = new List<string> { "Saga compensation - order creation failed" };
-                    order.Cancel(failureMessages);
-                    return Task.CompletedTask;
-                },
-                cancellationToken);
-
-            logger.LogInformation("Successfully cancelled order {OrderId}",
-                data.CorrelationId);
-
-        }
-        catch (OrderNotFoundException ex)
-        {
-            logger.LogWarning("Compensate skipped: Order {OrderId} not found. It may have never been created.", data.CorrelationId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Failed to cancel order {OrderId} during compensation",
-                data.CorrelationId);
-        }
-    }
+        => Task.CompletedTask; // Order cancellation is handled by CancelOrderOnFailureStep (Order: 0)
 }

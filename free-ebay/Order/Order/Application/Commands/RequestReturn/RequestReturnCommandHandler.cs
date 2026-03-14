@@ -104,7 +104,7 @@ public class RequestReturnCommandHandler(
                 var resultOrderId = await returnRequestPersistenceService.CreateReturnRequestAsync(
                     returnRequest,
                     request.IdempotencyKey,
-                    order.Id.Value,
+                    returnRequest.Id.Value,
                     cancellationToken);
                 
                 logger.LogInformation(

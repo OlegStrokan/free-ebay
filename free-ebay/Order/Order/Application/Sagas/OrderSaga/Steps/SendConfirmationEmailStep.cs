@@ -11,7 +11,7 @@ public sealed class SendConfirmationEmailStep(
 {
 
     public string StepName => "SendConfirmationEmail";
-    public int Order => 5;
+    public int Order => 6;
 
 
     public async Task<StepResult> ExecuteAsync(

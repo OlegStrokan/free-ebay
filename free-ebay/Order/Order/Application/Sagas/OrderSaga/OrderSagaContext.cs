@@ -10,4 +10,5 @@ public sealed class OrderSagaContext : SagaContext
     
     // internal flags - for idempotency
     public bool OrderStatusUpdated { get; set; }
+    public bool OrderCompleted { get; set; }
 }

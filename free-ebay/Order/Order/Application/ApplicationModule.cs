@@ -28,10 +28,12 @@ public static class ApplicationModule
         services.AddScoped<IReturnSaga, ReturnSaga>();
         
         // order saga steps
+        services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, CancelOrderOnFailureStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, ReserveInventoryStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, ProcessPaymentStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, UpdateOrderStatusStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, CreateShipmentStep>();
+        services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, CompleteOrderStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, SendConfirmationEmailStep>();
         
         // return saga step
