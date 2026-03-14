@@ -30,8 +30,7 @@ public class SagaHandlerFactoryTests
         var handler = new OrderCreatedHandler();
 
         var serviceProvider = Substitute.For<IServiceProvider>();
-        serviceProvider.GetService(typeof(IEnumerable<ISagaEventHandler>))
-            .Returns(new ISagaEventHandler[] { handler });
+        serviceProvider.GetService(typeof(OrderCreatedHandler)).Returns(handler);
 
         var factory = new SagaHandlerFactory(new ISagaEventHandler[] { handler });
 
@@ -57,8 +56,8 @@ public class SagaHandlerFactoryTests
         var h2 = new OrderPaidHandler();
 
         var serviceProvider = Substitute.For<IServiceProvider>();
-        serviceProvider.GetService(typeof(IEnumerable<ISagaEventHandler>))
-            .Returns(new ISagaEventHandler[] { h1, h2 });
+        serviceProvider.GetService(typeof(OrderCreatedHandler)).Returns(h1);
+        serviceProvider.GetService(typeof(OrderPaidHandler)).Returns(h2);
 
         var factory = new SagaHandlerFactory(new ISagaEventHandler[] { h1, h2 });
 
@@ -79,8 +78,6 @@ public class SagaHandlerFactoryTests
 
         // but the service provider returns nothing (not registered in DI)
         var serviceProvider = Substitute.For<IServiceProvider>();
-        serviceProvider.GetService(typeof(IEnumerable<ISagaEventHandler>))
-            .Returns(Array.Empty<ISagaEventHandler>());
 
         var result = factory.GetHandler(serviceProvider, "OrderCreatedEvent");
 

@@ -104,14 +104,17 @@ public class UpdateOrderStatusStepTests
     }
     
     [Fact]
-    public async Task CompensateAsync_ShouldCancelOrder_WhenOrderExists()
+    public async Task CompensateAsync_ShouldBeNoOp_BecauseCancelOrderOnFailureStepHandlesCancellation()
     {
         var data = CreateSampleData();
 
         await BuildStep().CompensateAsync(data, new OrderSagaContext(), CancellationToken.None);
 
-        await _orderPersistenceService.Received(1).UpdateOrderAsync(
-            data.CorrelationId,
+        // UpdateOrderStatusStep.CompensateAsync is intentionally a no-op:
+        // order cancellation is centralised in CancelOrderOnFailureStep (Order: 0),
+        // which runs for every compensation regardless of which step failed.
+        await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
+            Arg.Any<Guid>(),
             Arg.Any<Func<Order, Task>>(),
             Arg.Any<CancellationToken>());
     }

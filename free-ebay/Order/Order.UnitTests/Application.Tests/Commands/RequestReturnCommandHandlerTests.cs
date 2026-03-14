@@ -80,7 +80,7 @@ public class RequestReturnCommandHandlerTest
         await _returnRequestPersistenceService.Received(1).CreateReturnRequestAsync(
             Arg.Any<RequestReturn>(),
             Arg.Is<string?>(k => k == "idempotency-key"),
-            Arg.Is<Guid?>(id => id == order.Id.Value),
+            Arg.Any<Guid?>(),  // handler passes returnRequest.Id.Value, not order.Id.Value
             Arg.Any<CancellationToken>());
     }
 

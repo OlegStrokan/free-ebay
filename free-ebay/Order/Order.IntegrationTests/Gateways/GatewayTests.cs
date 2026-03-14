@@ -33,15 +33,15 @@ public sealed class GatewayTests
     public async Task PaymentGateway_ShouldThrowGatewayUnavailableException_OnGrpcUnavailable()
     {
         using var channel  = UnreachableChannel();
-        var grpcClient     = new PaymentService.PaymentServiceClient(channel);
-        var gateway        = new PaymentGateway(grpcClient, NullLogger<PaymentGateway>.Instance);
+        var grpcClient = new PaymentService.PaymentServiceClient(channel);
+        var gateway = new PaymentGateway(grpcClient, NullLogger<PaymentGateway>.Instance);
 
         Func<Task> act = () => gateway.ProcessPaymentAsync(
-            orderId:           Guid.NewGuid(),
-            customerId:        Guid.NewGuid(),
-            amount:            99.99m,
-            currency:          "USD",
-            paymentMethod:     "card",
+            orderId: Guid.NewGuid(),
+            customerId: Guid.NewGuid(),
+            amount: 99.99m,
+            currency: "USD",
+            paymentMethod: "card",
             cancellationToken: CancellationToken.None);
 
         await act.Should()
@@ -53,12 +53,12 @@ public sealed class GatewayTests
     public async Task InventoryGateway_ShouldThrowGatewayUnavailableException_OnGrpcUnavailable()
     {
         using var channel  = UnreachableChannel();
-        var grpcClient     = new InventoryService.InventoryServiceClient(channel);
-        var gateway        = new InventoryGateway(grpcClient, NullLogger<InventoryGateway>.Instance);
+        var grpcClient = new InventoryService.InventoryServiceClient(channel);
+        var gateway = new InventoryGateway(grpcClient, NullLogger<InventoryGateway>.Instance);
 
         Func<Task> act = () => gateway.ReserveAsync(
-            orderId:           Guid.NewGuid(),
-            items:             new List<OrderItemDto>
+            orderId: Guid.NewGuid(),
+            items: new List<OrderItemDto>
             {
                 new(Guid.NewGuid(), Quantity: 1, Price: 10m, Currency: "USD")
             },
@@ -73,11 +73,11 @@ public sealed class GatewayTests
     public async Task ProductGateway_ShouldThrowGatewayUnavailableException_OnGrpcUnavailable()
     {
         using var channel = UnreachableChannel();
-        var grpcClient    = new ProductService.ProductServiceClient(channel);
-        var gateway       = new ProductGateway(grpcClient, NullLogger<ProductGateway>.Instance);
+        var grpcClient = new ProductService.ProductServiceClient(channel);
+        var gateway = new ProductGateway(grpcClient, NullLogger<ProductGateway>.Instance);
 
         Func<Task> act = () => gateway.GetCurrentPricesAsync(
-            productIds:        new[] { Guid.NewGuid() },
+            productIds: new[] { Guid.NewGuid() },
             cancellationToken: CancellationToken.None);
 
         await act.Should()
