@@ -75,8 +75,14 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         var orderId = Guid.Parse(response.OrderId);
         _output.WriteLine($"Order created: {orderId}");
 
-        await Task.Delay(TimeSpan.FromSeconds(10));
-        
+        // wait for saga to complete before asserting events/read-model
+        var saga = await _server.WaitForSagaStatusAsync(
+            orderId, SagaTypes.OrderSaga, SagaStatus.Completed, timeoutSeconds: 30);
+
+        saga.Should().NotBeNull("saga must reach Completed within timeout");
+        saga!.Status.Should().Be(SagaStatus.Completed);
+        _output.WriteLine($"Saga: {saga.Status}");
+
         // assert event store
         var events = await _server.GetEventsAsync(orderId, AggregateTypes.Order);
         var eventTypes = events.Select(e => e.GetType().Name).ToList();
@@ -87,14 +93,6 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         eventTypes.Should().Contain("OrderTrackingAssignedEvent");
         eventTypes.Should().Contain("OrderCompletedEvent");
     
-        // assert saga
-        var saga = await _server.WaitForSagaStatusAsync(
-            orderId, SagaTypes.OrderSaga, SagaStatus.Completed, timeoutSeconds: 30);
-
-        saga.Should().NotBeNull("saga must reach Completed within timeout");
-        saga!.Status.Should().Be(SagaStatus.Completed);
-        _output.WriteLine($"Saga: {saga.Status}");
-
         // assert read model
         var readModel = await _server.WaitForReadModelStatusAsync(
             orderId, "Completed", timeoutSeconds: 30);
@@ -148,9 +146,9 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.ProductService.ShouldSucceed = true;
 
         _server.ShipmentServer
-            .Given(Request.Create().WithBodyAsJson("/api/shipping/create").UsingPost())
+            .Given(Request.Create().WithPath("/api/shipping/create").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200)
-                .WithBodyAsJson(new { shipmentId = "ShipmentId", trackingNumber = "TrackingNumber " }));
+                .WithBodyAsJson(new { shipmentId = "ShipmentId", trackingNumber = "TrackingNumber" }));
         
         // same key on both request - simulated client retry after network issue
 
@@ -170,6 +168,11 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _output.WriteLine($"Both returned: {response1.OrderId}");
 
         var orderId = Guid.Parse(response1.OrderId);
+
+        // wait for saga to run payment before asserting call counts
+        await _server.WaitForSagaStatusAsync(
+            orderId, SagaTypes.OrderSaga, SagaStatus.Completed, timeoutSeconds: 30);
+
         var events = await _server.GetEventsAsync(orderId, AggregateTypes.Order);
 
         events.Count(e => e.GetType().Name == "OrderCreatedEvent")
@@ -214,8 +217,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         saga!.Status.Should().Be(SagaStatus.Compensated);
         _output.WriteLine($"Saga: {saga.Status}");
 
-        var sagaRepo = _server.GetService<ISagaRepository>();
-        var steps = await sagaRepo.GetStepLogsAsync(saga.Id, CancellationToken.None);
+        var steps = await _server.GetSagaStepLogsAsync(saga.Id);
 
         steps.Single(s => s.StepName == "ProcessPayment")
             .Status.Should().Be(StepStatus.Failed);
@@ -272,8 +274,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
 
         saga!.Status.Should().Be(SagaStatus.Completed);
 
-        var sagaRepo = _server.GetService<ISagaRepository>();
-        var steps = await sagaRepo.GetStepLogsAsync(saga.Id, CancellationToken.None);
+        var steps = await _server.GetSagaStepLogsAsync(saga.Id);
 
         steps.Select(s => s.StepName).Should().OnlyHaveUniqueItems(
             "each step must run exactly once - no duplicates after crash + resume");

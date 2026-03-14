@@ -268,6 +268,21 @@ public class FakeAccountingServiceImpl : AccountingService.AccountingServiceBase
             ErrorMessage = _cfg.ShouldSucceed ? string.Empty : "RecordRefund failed"
         });
     }
+
+    public override Task<ReverseRevenueResponse> ReverseRevenue(
+        ReverseRevenueRequest request,
+        ServerCallContext context
+    )
+    {
+        _cfg.ReverseRevenueCalls.Add(request);
+
+        return Task.FromResult(new ReverseRevenueResponse
+        {
+            Success = _cfg.ShouldSucceed,
+            ReversalId = _cfg.ShouldSucceed ? _cfg.ReversalIdToReturn : string.Empty,
+            ErrorMessage = _cfg.ShouldSucceed ? string.Empty : "ReverseRevenue failed"
+        });
+    }
 }
 
 

@@ -35,4 +35,7 @@ public sealed class FakeEventPublisher : IEventPublisher
 
         return Task.CompletedTask;
     }
+
+    public string Serialize(IDomainEvent @event)
+        => System.Text.Json.JsonSerializer.Serialize(@event, @event.GetType());
 }

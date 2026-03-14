@@ -9,6 +9,7 @@ using Infrastructure.Services.EventIdempotencyChecker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Order.IntegrationTests.TestHelpers;
 using StackExchange.Redis;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
@@ -61,6 +62,7 @@ public sealed class IntegrationFixture : IAsyncLifetime
         services.AddScoped<IOutboxRepository, OutboxRepository>();
         services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
         services.AddScoped<IDeadLetterRepository, DeadLetterRepository>();
+        services.AddScoped<IEventPublisher, FakeEventPublisher>();
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
         services.AddScoped<IReturnRequestPersistenceService, ReturnRequestPersistenceService>();
         services.AddScoped<IB2BOrderPersistenceService, B2BOrderPersistenceService>();

@@ -59,7 +59,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
     {
         _output.WriteLine("🧪 Return Happy Path - Full flow with webhook continuation");
 
-        var orderId = await CreateCompletedOrderAsync();
+        var (orderId, productId) = await CreateCompletedOrderAsync();
         _output.WriteLine($"✅ Setup: Order {orderId} completed");
         
         var returnShipmentId = "ReturnShipmentId";
@@ -97,7 +97,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
         returnRequest.ItemsToReturn.Add(new OrderItem
         {
-            ProductId = Guid.NewGuid().ToString(),
+            ProductId = productId.ToString(),
             Quantity = 1,
             Price = 29.99m.ToDecimalValue(),
             Currency = "USD"
@@ -150,8 +150,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         _output.WriteLine($"✅ Saga completed: {saga.Status}");
 
         // all steps are completed
-        var sagaRepo = _server.GetService<ISagaRepository>();
-        var steps = await sagaRepo.GetStepLogsAsync(saga.Id, CancellationToken.None);
+        var steps = await _server.GetSagaStepLogsAsync(saga.Id);
 
         var expectedSteps = new[]
         {
@@ -219,7 +218,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
     {
         _output.WriteLine("Return Idempotency - Duplicate request");
         
-        var orderId = await CreateCompletedOrderAsync();
+        var (orderId, productId) = await CreateCompletedOrderAsync();
         
         _server.ShipmentServer
             .Given(Request.Create().WithPath("/api/shipping/return/create").UsingPost())
@@ -242,7 +241,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         
         request.ItemsToReturn.Add(new OrderItem
         {
-            ProductId = Guid.NewGuid().ToString(),
+            ProductId = productId.ToString(),
             Quantity = 1,
             Price = 50.00m.ToDecimalValue(),
             Currency = "USD"
@@ -275,7 +274,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
     {
         _output.WriteLine("Return Rainy Day - Refund failure => compensation");
 
-        var orderId = await CreateCompletedOrderAsync();
+        var (orderId, productId) = await CreateCompletedOrderAsync();
 
         var returnShipmentId = "returnShipmentId";
         
@@ -306,7 +305,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         
         request.ItemsToReturn.Add(new OrderItem
         {
-            ProductId = Guid.NewGuid().ToString(),
+            ProductId = productId.ToString(),
             Quantity = 1, 
             Price = 75.00m.ToDecimalValue(),
             Currency = "USD"
@@ -340,8 +339,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         
         // check steps: processRefund failed, earlier steps Compensated
 
-        var sagaRepo = _server.GetService<ISagaRepository>();
-        var steps = await sagaRepo.GetStepLogsAsync(saga.Id, CancellationToken.None);
+        var steps = await _server.GetSagaStepLogsAsync(saga.Id);
 
         steps.Single(s => s.StepName == "ProcessRefund")
             .Status.Should().Be(StepStatus.Failed);
@@ -362,8 +360,8 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var eventTypes = events.Select(e => e.GetType().Name).ToList();
 
         eventTypes.Should().Contain("ReturnRequestCreatedEvent");
-        eventTypes.Should().Contain("ReturnItemsReceivedEvents");
-        eventTypes.Should().NotContain("ReturnRefundProessedEvent");
+        eventTypes.Should().Contain("ReturnItemsReceivedEvent");
+        eventTypes.Should().NotContain("ReturnRefundProcessedEvent");
         eventTypes.Should().NotContain("RefundCompletedEvents");
         
         _output.WriteLine("ReturnRequest did not complete (no refund events)");
@@ -375,7 +373,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
     {
         _output.WriteLine("Return Disaster - Webhook timeout, watchdog compensates");
 
-        var orderId = await CreateCompletedOrderAsync();
+        var (orderId, productId) = await CreateCompletedOrderAsync();
         
         // shipping success, but webhook never arrives
         _server.ShipmentServer
@@ -400,7 +398,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
         request.ItemsToReturn.Add(new OrderItem
         {
-            ProductId = Guid.NewGuid().ToString(),
+            ProductId = productId.ToString(),
             Quantity = 1,
             Price = 100.00m.ToDecimalValue(),
             Currency = "USD"
@@ -423,13 +421,12 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         // wait for sagaWatchdogService to detect and compensate ( runs every minute, mark stuck saga after 5 minutes)
         // for testing, we manually trigger watchdog logic (update updatedAt field)
         
-        _output.WriteLine("Simulating watchdog timeout (normally 5+ minutes");
-        _output.WriteLine("In real scenario: SagaWatchdogService detects saga stuck > 10 minutes");
-        _output.WriteLine("For test we will manually mark UpdatedAt as old");
+        _output.WriteLine("Simulating watchdog scenario: move saga to Running with old timestamp");
+        _output.WriteLine("Watchdog only picks up Running sagas (WaitingForEvent is intentionally paused)");
 
+        saga.Status = SagaStatus.Running;
         saga.UpdatedAt = DateTime.UtcNow.AddMinutes(-11);
-        var sagaRepo = _server.GetService<ISagaRepository>();
-        await sagaRepo.SaveAsync(saga, CancellationToken.None);
+        await _server.SaveSagaStateAsync(saga);
 
         await Task.Delay(TimeSpan.FromSeconds(70)); // wait 1 full watchdog cycle
         
@@ -449,8 +446,8 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
     }
     
-    // starting point
-    private async Task<Guid> CreateCompletedOrderAsync()
+    // starting point — returns (orderId, productId) so tests can build valid return requests
+    private async Task<(Guid orderId, Guid productId)> CreateCompletedOrderAsync()
     {
         // Configure mocks for order creation
         _server.PaymentService.ProcessShouldSucceed = true;
@@ -465,6 +462,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
                 .WithBodyAsJson(new { shipmentId = "ShipmentId", trackingNumber = "TrackingNumber" }));
 
         var customerId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
         var orderRequest = new CreateOrderRequest
         {
             CustomerId = customerId.ToString(),
@@ -481,7 +479,7 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
 
         orderRequest.Items.Add(new OrderItem
         {
-            ProductId = Guid.NewGuid().ToString(),
+            ProductId = productId.ToString(),
             Quantity = 1,
             Price = 29.99m.ToDecimalValue(),
             Currency = "USD"
@@ -491,10 +489,11 @@ public class RequestReturnE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var orderId = Guid.Parse(orderResponse.OrderId);
 
         // Wait for order saga to complete
-        await _server.WaitForSagaStatusAsync(
+        var saga = await _server.WaitForSagaStatusAsync(
             orderId, SagaTypes.OrderSaga, SagaStatus.Completed, timeoutSeconds: 30);
+        saga.Should().NotBeNull("order saga must complete before requesting return");
 
-        return orderId;
+        return (orderId, productId);
     }
 
 

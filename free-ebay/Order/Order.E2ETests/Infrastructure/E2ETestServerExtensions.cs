@@ -76,6 +76,24 @@ public static class E2ETestServerExtensions
         return null;
     }
 
+    public static async Task<List<SagaStepLog>> GetSagaStepLogsAsync(
+        this E2ETestServer server,
+        Guid sagaId)
+    {
+        using var scope = server.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<ISagaRepository>();
+        return await repo.GetStepLogsAsync(sagaId, CancellationToken.None);
+    }
+
+    public static async Task SaveSagaStateAsync(
+        this E2ETestServer server,
+        SagaState saga)
+    {
+        using var scope = server.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<ISagaRepository>();
+        await repo.SaveAsync(saga, CancellationToken.None);
+    }
+
     public static async Task<OrderResponse?> WaitForReadModelStatusAsync(
         this E2ETestServer server,
         Guid orderId,
