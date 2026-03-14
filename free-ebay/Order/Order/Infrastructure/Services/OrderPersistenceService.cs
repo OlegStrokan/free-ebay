@@ -17,6 +17,7 @@ public class OrderPersistenceService(
     IOutboxRepository outboxRepository,
     IIdempotencyRepository idempotencyRepository,
     ISnapshotRepository  snapshotRepository,
+    IEventPublisher eventPublisher,
     AppDbContext dbContext,
     ILogger<OrderPersistenceService> logger) : IOrderPersistenceService
 {
@@ -90,7 +91,7 @@ public class OrderPersistenceService(
                     await outboxRepository.AddAsync(
                         domainEvent.EventId, // helps to detect duplicates 
                         domainEvent.GetType().Name,
-                        JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                        eventPublisher.Serialize(domainEvent),
                         DateTime.UtcNow,
                         order.Id.Value.ToString(),
                         cancellationToken);
@@ -167,7 +168,7 @@ public class OrderPersistenceService(
                     await outboxRepository.AddAsync(
                         domainEvent.EventId,
                         domainEvent.GetType().Name,
-                        JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                        eventPublisher.Serialize(domainEvent),
                         domainEvent.OccurredOn,
                         order.Id.Value.ToString(),
                         cancellationToken);

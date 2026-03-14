@@ -21,6 +21,7 @@ public class ReturnRequestPersistenceService(
     IOutboxRepository outboxRepository,
     IIdempotencyRepository idempotencyRepository,
     IReturnRequestLookupRepository lookupRepository,
+    IEventPublisher eventPublisher,
     AppDbContext dbContext,
     ILogger<ReturnRequestPersistenceService> logger)
     : IReturnRequestPersistenceService
@@ -86,7 +87,7 @@ public class ReturnRequestPersistenceService(
                     await outboxRepository.AddAsync(
                         domainEvent.EventId,
                         domainEvent.GetType().Name,
-                        JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                        eventPublisher.Serialize(domainEvent),
                         domainEvent.OccurredOn,
                         returnRequest.Id.Value.ToString(),
                         cancellationToken);
@@ -134,7 +135,7 @@ public class ReturnRequestPersistenceService(
                     await outboxRepository.AddAsync(
                         domainEvent.EventId,
                         domainEvent.GetType().Name,
-                        JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                        eventPublisher.Serialize(domainEvent),
                         domainEvent.OccurredOn,
                         requestReturn.Id.Value.ToString(),
                         cancellationToken);

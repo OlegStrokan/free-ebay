@@ -152,6 +152,8 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
     }
 
 
+    public string Serialize(IDomainEvent @event) => SerializeEvent(@event);
+
     private string SerializeEvent<TEvent>(TEvent @event) where TEvent : IDomainEvent
     {
         return @event switch
@@ -177,7 +179,23 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
                 CreatedAt = e.CreatedAt
             }),
 
-            _ => System.Text.Json.JsonSerializer.Serialize(@event)
+            ReturnRequestCreatedEvent e => System.Text.Json.JsonSerializer.Serialize(new ReturnRequestCreatedEventDto
+            {
+                OrderId = e.OrderId.Value,
+                CustomerId = e.CustomerId.Value,
+                Reason = e.Reason,
+                ItemsToReturn = e.ItemsToReturn.Select(i => new OrderItemDto(
+                    i.ProductId.Value,
+                    i.Quantity,
+                    i.PriceAtPurchase.Amount,
+                    i.PriceAtPurchase.Currency
+                )).ToList(),
+                RefundAmount = e.RefundAmount.Amount,
+                Currency = e.RefundAmount.Currency,
+                RequestedAt = e.RequestedAt
+            }),
+
+            _ => System.Text.Json.JsonSerializer.Serialize(@event, @event.GetType())
         };
     }
 
