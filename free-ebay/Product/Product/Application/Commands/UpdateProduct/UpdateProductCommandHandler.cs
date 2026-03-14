@@ -25,7 +25,7 @@ internal sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProduc
                 return Result.Failure($"Product with ID {request.ProductId} was not found.");
 
             var categoryId = CategoryId.From(request.CategoryId);
-            var price      = Money.Create(request.Price, request.Currency);
+            var price = Money.Create(request.Price, request.Currency);
             var attributes = request.Attributes
                 .Select(a => new ProductAttribute(a.Key, a.Value))
                 .ToList();

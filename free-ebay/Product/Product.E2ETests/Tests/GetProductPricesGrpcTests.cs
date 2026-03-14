@@ -31,7 +31,7 @@ public class GetProductPricesGrpcTests : IClassFixture<E2ETestServer>, IAsyncLif
     [Fact]
     public async Task GetProductPrices_KnownProducts_ReturnsPricesWithCorrectDecimalPrecision()
     {
-        _output.WriteLine("GetProductPrices — happy path with decimal precision");
+        _output.WriteLine("GetProductPrices - happy path with decimal precision");
 
         var categoryId = await _server.SeedCategoryAsync("Electronics");
         var sellerId   = Guid.NewGuid();
@@ -85,7 +85,7 @@ public class GetProductPricesGrpcTests : IClassFixture<E2ETestServer>, IAsyncLif
     [Fact]
     public async Task GetProductPrices_NoneFound_ReturnsEmptyList()
     {
-        _output.WriteLine("GetProductPrices — all missing");
+        _output.WriteLine("GetProductPrices - all missing");
 
         var request = new GetProductPricesRequest();
         request.ProductIds.Add(Guid.NewGuid().ToString());

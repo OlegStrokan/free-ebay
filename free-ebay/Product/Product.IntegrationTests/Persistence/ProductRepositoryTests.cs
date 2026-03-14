@@ -51,9 +51,8 @@ public sealed class ProductRepositoryTests : IClassFixture<IntegrationFixture>
         loaded.Should().NotBeNull();
         loaded!.Id.Value.Should().Be(productId.Value);
         loaded.Name.Should().Be("Test Widget");
-        // @todo: fix it boy
-        //loaded.Price.Amount.Should().Be(29.99m);
-       // loaded.Price.Currency.Should().Be("USD");
+        loaded.Price.Amount.Should().Be(29.99m);
+        loaded.Price.Currency.Should().Be("USD");
         loaded.StockQuantity.Should().Be(10);
         loaded.Status.Should().Be(ProductStatus.Draft);
     }

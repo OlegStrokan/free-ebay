@@ -49,7 +49,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasColumnName("Status")
             .IsRequired();
 
-        builder.OwnsOne(x => x.Price, priceBuilder =>
+        builder.ComplexProperty(x => x.Price, priceBuilder =>
         {
             priceBuilder.Property(m => m.Amount)
                 .HasColumnName("Price")

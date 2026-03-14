@@ -32,7 +32,7 @@ public class GetProductGrpcTests : IClassFixture<E2ETestServer>, IAsyncLifetime
     [Fact]
     public async Task GetProduct_ActiveProduct_ReturnsCorrectDetails()
     {
-        _output.WriteLine("GetProduct — happy path");
+        _output.WriteLine("GetProduct - happy path");
 
         var categoryId = await _server.SeedCategoryAsync("Tools");
         var sellerId   = Guid.NewGuid();
@@ -84,7 +84,7 @@ public class GetProductGrpcTests : IClassFixture<E2ETestServer>, IAsyncLifetime
     [Fact]
     public async Task GetProduct_InvalidGuidFormat_ReturnsInvalidArgumentStatus()
     {
-        _output.WriteLine("GetProduct — invalid GUID");
+        _output.WriteLine("GetProduct - invalid GUID");
 
         var act = async () => await _client.GetProductAsync(new GetProductRequest
         {
@@ -100,7 +100,7 @@ public class GetProductGrpcTests : IClassFixture<E2ETestServer>, IAsyncLifetime
     [Fact]
     public async Task GetProduct_DraftProduct_ReturnsDraftProduct()
     {
-        _output.WriteLine("GetProduct — draft product (not yet activated)");
+        _output.WriteLine("GetProduct - draft product (not yet activated)");
 
         var categoryId = await _server.SeedCategoryAsync("Electronics");
         var productId  = await _server.CreateProductAsync(

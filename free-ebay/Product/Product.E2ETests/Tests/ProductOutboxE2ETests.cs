@@ -91,7 +91,7 @@ public class ProductOutboxE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
     [Fact]
     public async Task UpdateStock_ShouldPublishStockUpdatedEvent_ToKafka()
     {
-        _output.WriteLine("Outbox — StockUpdatedEvent published after stock change");
+        _output.WriteLine("Outbox - StockUpdatedEvent published after stock change");
 
         var categoryId = await _server.SeedCategoryAsync();
         var sellerId   = Guid.NewGuid();
@@ -112,7 +112,7 @@ public class ProductOutboxE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
     [Fact]
     public async Task MultipleEvents_FromSequentialCommands_AllArrivedOnKafka()
     {
-        _output.WriteLine("Outbox — sequential commands produce multiple distinct events");
+        _output.WriteLine("Outbox - sequential commands produce multiple distinct events");
 
         var categoryId = await _server.SeedCategoryAsync();
         var sellerId   = Guid.NewGuid();

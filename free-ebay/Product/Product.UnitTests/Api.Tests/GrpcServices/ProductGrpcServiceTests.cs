@@ -133,7 +133,7 @@ public class ProductGrpcServiceTests
     {
         var request = new GetProductPricesRequest { ProductIds = { "bad-guid" } };
 
-        // validation mocked to pass — FormatException thrown inside handler by Guid.Parse
+        // validation mocked to pass - FormatException thrown inside handler by Guid.Parse
         _getPricesValidator
             .ValidateAsync(request, Arg.Any<CancellationToken>())
             .Returns(new ValidationResult());
@@ -219,7 +219,7 @@ public class ProductGrpcServiceTests
             .ValidateAsync(request, Arg.Any<CancellationToken>())
             .Returns(new ValidationResult());
 
-        // only id1 returned — id2 should appear in not_found_ids
+        // only id1 returned - id2 should appear in not_found_ids
         _mediator
             .Send(Arg.Any<GetProductsQuery>(), Arg.Any<CancellationToken>())
             .Returns(Result<List<ProductDetailDto>>.Success([SampleDetail(id1)]));

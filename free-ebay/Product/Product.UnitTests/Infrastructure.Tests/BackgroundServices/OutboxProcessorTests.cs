@@ -223,7 +223,7 @@ public class OutboxProcessorTests
         var aggregateId = Guid.NewGuid().ToString();
         var order = new List<string>();
 
-        // Two messages from same aggregate — should process sequentially in OccurredOn order
+        // Two messages from same aggregate - should process sequentially in OccurredOn order
         var msg1 = MakeMessage("ProductCreatedEvent", aggregateId: aggregateId,
             occurredOn: DateTime.UtcNow.AddMinutes(-2));
         var msg2 = MakeMessage("ProductUpdatedEvent", aggregateId: aggregateId,
