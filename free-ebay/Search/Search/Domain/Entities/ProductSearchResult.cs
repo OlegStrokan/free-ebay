@@ -6,11 +6,11 @@ namespace Domain.Entities;
 public sealed class ProductSearchResult
 {
     private Guid _productId;
-    private string _name;
-    private string _category;
-    private Money _price;
+    private string _name = default!;
+    private string _category = default!;
+    private Money _price = default!;
     private double _relevanceScore;
-    private List<string> _imageUrls;
+    private List<string> _imageUrls = default!;
 
     public Guid ProductId => _productId;
     public string Name => _name;

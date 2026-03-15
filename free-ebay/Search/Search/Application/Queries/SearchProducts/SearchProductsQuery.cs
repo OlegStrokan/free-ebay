@@ -1,4 +1,3 @@
-using Application.Queries.SearchProducts;
 using Domain.Common.Interfaces;
 
 namespace Application.Queries.SearchProducts;

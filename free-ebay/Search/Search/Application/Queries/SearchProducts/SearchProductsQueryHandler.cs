@@ -1,14 +1,13 @@
 using Application.Gateways;
-using Application.Queries.SearchProducts;
 using Microsoft.Extensions.Logging;
 using Domain.Common.Interfaces;
 
 namespace Application.Queries.SearchProducts;
 
 public sealed class SearchProductsQueryHandler(
-    IElasticSearcher _elasticSearch,
-    IAiSearchGateway _aiGateway,
-    ILogger _logger)
+    IElasticsearchSearcher elasticsearchSearcher,
+    IAiSearchGateway aiGateway,
+    ILogger<SearchProductsQueryHandler> logger)
 : IQueryHandler<SearchProductsQuery, SearchProductsResult>
 {
     
@@ -20,13 +19,13 @@ public sealed class SearchProductsQueryHandler(
         {
             try
             {
-                return await _aiGateway
+                return await aiGateway
                     .SearchAsync(query, ct)
                     .WaitAsync(AiTimeout, ct);
             }
             catch (TimeoutException)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "AI search timed out after {Ms}ms for query [{Query}]. " +
                     "Falling back to Elasticsearch.",
                     AiTimeout.TotalMilliseconds,
@@ -34,13 +33,13 @@ public sealed class SearchProductsQueryHandler(
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
+                logger.LogError(ex,
                     "AI search threw an exception for query [{Query}]. " +
                     "Falling back to Elasticsearch.",
                     query.QueryText);
             }
         }
 
-        return await _elasticSearch.SearchAsync(query, ct);
+        return await elasticsearchSearcher.SearchAsync(query, ct);
     }
 }
