@@ -19,4 +19,12 @@ class Settings(BaseSettings):
     top_k: int = 50
     rrf_K: int = 60
 
+    @property
+    def grpc_port(self) -> int:
+        return self.gprc_port
+
+    @property
+    def rrf_k(self) -> int:
+        return self.rrf_K
+
 settings = Settings()

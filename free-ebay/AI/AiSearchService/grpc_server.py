@@ -12,7 +12,7 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
     def __init__(self, llm_client, embedding_client, qdrant, es):
         self._llm = llm_client
         self._embedding = embedding_client
-        self.qdrant = qdrant
+        self._qdrant = qdrant
         self._es = es
 
     async def Search(self, request, context):
@@ -46,7 +46,7 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
         if request.debug and result.parsed_query:
             parsed_debug = json.dumps({
                 "semantic_query": result.parsed_query.semantic_query,
-                "keyword": result.parsed_query.keywords,
+                "keywords": result.parsed_query.keywords,
                 "confidence": result.parsed_query.confidence,
             })
 
@@ -60,7 +60,7 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
 async def serve(servicer: AiSearchServicer) -> None:
     server = grpc.aio.server()
     ai_search_pb2_grpc.add_AiSearchServiceServicer_to_server(servicer, server)
-    server.add_insecure_port(f"[::]:{settings.gprc_port}")
+    server.add_insecure_port(f"[::]:{settings.grpc_port}")
     await server.start()
-    log.info("grpc_server_started", port=settings.gprc_port)
+    log.info("grpc_server_started", port=settings.grpc_port)
     await server.wait_for_termination()
