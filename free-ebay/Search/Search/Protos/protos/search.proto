@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protos.Search";
+
+package search;
+
+service SearchService {
+  rpc Search (SearchRequest) returns (SearchResponse);
+}
+
+message SearchRequest {
+  string query = 1;
+  bool use_ai = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message SearchResponse {
+  repeated SearchResultItem items = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 size = 4;
+  bool was_ai_search = 5;
+  string parsed_query_debug = 6;
+}
+
+message SearchResultItem {
+  string product_id = 1;
+  string name = 2;
+  string category = 3;
+  double price = 4;
+  string currency = 5;
+  double relevance_score = 6;
+  repeated string image_urls = 7;
+}

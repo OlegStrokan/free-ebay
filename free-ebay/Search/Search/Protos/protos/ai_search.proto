@@ -16,7 +16,7 @@ message AiSearchRequest {
 }
 
 message AiSearchResponse {
-  repeated AiSearchRequest items = 1;
+  repeated AiSearchResultItem items = 1;
   int32 total_count = 2;
   string parsed_query_debug = 3;
   bool used_ai = 4;
