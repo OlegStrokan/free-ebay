@@ -132,6 +132,11 @@ public class SagaWatchdogService : BackgroundService
         ISagaRepository sagaRepository,
         CancellationToken cancellationToken)
     {
+        if (saga.Status != SagaStatus.Completed)
+        {
+            return false;
+        }
+
         try
         {
             var steps = await sagaRepository.GetStepLogsAsync(saga.Id, cancellationToken);
