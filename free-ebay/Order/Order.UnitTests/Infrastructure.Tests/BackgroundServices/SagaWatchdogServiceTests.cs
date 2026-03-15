@@ -39,7 +39,7 @@ public class SagaWatchdogServiceTests
         {
             Id       = sagaId,
             SagaType = "OrderSaga",
-            Status   = SagaStatus.Running,
+            Status   = SagaStatus.Completed,
             // UpdatedAt can be recent - stuck detection is done by the repository; we
             // just care about the in-service logic after a saga is returned as "stuck"
             UpdatedAt = DateTime.UtcNow.AddMinutes(-3),
