@@ -35,14 +35,14 @@ public sealed class ElasticsearchSearcher : IElasticsearchSearcher
                 .Query(q => q
                     .MultiMatch(mm => mm
                         .Query(query.QueryText)
-                        .Fields(new[]
+                        .Fields(new Field[]
                         {
-                            "name^3",
-                            "description",
-                            "category^2",
-                            "brand^2",
-                            "color",
-                            "layout"
+                            new("name", 3.0),
+                            new("description"),
+                            new("category", 2.0),
+                            new("brand", 2.0),
+                            new("color"),
+                            new("layout")
                         })
                         .Type(TextQueryType.BestFields)
                     )
@@ -77,9 +77,15 @@ public sealed class ElasticsearchSearcher : IElasticsearchSearcher
                 ImageUrls: h.Source.ImageUrls))
             .ToList();
 
+        var totalCount = response.HitsMetadata?.Total is { } total
+            ? total.Match(
+                totalHits => (int)totalHits.Value,
+                value => (int)value)
+            : items.Count;
+
         return new SearchProductsResult(
             Items: items,
-            TotalCount: (int)response.Total,
+            TotalCount: totalCount,
             Page: query.Page,
             Size: query.Size,
             WasAiSearch: false,

@@ -23,7 +23,8 @@ public sealed class ElasticsearchIndexInitializer
     public async Task EnsureIndexAsync(CancellationToken ct = default)
     {
         var exists = await _client.Indices.ExistsAsync(IndexName, ct);
-        if (exists.IsValidResponse)
+        var indexExists = exists.ApiCallDetails.HttpStatusCode == 200;
+        if (indexExists)
         {
             _logger.LogInformation(
                 "Elasticsearch index [{Index}] already exists. Skipping.",
