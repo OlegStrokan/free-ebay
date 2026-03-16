@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# 
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Payment", "Payment", "{2EC8573F-DB32-40FC-B54F-DF31C0835105}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Payment\Domain\Domain.csproj", "{1D4E4A3B-BFD4-4DF2-B7E5-15C2B6EBB362}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1D4E4A3B-BFD4-4DF2-B7E5-15C2B6EBB362}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D4E4A3B-BFD4-4DF2-B7E5-15C2B6EBB362}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D4E4A3B-BFD4-4DF2-B7E5-15C2B6EBB362}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D4E4A3B-BFD4-4DF2-B7E5-15C2B6EBB362}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1D4E4A3B-BFD4-4DF2-B7E5-15C2B6EBB362} = {2EC8573F-DB32-40FC-B54F-DF31C0835105}
+	EndGlobalSection
+EndGlobal
