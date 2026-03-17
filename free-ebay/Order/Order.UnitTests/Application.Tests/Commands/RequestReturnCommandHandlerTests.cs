@@ -1,5 +1,6 @@
 using Application.Commands.RequestReturn;
 using Application.DTOs;
+using Application.Gateways;
 using Application.Interfaces;
 using Domain.Entities.Order;
 using Domain.Entities.RequestReturn;
@@ -23,12 +24,28 @@ public class RequestReturnCommandHandlerTest
     private readonly IReturnRequestPersistenceService _returnRequestPersistenceService =
         Substitute.For<IReturnRequestPersistenceService>();
 
+    private readonly IUserGateway _userGateway =
+        Substitute.For<IUserGateway>();
+
     private readonly ReturnPolicyService _returnPolicyService = new();
     private readonly ILogger<RequestReturnCommandHandler> _logger =
         Substitute.For<ILogger<RequestReturnCommandHandler>>();
 
     private RequestReturnCommandHandler BuildHandler() =>
-        new(_orderPersistenceService, _idempotencyRepository, _returnRequestPersistenceService, _returnPolicyService, _logger);
+        new(_orderPersistenceService, _idempotencyRepository, _returnRequestPersistenceService, _userGateway, _returnPolicyService, _logger);
+
+    private void SetupUserGateway(Guid customerId)
+    {
+        _userGateway
+            .GetUserProfileAsync(customerId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new UserProfileDto(
+                customerId,
+                $"{customerId}@test.local",
+                "Return Customer",
+                "US",
+                "Standard",
+                true)));
+    }
 
     // -------------------------------------------------------------------------
 
@@ -62,6 +79,8 @@ public class RequestReturnCommandHandlerTest
         _orderPersistenceService
             .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(order);
+
+        SetupUserGateway(order.CustomerId.Value);
 
         _returnRequestPersistenceService
             .CreateReturnRequestAsync(
@@ -147,6 +166,8 @@ public class RequestReturnCommandHandlerTest
             .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(pendingOrder);
 
+        SetupUserGateway(pendingOrder.CustomerId.Value);
+
         var result = await BuildHandler().Handle(
             CreateValidCommand(pendingOrder.Id.Value, items.First().ProductId.Value),
             CancellationToken.None);
@@ -167,6 +188,8 @@ public class RequestReturnCommandHandlerTest
         _orderPersistenceService
             .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(order);
+
+        SetupUserGateway(order.CustomerId.Value);
 
         _returnRequestPersistenceService
             .CreateReturnRequestAsync(

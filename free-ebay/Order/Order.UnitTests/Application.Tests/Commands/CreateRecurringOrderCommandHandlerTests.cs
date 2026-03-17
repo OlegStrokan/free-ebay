@@ -1,5 +1,6 @@
 using Application.Commands.RecurringOrder.CreateRecurringOrder;
 using Application.DTOs;
+using Application.Gateways;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Entities.Subscription;
@@ -18,11 +19,31 @@ public class CreateRecurringOrderCommandHandlerTests
     private readonly IIdempotencyRepository _idempotencyRepository =
         Substitute.For<IIdempotencyRepository>();
 
+    private readonly IUserGateway _userGateway =
+        Substitute.For<IUserGateway>();
+
     private readonly ILogger<CreateRecurringOrderCommandHandler> _logger =
         Substitute.For<ILogger<CreateRecurringOrderCommandHandler>>();
 
     private CreateRecurringOrderCommandHandler BuildHandler() =>
-        new(_persistenceService, _idempotencyRepository, _logger);
+        new(_persistenceService, _idempotencyRepository, _userGateway, _logger);
+
+    private void SetupUserGateway(bool isActive = true)
+    {
+        _userGateway
+            .GetUserProfileAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var customerId = callInfo.ArgAt<Guid>(0);
+                return Task.FromResult(new UserProfileDto(
+                    customerId,
+                    $"{customerId}@test.local",
+                    "Test Customer",
+                    "US",
+                    "Standard",
+                    isActive));
+            });
+    }
 
     private static CreateRecurringOrderCommand ValidCommand(string idempotencyKey = "idem-recurring-001") =>
         new(
@@ -38,6 +59,7 @@ public class CreateRecurringOrderCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnSuccessWithNewId_WhenOrderIsCreated()
     {
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -70,11 +92,16 @@ public class CreateRecurringOrderCommandHandlerTests
             Arg.Any<RecurringOrder>(),
             Arg.Any<string>(),
             Arg.Any<CancellationToken>());
+
+        await _userGateway.DidNotReceive().GetUserProfileAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenPersistenceThrows()
     {
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -92,6 +119,7 @@ public class CreateRecurringOrderCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldPassCorrectIdempotencyKey_ToPersistenceService()
     {
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -101,6 +129,25 @@ public class CreateRecurringOrderCommandHandlerTests
         await _persistenceService.Received(1).CreateAsync(
             Arg.Any<RecurringOrder>(),
             Arg.Is<string>(k => k == "my-special-key"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenCustomerIsBlocked()
+    {
+        SetupUserGateway(isActive: false);
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        var result = await BuildHandler().Handle(ValidCommand(), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("blocked", result.Error, StringComparison.OrdinalIgnoreCase);
+
+        await _persistenceService.DidNotReceive().CreateAsync(
+            Arg.Any<RecurringOrder>(),
+            Arg.Any<string>(),
             Arg.Any<CancellationToken>());
     }
 }

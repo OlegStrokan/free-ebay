@@ -178,6 +178,9 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddScoped<IProductGateway>(_ =>
                 new FakeGrpcProductGateway(_productService.Address));
 
+            services.RemoveAll<IUserGateway>();
+            services.AddScoped<IUserGateway>(_ => new FakeUserGateway());
+
             services.RemoveAll<IShippingGateway>();
             services.AddScoped<IShippingGateway>(_ =>
                 new WireMockShippingGateway(_wireMockServer.Urls[0]));

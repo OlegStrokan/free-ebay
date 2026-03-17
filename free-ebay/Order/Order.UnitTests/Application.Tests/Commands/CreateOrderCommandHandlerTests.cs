@@ -24,11 +24,14 @@ public class CreateOrderCommandHandlerTests
     private readonly IProductGateway _productGateway =
         Substitute.For<IProductGateway>();
 
+    private readonly IUserGateway _userGateway =
+        Substitute.For<IUserGateway>();
+
     private readonly ILogger<CreateOrderCommandHandler> _logger =
         Substitute.For<ILogger<CreateOrderCommandHandler>>();
 
     private CreateOrderCommandHandler BuildHandler() =>
-        new(_orderPersistenceService, _idempotencyRepository, _productGateway, _logger);
+        new(_orderPersistenceService, _idempotencyRepository, _productGateway, _userGateway, _logger);
 
     // default setup: gateway returns 99.50 USD - intentionally different from the
     // 200 USD baked into CreateValidCommand() so tests can verify the override
@@ -39,10 +42,28 @@ public class CreateOrderCommandHandlerTests
             .Returns(new List<ProductPriceDto> { new(ProductId, price, currency) });
     }
 
+    private void SetupUserGateway(bool isActive = true)
+    {
+        _userGateway
+            .GetUserProfileAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var customerId = callInfo.ArgAt<Guid>(0);
+                return Task.FromResult(new UserProfileDto(
+                    customerId,
+                    $"{customerId}@test.local",
+                    "Test Customer",
+                    "US",
+                    "Standard",
+                    isActive));
+            });
+    }
+
     [Fact]
     public async Task Handle_ShouldReturnSuccess_AndCallPersistence_WhenOrderIsCreated()
     {
         SetupProductGateway();
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -76,6 +97,10 @@ public class CreateOrderCommandHandlerTests
             Arg.Any<string>(),
             Arg.Any<CancellationToken>());
 
+        await _userGateway.DidNotReceive().GetUserProfileAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
+
         await _productGateway.DidNotReceive().GetCurrentPricesAsync(
             Arg.Any<IEnumerable<Guid>>(),
             Arg.Any<CancellationToken>());
@@ -85,6 +110,7 @@ public class CreateOrderCommandHandlerTests
     public async Task Handle_ShouldReturnFailure_WhenPersistenceThrows()
     {
         SetupProductGateway();
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -108,6 +134,7 @@ public class CreateOrderCommandHandlerTests
         const decimal gatewayPrice = 99.50m;
 
         SetupProductGateway(price: gatewayPrice);
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -137,6 +164,7 @@ public class CreateOrderCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenProductGatewayThrowsProductNotFoundException()
     {
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -159,6 +187,7 @@ public class CreateOrderCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenProductGatewayThrowsGatewayUnavailable()
     {
+        SetupUserGateway();
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((IdempotencyRecord?)null);
@@ -171,6 +200,29 @@ public class CreateOrderCommandHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Product Service is down", result.Error);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenCustomerIsBlocked()
+    {
+        SetupUserGateway(isActive: false);
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        var result = await BuildHandler().Handle(CreateValidCommand(), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("blocked", result.Error, StringComparison.OrdinalIgnoreCase);
+
+        await _productGateway.DidNotReceive().GetCurrentPricesAsync(
+            Arg.Any<IEnumerable<Guid>>(),
+            Arg.Any<CancellationToken>());
+
+        await _orderPersistenceService.DidNotReceive().CreateOrderAsync(
+            Arg.Any<Order>(),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     // -------------------------------------------------------------------------

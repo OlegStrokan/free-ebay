@@ -138,7 +138,9 @@ public class B2BOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         for (var i = 0; i < 20; i++)
         {
             updatedModel = await _server.GetB2BOrderReadModelAsync(b2bOrderId);
-            if (updatedModel?.TotalPrice > 0)
+            if (updatedModel is not null &&
+                updatedModel.TotalPrice > 0 &&
+                updatedModel.CommentsJson.Contains("Added 3 units", StringComparison.Ordinal))
                 break;
             await Task.Delay(1000);
         }

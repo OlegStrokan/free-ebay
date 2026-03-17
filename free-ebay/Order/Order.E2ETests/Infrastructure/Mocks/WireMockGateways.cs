@@ -338,3 +338,19 @@ public class FakeGrpcProductGateway : IProductGateway
             .ToList();
     }
 }
+
+public class FakeUserGateway : IUserGateway
+{
+    public Task<UserProfileDto> GetUserProfileAsync(Guid customerId, CancellationToken cancellationToken)
+    {
+        var profile = new UserProfileDto(
+            customerId,
+            $"{customerId}@e2e.local",
+            "E2E Customer",
+            "US",
+            "Standard",
+            true);
+
+        return Task.FromResult(profile);
+    }
+}
