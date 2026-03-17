@@ -19,6 +19,7 @@ public class CreateOrderCommandHandler
         IOrderPersistenceService orderPersistenceService,
         IIdempotencyRepository idempotencyRepository,
         IProductGateway productGateway,
+        IUserGateway userGateway,
         ILogger<CreateOrderCommandHandler> logger
         ) : IRequestHandler<CreateOrderCommand, Result<Guid>>
 {
@@ -41,6 +42,16 @@ public class CreateOrderCommandHandler
                     existingRecord.ResultId);
 
                 return Result<Guid>.Success(existingRecord.ResultId);
+            }
+
+            var customerProfile = await userGateway.GetUserProfileAsync(
+                request.CustomerId,
+                cancellationToken);
+
+            if (!customerProfile.IsActive)
+            {
+                return Result<Guid>.Failure(
+                    $"Customer {request.CustomerId} is blocked and cannot create orders");
             }
             
             var customerId = CustomerId.From(request.CustomerId);

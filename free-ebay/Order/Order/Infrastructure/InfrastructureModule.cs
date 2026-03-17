@@ -14,6 +14,11 @@ using Infrastructure.Persistence.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.EventIdempotencyChecker;
 using Microsoft.EntityFrameworkCore;
+using Protos.Accounting;
+using Protos.Inventory;
+using Protos.Payment;
+using Protos.Product;
+using Protos.User;
 using StackExchange.Redis;
 
 namespace Infrastructure;
@@ -25,6 +30,8 @@ public static class InfrastructureModule
     {
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
         services.Configure<ShippingApiOptions>(configuration.GetSection("Shipping"));
+
+        services.AddGrpcGatewayClients(configuration);
 
         services.AddSingleton<IConsumer<string, string>>(sp =>
         {
@@ -96,6 +103,7 @@ public static class InfrastructureModule
 
         // Gateways
         services.AddScoped<IProductGateway, ProductGateway>();
+        services.AddScoped<IUserGateway, UserGateway>();
         services.AddScoped<IInventoryGateway, InventoryGateway>();
         services.AddScoped<IPaymentGateway, PaymentGateway>();
         services.AddHttpClient<IShippingGateway, ShippingGateway>();
@@ -113,5 +121,52 @@ public static class InfrastructureModule
 
         return services;
         
+    }
+
+    private static IServiceCollection AddGrpcGatewayClients(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        RegisterGrpcClient<ProductService.ProductServiceClient>(
+            services,
+            configuration["GrpcServices:ProductUrl"] ?? "http://product-service:8080");
+
+        RegisterGrpcClient<InventoryService.InventoryServiceClient>(
+            services,
+            configuration["GrpcServices:InventoryUrl"] ?? "http://inventory-service:8080");
+
+        RegisterGrpcClient<PaymentService.PaymentServiceClient>(
+            services,
+            configuration["GrpcServices:PaymentUrl"] ?? "http://payment-service:8080");
+
+        RegisterGrpcClient<AccountingService.AccountingServiceClient>(
+            services,
+            configuration["GrpcServices:AccountingUrl"] ?? "http://accounting-service:8080");
+
+        RegisterGrpcClient<UserServiceProto.UserServiceProtoClient>(
+            services,
+            configuration["GrpcServices:UserUrl"] ?? "http://user-service:8080");
+
+        return services;
+    }
+
+    private static void RegisterGrpcClient<TClient>(
+        IServiceCollection services,
+        string address)
+        where TClient : class
+    {
+        services.AddGrpcClient<TClient>(options =>
+        {
+            options.Address = new Uri(address);
+        })
+        .ConfigureChannel(options =>
+        {
+            options.HttpHandler = new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                EnableMultipleHttp2Connections = true
+            };
+        });
     }
 }

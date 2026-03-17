@@ -3,6 +3,7 @@ using System.Net.Mail;
 using System.Text;
 using Application.DTOs;
 using Application.Gateways;
+using Application.Gateways.Exceptions;
 
 namespace Infrastructure.Gateways;
 
@@ -11,6 +12,7 @@ namespace Infrastructure.Gateways;
 // in external email system listen for kafka messages.....i guess
 public class EmailGateway
 (IConfiguration configuration,
+    IUserGateway userGateway,
     ILogger<EmailGateway> logger) : IEmailGateway
 {
 
@@ -24,7 +26,6 @@ public class EmailGateway
         DateTime estimatedDelivery,
         CancellationToken cancellationToken)
     {
-        // @todo: replace with real customer email lookup when user service will be ready
         logger.LogInformation(
             "Sending order confirmation for Order {OrderId} to Customer {CustomerId}. " +
             "Total: {Total} {Currency}. Estimated delivery: {EstimatedDelivery}",
@@ -49,16 +50,36 @@ public class EmailGateway
         var subject = $"Order Confirmation #{orderId}";
         var body = BuildOrderConfirmationBody(orderId, orderTotal, currency, items, deliveryDelivery,
             estimatedDelivery);
+    // @todo: should be refactored
+        string recipientEmail;
+        try
+        {
+            var customerProfile = await userGateway.GetUserProfileAsync(customerId, cancellationToken);
+            recipientEmail = customerProfile.Email;
+        }
+        catch (CustomerNotFoundException ex)
+        {
+            logger.LogWarning(ex,
+                "Cannot send order confirmation email for Order {OrderId}. Customer {CustomerId} not found.",
+                orderId,
+                customerId);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+        {
+            logger.LogWarning(
+                "Cannot send order confirmation email for Order {OrderId}. Customer {CustomerId} has no email.",
+                orderId,
+                customerId);
+            return;
+        }
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {
             Credentials = new NetworkCredential(smtpUser, smtpPassword),
             EnableSsl = true
         };
-        
-        // @todo: real implementation should resolve customer email via User service gRPC
-        // placeholder recipient - swap with actual lookup
-        var recipientEmail = $"{customerId}@placeholder.internal";
 
         var message = new MailMessage(fromAddress, recipientEmail, subject, body)
         {

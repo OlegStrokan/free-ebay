@@ -1,4 +1,5 @@
 using Application.Common;
+using Application.Gateways;
 using Application.Interfaces;
 using Domain.ValueObjects;
 using MediatR;
@@ -9,6 +10,7 @@ namespace Application.Commands.StartB2BOrder;
 public class StartB2BOrderCommandHandler(
     IB2BOrderPersistenceService persistenceService,
     IIdempotencyRepository idempotencyRepository,
+    IUserGateway userGateway,
     ILogger<StartB2BOrderCommandHandler> logger)
     : IRequestHandler<StartB2BOrderCommand, Result<Guid>>
 {
@@ -23,6 +25,16 @@ public class StartB2BOrderCommandHandler(
                     "Duplicate StartB2BOrder for key {Key}. Returning existing {Id}",
                     request.IdempotencyKey, existing.ResultId);
                 return Result<Guid>.Success(existing.ResultId);
+            }
+
+            var customerProfile = await userGateway.GetUserProfileAsync(
+                request.CustomerId,
+                cancellationToken);
+
+            if (!customerProfile.IsActive)
+            {
+                return Result<Guid>.Failure(
+                    $"Customer {request.CustomerId} is blocked and cannot create orders");
             }
 
             var customerId = CustomerId.From(request.CustomerId);

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Application.Common;
 using Application.DTOs;
+using Application.Gateways;
 using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
@@ -17,6 +18,7 @@ public class RequestReturnCommandHandler(
     IOrderPersistenceService orderPersistenceService,
     IIdempotencyRepository idempotencyRepository,
     IReturnRequestPersistenceService returnRequestPersistenceService,
+    IUserGateway userGateway,
     ReturnPolicyService returnPolicyService,
     ILogger<RequestReturnCommandHandler> logger
         ) : IRequestHandler<RequestReturnCommand, Result<Guid>>
@@ -70,17 +72,14 @@ public class RequestReturnCommandHandler(
 
                 var refundAmount = Order.CalculateTotalPrice(itemsToReturn);
 
-               /* @todo: integrate user service
-                * to make it correct i need to update user proto and 
-                * take all needed info as countryCode, CustomerTier
-                * in addition i need one more integration to product to get
-                * list of categories which products have from current order
-                * for now it's enough
-                */
+                var customerProfile = await userGateway.GetUserProfileAsync(
+                    order.CustomerId.Value,
+                    cancellationToken);
+
                 var policyContext = new ReturnPolicyContext(
-                    CountryCode: "US",
+                    CountryCode: customerProfile.CountryCode,
                     ProductCategories: new List<string>(), 
-                    CustomerTier: "Standard", 
+                    CustomerTier: customerProfile.CustomerTier,
                     IsHolidaySeason: false 
                 );
                 

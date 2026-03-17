@@ -1,5 +1,6 @@
 using Application.Common;
 using Application.DTOs;
+using Application.Gateways;
 using Application.Interfaces;
 using Domain.Entities.Subscription;
 using Domain.Interfaces;
@@ -12,6 +13,7 @@ namespace Application.Commands.RecurringOrder.CreateRecurringOrder;
 public sealed class CreateRecurringOrderCommandHandler(
     IRecurringOrderPersistenceService persistenceService,
     IIdempotencyRepository idempotencyRepository,
+    IUserGateway userGateway,
     ILogger<CreateRecurringOrderCommandHandler> logger)
     : IRequestHandler<CreateRecurringOrderCommand, Result<Guid>>
 {
@@ -32,6 +34,16 @@ public sealed class CreateRecurringOrderCommandHandler(
                         request.IdempotencyKey, existing.ResultId);
                     return Result<Guid>.Success(existing.ResultId);
                 }
+            }
+
+            var customerProfile = await userGateway.GetUserProfileAsync(
+                request.CustomerId,
+                cancellationToken);
+
+            if (!customerProfile.IsActive)
+            {
+                return Result<Guid>.Failure(
+                    $"Customer {request.CustomerId} is blocked and cannot create orders");
             }
 
             var customerId = CustomerId.From(request.CustomerId);
