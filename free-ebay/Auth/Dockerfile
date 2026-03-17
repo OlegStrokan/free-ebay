@@ -3,16 +3,16 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY Auth.sln ./
-COPY src/Api/Api.csproj                         src/Api/
-COPY src/Application/Application.csproj         src/Application/
-COPY src/Domain/Domain.csproj                   src/Domain/
-COPY src/Infrastructure/Infrastructure.csproj   src/Infrastructure/
-COPY src/Protos/Protos.csproj                   src/Protos/
+COPY Auth/Api/Api.csproj                         Auth/Api/
+COPY Auth/Application/Application.csproj         Auth/Application/
+COPY Auth/Domain/Domain.csproj                   Auth/Domain/
+COPY Auth/Infrastructure/Infrastructure.csproj   Auth/Infrastructure/
+COPY Auth/Protos/Protos.csproj                   Auth/Protos/
 
 RUN dotnet restore Auth.sln
 
 COPY . .
-RUN dotnet publish src/Api/Api.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish Auth/Api/Api.csproj -c Release -o /app/publish --no-restore
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime

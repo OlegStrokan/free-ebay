@@ -1,25 +1,34 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D263EFA0-AB44-4A1C-B1F7-58104F8EF046}"
+# 
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Auth", "Auth", "{D263EFA0-AB44-4A1C-B1F7-58104F8EF046}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E3C7DA1F-97CD-4CD1-B53E-4F20A6C8C123}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Auth.UnitTests", "Auth.UnitTests", "{E3C7DA1F-97CD-4CD1-B53E-4F20A6C8C123}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protos", "src\Protos\Protos.csproj", "{F1426CE7-65EA-45C2-943B-0FE6F633BBDD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protos", "Auth\Protos\Protos.csproj", "{F1426CE7-65EA-45C2-943B-0FE6F633BBDD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Domain\Domain.csproj", "{F47F0067-C8D2-453E-B29E-89784E67D355}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Auth\Domain\Domain.csproj", "{F47F0067-C8D2-453E-B29E-89784E67D355}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Application\Application.csproj", "{16351308-7A22-4C97-9328-02DD65296650}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Auth\Application\Application.csproj", "{16351308-7A22-4C97-9328-02DD65296650}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Infrastructure\Infrastructure.csproj", "{23BC069E-15EC-4A17-9554-F028520A0051}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Auth\Infrastructure\Infrastructure.csproj", "{23BC069E-15EC-4A17-9554-F028520A0051}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "src\Api\Api.csproj", "{3EE0C1CB-0632-4572-A798-A361A43246C0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "Auth\Api\Api.csproj", "{3EE0C1CB-0632-4572-A798-A361A43246C0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Tests", "tests\Api.Tests\Api.Tests.csproj", "{2B27CE84-9291-401C-B939-4312D87F2643}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Tests", "Auth.UnitTests\Api.Tests\Api.Tests.csproj", "{2B27CE84-9291-401C-B939-4312D87F2643}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application.Tests", "tests\Application.Tests\Application.Tests.csproj", "{AF97FE26-D3F7-44B4-A951-CBDE6AD4456A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application.Tests", "Auth.UnitTests\Application.Tests\Application.Tests.csproj", "{AF97FE26-D3F7-44B4-A951-CBDE6AD4456A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain.Tests", "tests\Domain.Tests\Domain.Tests.csproj", "{8A4BC8D2-58A5-43DC-8DB9-CB102C2BDA14}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain.Tests", "Auth.UnitTests\Domain.Tests\Domain.Tests.csproj", "{8A4BC8D2-58A5-43DC-8DB9-CB102C2BDA14}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.Tests", "tests\Infrastructure.Tests\Infrastructure.Tests.csproj", "{DFE90030-C6A5-43AD-8CD6-3CF9BD880E5E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.Tests", "Auth.UnitTests\Infrastructure.Tests\Infrastructure.Tests.csproj", "{DFE90030-C6A5-43AD-8CD6-3CF9BD880E5E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Auth.IntegrationTests", "Auth.IntegrationTests", "{C9DA931D-DE79-4591-A76C-1F5A9B935768}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Auth.E2ETests", "Auth.E2ETests", "{2BAC2888-60D1-40D3-802A-078E47D5D6D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth.IntegrationTests", "Auth.IntegrationTests\Auth.IntegrationTests.csproj", "{C6D98F21-D4C9-4850-9267-11B421EF062F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth.E2ETests", "Auth.E2ETests\Auth.E2ETests.csproj", "{37A88648-5840-477C-A3E2-380AC0CBED82}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,6 +72,14 @@ Global
 		{DFE90030-C6A5-43AD-8CD6-3CF9BD880E5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DFE90030-C6A5-43AD-8CD6-3CF9BD880E5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DFE90030-C6A5-43AD-8CD6-3CF9BD880E5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6D98F21-D4C9-4850-9267-11B421EF062F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6D98F21-D4C9-4850-9267-11B421EF062F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6D98F21-D4C9-4850-9267-11B421EF062F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6D98F21-D4C9-4850-9267-11B421EF062F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37A88648-5840-477C-A3E2-380AC0CBED82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37A88648-5840-477C-A3E2-380AC0CBED82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37A88648-5840-477C-A3E2-380AC0CBED82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37A88648-5840-477C-A3E2-380AC0CBED82}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F1426CE7-65EA-45C2-943B-0FE6F633BBDD} = {D263EFA0-AB44-4A1C-B1F7-58104F8EF046}
@@ -74,5 +91,7 @@ Global
 		{AF97FE26-D3F7-44B4-A951-CBDE6AD4456A} = {E3C7DA1F-97CD-4CD1-B53E-4F20A6C8C123}
 		{8A4BC8D2-58A5-43DC-8DB9-CB102C2BDA14} = {E3C7DA1F-97CD-4CD1-B53E-4F20A6C8C123}
 		{DFE90030-C6A5-43AD-8CD6-3CF9BD880E5E} = {E3C7DA1F-97CD-4CD1-B53E-4F20A6C8C123}
+		{C6D98F21-D4C9-4850-9267-11B421EF062F} = {C9DA931D-DE79-4591-A76C-1F5A9B935768}
+		{37A88648-5840-477C-A3E2-380AC0CBED82} = {2BAC2888-60D1-40D3-802A-078E47D5D6D2}
 	EndGlobalSection
 EndGlobal
