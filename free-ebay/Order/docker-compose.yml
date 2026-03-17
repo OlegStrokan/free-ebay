@@ -1,0 +1,36 @@
+name: order-service-deps
+
+services:
+  postgres-write:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: order
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order_write_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_write_data:/var/lib/postgresql/data
+
+  postgres-read:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: order_read
+      POSTGRES_USER: order_read
+      POSTGRES_PASSWORD: order_read_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_read_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_write_data:
+  postgres_read_data:
+  redis_data:
