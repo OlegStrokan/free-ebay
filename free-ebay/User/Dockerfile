@@ -3,16 +3,16 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY User.sln ./
-COPY src/Api/Api.csproj                         src/Api/
-COPY src/Application/Application.csproj         src/Application/
-COPY src/Domain/Domain.csproj                   src/Domain/
-COPY src/Infrastructure/Infrastructure.csproj   src/Infrastructure/
-COPY src/Protos/Protos.csproj                   src/Protos/
+COPY User/Api/Api.csproj                         User/Api/
+COPY User/Application/Application.csproj         User/Application/
+COPY User/Domain/Domain.csproj                   User/Domain/
+COPY User/Infrastructure/Infrastructure.csproj   User/Infrastructure/
+COPY User/Protos/Protos.csproj                   User/Protos/
 
 RUN dotnet restore User.sln
 
 COPY . .
-RUN dotnet publish src/Api/Api.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish User/Api/Api.csproj -c Release -o /app/publish --no-restore
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
