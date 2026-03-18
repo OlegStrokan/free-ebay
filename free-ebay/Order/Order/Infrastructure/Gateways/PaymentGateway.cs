@@ -12,7 +12,7 @@ public sealed class PaymentGateway(
     PaymentService.PaymentServiceClient  client,
     ILogger<PaymentGateway> logger) : IPaymentGateway
 {
-    public async Task<string> ProcessPaymentAsync(
+    public async Task<PaymentProcessingResult> ProcessPaymentAsync(
         Guid orderId,
         Guid customerId, 
         decimal amount,
@@ -32,30 +32,60 @@ public sealed class PaymentGateway(
         try
         {
             var response = await client.ProcessPaymentAsync(request, cancellationToken: cancellationToken);
+            var status = MapPaymentStatus(response);
 
-            if (!response.Success)
+            var providerPaymentIntentId = string.IsNullOrWhiteSpace(response.ProviderPaymentIntentId)
+                ? null
+                : response.ProviderPaymentIntentId;
+
+            var clientSecret = string.IsNullOrWhiteSpace(response.ClientSecret)
+                ? null
+                : response.ClientSecret;
+
+            var errorCode = string.IsNullOrWhiteSpace(response.ErrorCode)
+                ? null
+                : response.ErrorCode;
+
+            var errorMessage = string.IsNullOrWhiteSpace(response.ErrorMessage)
+                ? null
+                : response.ErrorMessage;
+
+            if (status == PaymentProcessingStatus.Failed)
             {
                 // it's more clear than extracting it to a separate method
                 // eventually we will move it when we have like 20+ error codes
-                throw response.ErrorCode switch
+                throw errorCode switch
                 {
                     "INSUFFICIENT_FUNDS" => new InsufficientFundsException(
                         $"Payment failed: insufficient funds. OrderId={orderId}, Amount={amount} {currency}"),
                     "PAYMENT_DECLINED" => new PaymentDeclinedException(
-                        $"Payment declined by provider. OrderId={orderId}, Reason={response.ErrorMessage}"),
+                        $"Payment declined by provider. OrderId={orderId}, Reason={errorMessage}"),
                     _ => new InvalidOperationException(
-                        $"Payment processing failed. OrderId={orderId}, Error={response.ErrorMessage}")
+                        $"Payment processing failed. OrderId={orderId}, Error={errorMessage}")
                 };
             }
 
+            if (string.IsNullOrWhiteSpace(response.PaymentId))
+            {
+                throw new InvalidOperationException(
+                    $"Payment service returned empty PaymentId for non-failed status. OrderId={orderId}");
+            }
+
             logger.LogInformation(
-                "Payment processed successfully. OrderId={OrderId}, PaymentId={PaymentId}, Amount={Amount} {Currency}",
+                "Payment processed. OrderId={OrderId}, PaymentId={PaymentId}, Status={Status}, Amount={Amount} {Currency}",
                 orderId,
                 response.PaymentId,
+                status,
                 amount,
                 currency);
 
-            return response.PaymentId;
+            return new PaymentProcessingResult(
+                PaymentId: response.PaymentId,
+                Status: status,
+                ProviderPaymentIntentId: providerPaymentIntentId,
+                ClientSecret: clientSecret,
+                ErrorCode: errorCode,
+                ErrorMessage: errorMessage);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.InvalidArgument)
         {
@@ -72,6 +102,22 @@ public sealed class PaymentGateway(
             throw new GatewayUnavailableException(
                 $"Payment service unavailable for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}", ex);
         }
+    }
+
+    private static PaymentProcessingStatus MapPaymentStatus(ProcessPaymentResponse response)
+    {
+        var rawStatus = (int)response.Status;
+
+        return rawStatus switch
+        {
+            1 => PaymentProcessingStatus.Succeeded,
+            2 => PaymentProcessingStatus.Pending,
+            3 => PaymentProcessingStatus.Failed,
+            4 => PaymentProcessingStatus.RequiresAction,
+            _ => response.Success
+                ? PaymentProcessingStatus.Succeeded
+                : PaymentProcessingStatus.Failed,
+        };
     }
 
     public async Task<string> RefundAsync(
