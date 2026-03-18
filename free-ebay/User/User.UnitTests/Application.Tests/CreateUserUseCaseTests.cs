@@ -39,6 +39,7 @@ public class CreateUserUseCaseTests
             CountryCode = "DE",
             CustomerTier = CustomerTier.Standard,
             Status = UserStatus.Active,
+            IsEmailVerified = false,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -58,6 +59,7 @@ public class CreateUserUseCaseTests
         Assert.Equal(savedUser.CountryCode, result.CountryCode);
         Assert.Equal(savedUser.CustomerTier, result.CustomerTier);
         Assert.Equal(savedUser.Status, result.Status);
+        Assert.Equal(savedUser.IsEmailVerified, result.IsEmailVerified);
         Assert.NotNull(createdUser);
         Assert.True(Guid.TryParse(createdUser!.Id, out var _));
         Assert.Equal(normalizedEmail, createdUser.Email);
@@ -66,6 +68,7 @@ public class CreateUserUseCaseTests
         Assert.Equal(command.Phone, createdUser.Phone);
         Assert.Equal("DE", createdUser.CountryCode);
         Assert.Equal(CustomerTier.Standard, createdUser.CustomerTier);
+        Assert.False(createdUser.IsEmailVerified);
 
         await userRepository.Received(1).ExistsByEmail(normalizedEmail);
         passwordHasher.Received(1).HashPassword(command.Password);

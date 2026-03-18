@@ -22,6 +22,7 @@ public class UpdateUserUseCaseTests
             CountryCode = "DE",
             CustomerTier = CustomerTier.Standard,
             Status = UserStatus.Active,
+            IsEmailVerified = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -36,6 +37,7 @@ public class UpdateUserUseCaseTests
             CountryCode = "US",
             CustomerTier = CustomerTier.Premium,
             Status = UserStatus.Active,
+            IsEmailVerified = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -62,6 +64,7 @@ public class UpdateUserUseCaseTests
         Assert.Equal(updatedUser.Phone, result.Phone);
         Assert.Equal(updatedUser.CountryCode, result.CountryCode);
         Assert.Equal(updatedUser.CustomerTier, result.CustomerTier);
+        Assert.Equal(updatedUser.IsEmailVerified, result.IsEmailVerified);
         
         await userRepository.Received(1).GetUserById("userId");
         await userRepository.Received(1).GetUserByEmail("testnew@example.com");

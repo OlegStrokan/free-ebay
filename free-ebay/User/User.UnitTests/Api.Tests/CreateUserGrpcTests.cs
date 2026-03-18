@@ -28,7 +28,8 @@ public class CreateUserGrpcTests
             CustomerTier.Premium,
             UserStatus.Active,
             createdAt,
-            updatedAt
+            updatedAt,
+            true
         );
 
         useCase.ExecuteAsync(Arg.Any<CreateUserCommand>()).Returns(useCaseResponse);
@@ -55,6 +56,7 @@ public class CreateUserGrpcTests
         Assert.Equal("US", response.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Premium, response.Data.CustomerTier);
         Assert.Equal(UserStatusProto.Active, response.Data.Status);
+        Assert.True(response.Data.IsEmailVerified);
 
         await useCase.Received(1).ExecuteAsync(
             Arg.Is<CreateUserCommand>(c =>

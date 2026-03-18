@@ -49,6 +49,7 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
         created.Data.CountryCode.Should().Be("DE");
         created.Data.CustomerTier.Should().Be(CustomerTierProto.Premium);
         created.Data.Status.Should().Be(UserStatusProto.Active);
+        created.Data.IsEmailVerified.Should().BeFalse();
 
         var fetched = await _client.GetUserByIdAsync(new GetUserByIdRequest
         {
@@ -61,6 +62,93 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
         fetched.Data.CountryCode.Should().Be("DE");
         fetched.Data.CustomerTier.Should().Be(CustomerTierProto.Premium);
         fetched.Data.Status.Should().Be(UserStatusProto.Active);
+        fetched.Data.IsEmailVerified.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetUserByEmail_ShouldReturnUserAndPasswordHash()
+    {
+        var email = $"lookup-{Guid.NewGuid():N}@example.com";
+        await CreateUserAsync(email: email, password: "Password123");
+
+        var byEmail = await _client.GetUserByEmailAsync(new GetUserByEmailRequest
+        {
+            Email = $"  {email.ToUpperInvariant()}  "
+        });
+
+        byEmail.Data.Should().NotBeNull();
+        byEmail.Data.Email.Should().Be(email);
+        byEmail.PasswordHash.Should().NotBeNullOrWhiteSpace();
+        byEmail.PasswordHash.Should().NotBe("Password123");
+        byEmail.Data.IsEmailVerified.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task VerifyUserEmail_ShouldSetFlag_AndBeIdempotent()
+    {
+        var created = await CreateUserAsync();
+
+        var first = await _client.VerifyUserEmailAsync(new VerifyUserEmailRequest
+        {
+            UserId = created.Id
+        });
+        first.Success.Should().BeTrue();
+
+        var second = await _client.VerifyUserEmailAsync(new VerifyUserEmailRequest
+        {
+            UserId = created.Id
+        });
+        second.Success.Should().BeTrue();
+
+        var fetched = await _client.GetUserByIdAsync(new GetUserByIdRequest { Id = created.Id });
+        fetched.Data.IsEmailVerified.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task VerifyUserEmail_ShouldReturnFalse_WhenUserMissing()
+    {
+        var response = await _client.VerifyUserEmailAsync(new VerifyUserEmailRequest
+        {
+            UserId = Guid.NewGuid().ToString()
+        });
+
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateUserPassword_ShouldReplacePasswordHashForAuthFlow()
+    {
+        var email = $"reset-{Guid.NewGuid():N}@example.com";
+        await CreateUserAsync(email: email, password: "Password123");
+
+        var before = await _client.GetUserByEmailAsync(new GetUserByEmailRequest { Email = email });
+        before.PasswordHash.Should().NotBeNullOrWhiteSpace();
+
+        const string newPasswordHash = "$2a$12$new-password-hash-from-auth";
+        var update = await _client.UpdateUserPasswordAsync(new UpdateUserPasswordRequest
+        {
+            UserId = before.Data.Id,
+            NewPasswordHash = newPasswordHash
+        });
+
+        update.Success.Should().BeTrue();
+        update.Message.Should().Be("Password updated successfully");
+
+        var after = await _client.GetUserByEmailAsync(new GetUserByEmailRequest { Email = email });
+        after.PasswordHash.Should().Be(newPasswordHash);
+    }
+
+    [Fact]
+    public async Task UpdateUserPassword_ShouldReturnFailure_WhenUserMissing()
+    {
+        var response = await _client.UpdateUserPasswordAsync(new UpdateUserPasswordRequest
+        {
+            UserId = Guid.NewGuid().ToString(),
+            NewPasswordHash = "$2a$12$anything"
+        });
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Contain("not found");
     }
 
     [Fact]

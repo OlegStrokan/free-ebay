@@ -25,6 +25,7 @@ public class GetUserByIdUseCaseTests
             CountryCode = "DE",
             CustomerTier = CustomerTier.Subscriber,
             Status = UserStatus.Active,
+            IsEmailVerified = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -43,6 +44,7 @@ public class GetUserByIdUseCaseTests
         Assert.Equal(existingUser.CountryCode, result.CountryCode);
         Assert.Equal(existingUser.CustomerTier, result.CustomerTier);
         Assert.Equal(existingUser.Status, result.Status);
+        Assert.Equal(existingUser.IsEmailVerified, result.IsEmailVerified);
 
         await userRepository.Received(1).GetUserById(existingUser.Id);
     }

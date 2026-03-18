@@ -44,6 +44,7 @@ public sealed class UserRepositoryIntegrationTests : IClassFixture<IntegrationFi
         stored.CountryCode.Should().Be("DE");
         stored.Status.Should().Be(UserStatus.Active);
         stored.CustomerTier.Should().Be(CustomerTier.Standard);
+        stored.IsEmailVerified.Should().BeFalse();
         stored.CreatedAt.Should().NotBe(default);
         stored.UpdatedAt.Should().NotBe(default);
     }
@@ -77,6 +78,7 @@ public sealed class UserRepositoryIntegrationTests : IClassFixture<IntegrationFi
         result.Should().NotBeNull();
         result!.Id.Should().Be(id);
         result.Email.Should().Be(email);
+        result.IsEmailVerified.Should().BeFalse();
     }
 
     [Fact]
@@ -114,6 +116,31 @@ public sealed class UserRepositoryIntegrationTests : IClassFixture<IntegrationFi
         updated.Fullname.Should().Be("Updated Name");
         updated.Phone.Should().Be("+490000");
         updated.CountryCode.Should().Be("US");
+    }
+
+    [Fact]
+    public async Task UpdateUser_ShouldPersistPassword_AndEmailVerificationFlag()
+    {
+        await using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var id = Guid.NewGuid().ToString();
+        await repo.CreateUser(BuildUser(id, $"verify-{Guid.NewGuid():N}@example.com"));
+
+        var user = await repo.GetUserById(id);
+        user.Should().NotBeNull();
+
+        user!.Password = "$2a$12$new-hash";
+        user.IsEmailVerified = true;
+
+        await repo.UpdateUser(user);
+
+        db.ChangeTracker.Clear();
+        var updated = await db.Users.AsNoTracking().SingleAsync(u => u.Id == id);
+
+        updated.Password.Should().Be("$2a$12$new-hash");
+        updated.IsEmailVerified.Should().BeTrue();
     }
 
     [Fact]

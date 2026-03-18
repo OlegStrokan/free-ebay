@@ -40,6 +40,7 @@ public class UserRepositoryTests
         Assert.Equal(user.Id, fetchedUser.Id);
         Assert.Equal(user.Email, fetchedUser.Email);
         Assert.Equal(UserStatus.Active, fetchedUser.Status);
+        Assert.False(fetchedUser.IsEmailVerified);
     }
 
     [Fact]
@@ -81,6 +82,38 @@ public class UserRepositoryTests
 
         Assert.NotNull(fetchedUser);
         Assert.Equal(newEmail, fetchedUser.Email);
+
+        user.IsEmailVerified = true;
+        await userRepository.UpdateUser(user);
+
+        var verifiedUser = await userRepository.GetUserById(user.Id);
+        Assert.NotNull(verifiedUser);
+        Assert.True(verifiedUser!.IsEmailVerified);
+    }
+
+    [Fact]
+    public async Task GetUserByEmail_ShouldNormalizeLookup()
+    {
+        var dbContext = GetDbContext("GetUserByEmailDb");
+        var userRepository = new UserRepository(dbContext);
+
+        var user = new UserEntity
+        {
+            Id = "ULID_*#(@*@*(#*U",
+            Email = "test@example.com",
+            Fullname = "John Doe",
+            Password = "password",
+            Phone = "+420293829",
+            CountryCode = "DE",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await userRepository.CreateUser(user);
+
+        var fetchedUser = await userRepository.GetUserByEmail("  TEST@EXAMPLE.COM  ");
+
+        Assert.NotNull(fetchedUser);
+        Assert.Equal(user.Id, fetchedUser!.Id);
     }
 
     

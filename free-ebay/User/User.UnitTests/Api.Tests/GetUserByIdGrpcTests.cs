@@ -25,7 +25,8 @@ public class GetUserByIdGrpcTests
             CustomerTier.Subscriber,
             UserStatus.Active,
             DateTime.UtcNow,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            true
         );
 
         useCase.ExecuteAsync("userId").Returns(useCaseResponse);
@@ -45,6 +46,7 @@ public class GetUserByIdGrpcTests
         Assert.Equal("DE", response.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Subscriber, response.Data.CustomerTier);
         Assert.Equal(UserStatusProto.Active, response.Data.Status);
+        Assert.True(response.Data.IsEmailVerified);
 
         await useCase.Received(1).ExecuteAsync("userId");
     }

@@ -3,6 +3,7 @@ using Domain.Entities.User;
 using Protos.User;
 using BlockUserResponse = Application.UseCases.BlockUser.BlockUserResponse;
 using CreateUserResponse = Application.UseCases.CreateUser.CreateUserResponse;
+using GetUserByEmailResponse = Application.UseCases.GetUserByEmail.GetUserByEmailResponse;
 using GetUserByIdResponse = Application.UseCases.GetUserById.GetUserByIdResponse;
 using UpdateUserResponse = Application.UseCases.UpdateUser.UpdateUserResponse;
 
@@ -85,7 +86,8 @@ public class UserMapperTests
             CustomerTier.Standard,
             UserStatus.Active,
             createdAt,
-            updatedAt
+            updatedAt,
+            true
         );
 
         var result = response.ToProto();
@@ -99,6 +101,7 @@ public class UserMapperTests
         Assert.Equal("DE", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Standard, result.Data.CustomerTier);
         Assert.Equal(UserStatusProto.Active, result.Data.Status);
+        Assert.True(result.Data.IsEmailVerified);
         Assert.True(result.Data.CreatedAt > 0);
         Assert.True(result.Data.UpdatedAt > 0);
     }
@@ -118,7 +121,8 @@ public class UserMapperTests
             CustomerTier.Standard,
             UserStatus.Active,
             createdAt,
-            updatedAt
+            updatedAt,
+            false
         );
 
         var phone = "+1234567890";
@@ -134,6 +138,7 @@ public class UserMapperTests
         Assert.Equal("DE", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Standard, result.Data.CustomerTier);
         Assert.Equal(UserStatusProto.Active, result.Data.Status);
+        Assert.False(result.Data.IsEmailVerified);
     }
 
     [Fact]
@@ -151,7 +156,8 @@ public class UserMapperTests
             CustomerTier.Premium,
             UserStatus.Blocked,
             createdAt,
-            updatedAt
+            updatedAt,
+            true
         );
 
         var result = response.ToUserProto();
@@ -163,6 +169,53 @@ public class UserMapperTests
         Assert.Equal("US", result.CountryCode);
         Assert.Equal(CustomerTierProto.Premium, result.CustomerTier);
         Assert.Equal(UserStatusProto.Blocked, result.Status);
+        Assert.True(result.IsEmailVerified);
+    }
+
+    [Fact]
+    public void GetUserByEmailResponse_ToProto_ShouldMapCorrectly()
+    {
+        var createdAt = DateTime.UtcNow;
+        var updatedAt = createdAt.AddMinutes(1);
+
+        var response = new GetUserByEmailResponse(
+            "user_123",
+            "email@example.com",
+            "Email User",
+            "+444444",
+            "US",
+            CustomerTier.Subscriber,
+            UserStatus.Active,
+            createdAt,
+            updatedAt,
+            true,
+            "$2a$12$hash");
+
+        var result = response.ToProto();
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
+        Assert.Equal("user_123", result.Data.Id);
+        Assert.Equal("email@example.com", result.Data.Email);
+        Assert.Equal("Email User", result.Data.FullName);
+        Assert.Equal("+444444", result.Data.Phone);
+        Assert.Equal("US", result.Data.CountryCode);
+        Assert.Equal(CustomerTierProto.Subscriber, result.Data.CustomerTier);
+        Assert.Equal(UserStatusProto.Active, result.Data.Status);
+        Assert.True(result.Data.IsEmailVerified);
+        Assert.Equal("$2a$12$hash", result.PasswordHash);
+    }
+
+    [Fact]
+    public void GetUserByEmailResponse_ToProto_ShouldReturnEmpty_WhenNull()
+    {
+        GetUserByEmailResponse? response = null;
+
+        var result = response.ToProto();
+
+        Assert.NotNull(result);
+        Assert.Null(result.Data);
+        Assert.Equal(string.Empty, result.PasswordHash);
     }
 
     [Fact]
@@ -180,7 +233,8 @@ public class UserMapperTests
             CustomerTier.Subscriber,
             UserStatus.Active,
             createdAt,
-            updatedAt
+            updatedAt,
+            true
         );
 
         var result = response.ToProto();
@@ -194,6 +248,7 @@ public class UserMapperTests
         Assert.Equal("DE", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Subscriber, result.Data.CustomerTier);
         Assert.Equal(UserStatusProto.Active, result.Data.Status);
+        Assert.True(result.Data.IsEmailVerified);
     }
 
     [Fact]
@@ -222,7 +277,8 @@ public class UserMapperTests
             CustomerTier.Premium,
             UserStatus.Blocked,
             createdAt,
-            updatedAt
+            updatedAt,
+            true
         );
 
         var result = response.ToProto();
@@ -236,6 +292,7 @@ public class UserMapperTests
         Assert.Equal("US", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Premium, result.Data.CustomerTier);
         Assert.Equal(UserStatusProto.Blocked, result.Data.Status);
+        Assert.True(result.Data.IsEmailVerified);
     }
 
     [Fact]
@@ -253,7 +310,8 @@ public class UserMapperTests
             CustomerTier.Standard,
             UserStatus.Blocked,
             createdAt,
-            updatedAt);
+            updatedAt,
+            true);
 
         var result = response.ToProto();
 
@@ -264,6 +322,7 @@ public class UserMapperTests
         Assert.Equal(UserStatusProto.Blocked, result.Data.Status);
         Assert.Equal("DE", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Standard, result.Data.CustomerTier);
+        Assert.True(result.Data.IsEmailVerified);
     }
 
     [Fact]
@@ -277,6 +336,7 @@ public class UserMapperTests
             Phone = "+5555555555",
             CountryCode = "DE",
             CustomerTier = CustomerTier.Subscriber,
+            IsEmailVerified = true,
             Password = "password",
             Status = UserStatus.Active,
             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -292,6 +352,7 @@ public class UserMapperTests
         Assert.Equal("DE", result.CountryCode);
         Assert.Equal(CustomerTierProto.Subscriber, result.CustomerTier);
         Assert.Equal(UserStatusProto.Active, result.Status);
+        Assert.True(result.IsEmailVerified);
         Assert.True(result.CreatedAt > 0);
         Assert.True(result.UpdatedAt > 0);
     }
@@ -307,6 +368,7 @@ public class UserMapperTests
             Phone = "+1234567890",
             CountryCode = "DE",
             CustomerTier = CustomerTier.Standard,
+            IsEmailVerified = true,
             Password = "password",
             Status = UserStatus.Active,
             CreatedAt = DateTime.UtcNow,
@@ -321,5 +383,6 @@ public class UserMapperTests
         Assert.Equal("test@example.com", result.Data.Email);
         Assert.Equal("Test User", result.Data.FullName);
         Assert.Equal("+1234567890", result.Data.Phone);
+        Assert.True(result.Data.IsEmailVerified);
     }
 }
