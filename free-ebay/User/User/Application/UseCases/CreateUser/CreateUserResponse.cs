@@ -11,4 +11,5 @@ public record CreateUserResponse(
 	CustomerTier CustomerTier,
 	UserStatus Status,
 	DateTime CreatedAt,
-	DateTime UpdatedAt);
+	DateTime UpdatedAt,
+	bool IsEmailVerified = false);

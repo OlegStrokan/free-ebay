@@ -3,9 +3,12 @@ using Domain.Common.Interfaces;
 using Application.UseCases.BlockUser;
 using Application.UseCases.CreateUser;
 using Application.UseCases.DeleteUser;
+using Application.UseCases.GetUserByEmail;
 using Application.UseCases.GetUserById;
 using Application.UseCases.UpdatePassword;
+using Application.UseCases.UpdateUserPassword;
 using Application.UseCases.UpdateUser;
+using Application.UseCases.VerifyUserEmail;
 using Infrastructure.DbContext;
 using Microsoft.EntityFrameworkCore;
 using Domain.Repositories;
@@ -24,9 +27,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<ICreateUserUseCase, CreateUserUseCase>();
 builder.Services.AddScoped<IUpdateUserUseCase, UpdateUserUseCase>();
 builder.Services.AddScoped<IGetUserByIdUseCase, GetUserByIdUseCase>();
+builder.Services.AddScoped<IGetUserByEmailUseCase, GetUserByEmailUseCase>();
 builder.Services.AddScoped<IDeleteUserUseCase, DeleteUserUseCase>();
 builder.Services.AddScoped<IBlockUserUseCase, BlockUserUseCase>();
 builder.Services.AddScoped<IUpdatePasswordUseCase, UpdatePasswordUseCase>();
+builder.Services.AddScoped<IVerifyUserEmailUseCase, VerifyUserEmailUseCase>();
+builder.Services.AddScoped<IUpdateUserPasswordUseCase, UpdateUserPasswordUseCase>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 

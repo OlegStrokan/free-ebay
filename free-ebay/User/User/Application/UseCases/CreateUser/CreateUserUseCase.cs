@@ -45,7 +45,8 @@ public class CreateUserUseCase(
             user.CustomerTier,
             user.Status,
             user.CreatedAt,
-            user.UpdatedAt);
+            user.UpdatedAt,
+            user.IsEmailVerified);
     }
 // @think: should this validation be in use-case or should we move it to gprc layer?
     private static void Validate(CreateUserCommand command)

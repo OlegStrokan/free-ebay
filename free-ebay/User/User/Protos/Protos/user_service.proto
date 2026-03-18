@@ -13,6 +13,33 @@ message GetUserByIdResponse {
   UserProto data = 1;
 }
 
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message GetUserByEmailResponse {
+  optional UserProto data = 1;
+  string password_hash = 2;
+}
+
+message VerifyUserEmailRequest {
+  string user_id = 1;
+}
+
+message VerifyUserEmailResponse {
+  bool success = 1;
+}
+
+message UpdateUserPasswordRequest {
+  string user_id = 1;
+  string new_password_hash = 2;
+}
+
+message UpdateUserPasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
 message BlockUserRequest {
   string id = 1;
 }
@@ -67,4 +94,7 @@ service UserServiceProto {
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
   rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
   rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserByEmailResponse);
+  rpc VerifyUserEmail(VerifyUserEmailRequest) returns (VerifyUserEmailResponse);
+  rpc UpdateUserPassword(UpdateUserPasswordRequest) returns (UpdateUserPasswordResponse);
 }

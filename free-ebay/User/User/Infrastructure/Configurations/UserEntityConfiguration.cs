@@ -20,6 +20,10 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(u => u.Fullname).IsRequired().HasMaxLength(120);
         builder.Property(u => u.Password).IsRequired().HasMaxLength(256);
         builder.Property(u => u.Phone).IsRequired().HasMaxLength(32);
+        builder.Property(u => u.IsEmailVerified)
+            .HasDefaultValue(false)
+            .IsRequired();
+        
         builder.Property(u => u.CountryCode).IsRequired().HasMaxLength(2);
         builder.Property(u => u.CustomerTier).IsRequired().HasDefaultValue(CustomerTier.Standard);
         builder.Property(u => u.Status).IsRequired().HasDefaultValue(UserStatus.Active);

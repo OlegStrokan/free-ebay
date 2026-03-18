@@ -22,6 +22,7 @@ public class GetUserByIdUseCase(IUserRepository repository) : IGetUserByIdUseCas
             existingUser.CustomerTier,
             existingUser.Status,
             existingUser.CreatedAt,
-            existingUser.UpdatedAt);
+            existingUser.UpdatedAt,
+            existingUser.IsEmailVerified);
     }
 }

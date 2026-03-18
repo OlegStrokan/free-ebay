@@ -2,15 +2,21 @@ using Api.Mappers;
 using Application.UseCases.BlockUser;
 using Application.UseCases.CreateUser;
 using Application.UseCases.DeleteUser;
+using Application.UseCases.GetUserByEmail;
 using Application.UseCases.GetUserById;
 using Application.UseCases.UpdatePassword;
+using Application.UseCases.UpdateUserPassword;
 using Application.UseCases.UpdateUser;
+using Application.UseCases.VerifyUserEmail;
 using Grpc.Core;
 using Protos.User;
 using BlockUserResponseProto = Protos.User.BlockUserResponse;
 using CreateUserResponseProto = Protos.User.CreateUserResponse;
+using GetUserByEmailResponseProto = Protos.User.GetUserByEmailResponse;
 using GetUserByIdResponseProto = Protos.User.GetUserByIdResponse;
+using UpdateUserPasswordResponseProto = Protos.User.UpdateUserPasswordResponse;
 using UpdateUserResponseProto = Protos.User.UpdateUserResponse;
+using VerifyUserEmailResponseProto = Protos.User.VerifyUserEmailResponse;
 
 namespace Api.GrpcServices;
 
@@ -18,9 +24,12 @@ public class UserGrpcService(
     ICreateUserUseCase createUserUseCase,
     IUpdateUserUseCase updateUserUseCase,
     IGetUserByIdUseCase getUserByIdUseCase,
+    IGetUserByEmailUseCase getUserByEmailUseCase,
     IDeleteUserUseCase deleteUserUseCase,
     IBlockUserUseCase blockUserUseCase,
-    IUpdatePasswordUseCase updatePasswordUseCase) : UserServiceProto.UserServiceProtoBase
+    IUpdatePasswordUseCase updatePasswordUseCase,
+    IVerifyUserEmailUseCase verifyUserEmailUseCase,
+    IUpdateUserPasswordUseCase updateUserPasswordUseCase) : UserServiceProto.UserServiceProtoBase
 {
     public override async Task<CreateUserResponseProto> CreateUser(CreateUserRequest request, ServerCallContext context)
     {
@@ -131,6 +140,57 @@ public class UserGrpcService(
         catch (InvalidOperationException ex)
         {
             throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+    }
+
+    public override async Task<GetUserByEmailResponseProto> GetUserByEmail(
+        GetUserByEmailRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var user = await getUserByEmailUseCase.ExecuteAsync(request.Email);
+            return user.ToProto();
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+    }
+
+    public override async Task<VerifyUserEmailResponseProto> VerifyUserEmail(
+        VerifyUserEmailRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var success = await verifyUserEmailUseCase.ExecuteAsync(request.UserId);
+            return new VerifyUserEmailResponseProto { Success = success };
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+    }
+
+    public override async Task<UpdateUserPasswordResponseProto> UpdateUserPassword(
+        UpdateUserPasswordRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var result = await updateUserPasswordUseCase.ExecuteAsync(
+                new UpdateUserPasswordCommand(request.UserId, request.NewPasswordHash));
+
+            return new UpdateUserPasswordResponseProto
+            {
+                Success = result.Success,
+                Message = result.Message,
+            };
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
         }
     }
 }

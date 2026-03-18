@@ -56,7 +56,8 @@ public class UpdateUserUseCase (IUserRepository repository) : IUpdateUserUseCase
             user.CustomerTier,
             user.Status,
             user.CreatedAt,
-            user.UpdatedAt);
+            user.UpdatedAt,
+            user.IsEmailVerified);
     }
 
     private static void Validate(UpdateUserCommand command)

@@ -23,6 +23,7 @@ public class UserEntity
     public required string Email { get; set; }
     public required string Phone { get; set; }
     public required string CountryCode { get; set; }
+    public bool IsEmailVerified { get; set; } = false;
 
     public CustomerTier CustomerTier { get; set; } = CustomerTier.Standard;
     public UserStatus Status { get; set; } = UserStatus.Active;

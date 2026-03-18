@@ -3,7 +3,9 @@ using Protos.User;
 using BlockUserResponse = Application.UseCases.BlockUser.BlockUserResponse;
 using CreateUserResponse = Application.UseCases.CreateUser.CreateUserResponse;
 using CreateUserResponseProto = Protos.User.CreateUserResponse;
+using GetUserByEmailResponse = Application.UseCases.GetUserByEmail.GetUserByEmailResponse;
 using GetUserByIdResponse = Application.UseCases.GetUserById.GetUserByIdResponse;
+using GetUserByEmailResponseProto = Protos.User.GetUserByEmailResponse;
 using UpdateUserResponse = Application.UseCases.UpdateUser.UpdateUserResponse;
 using BlockUserResponseProto = Protos.User.BlockUserResponse;
 using GetUserByIdResponseProto = Protos.User.GetUserByIdResponse;
@@ -71,6 +73,7 @@ public static class UserMapper
                 UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
                 CountryCode = response.CountryCode,
                 CustomerTier = response.CustomerTier.ToProto(),
+                IsEmailVerified = response.IsEmailVerified,
             }
         };
     }
@@ -90,6 +93,7 @@ public static class UserMapper
                 UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
                 CountryCode = response.CountryCode,
                 CustomerTier = response.CustomerTier.ToProto(),
+                IsEmailVerified = response.IsEmailVerified,
             }
         };
     }
@@ -107,6 +111,33 @@ public static class UserMapper
             UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
             CountryCode = response.CountryCode,
             CustomerTier = response.CustomerTier.ToProto(),
+            IsEmailVerified = response.IsEmailVerified,
+        };
+    }
+
+    public static GetUserByEmailResponseProto ToProto(this GetUserByEmailResponse? response)
+    {
+        if (response == null)
+        {
+            return new GetUserByEmailResponseProto();
+        }
+
+        return new GetUserByEmailResponseProto
+        {
+            Data = new UserProto
+            {
+                Id = response.Id,
+                FullName = response.Fullname,
+                Email = response.Email,
+                Phone = response.Phone,
+                Status = response.Status.ToProto(),
+                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
+                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
+                CountryCode = response.CountryCode,
+                CustomerTier = response.CustomerTier.ToProto(),
+                IsEmailVerified = response.IsEmailVerified,
+            },
+            PasswordHash = response.PasswordHash,
         };
     }
 
@@ -127,6 +158,7 @@ public static class UserMapper
                 UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
                 CountryCode = response.CountryCode,
                 CustomerTier = response.CustomerTier.ToProto(),
+                IsEmailVerified = response.IsEmailVerified,
             }
         };
     }
@@ -146,6 +178,7 @@ public static class UserMapper
                 UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
                 CountryCode = response.CountryCode,
                 CustomerTier = response.CustomerTier.ToProto(),
+                IsEmailVerified = response.IsEmailVerified,
             }
         };
     }
@@ -165,6 +198,7 @@ public static class UserMapper
                 UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
                 CountryCode = response.CountryCode,
                 CustomerTier = response.CustomerTier.ToProto(),
+                IsEmailVerified = response.IsEmailVerified,
             }
         };
     }
@@ -182,6 +216,7 @@ public static class UserMapper
             UpdatedAt = new DateTimeOffset(entity.UpdatedAt).ToUnixTimeSeconds(),
             CountryCode = entity.CountryCode,
             CustomerTier = entity.CustomerTier.ToProto(),
+            IsEmailVerified = entity.IsEmailVerified,
         };
     }
 

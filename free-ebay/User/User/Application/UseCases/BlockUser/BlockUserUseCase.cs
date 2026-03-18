@@ -30,6 +30,7 @@ public class BlockUserUseCase(IUserRepository repository) : IBlockUserUseCase
             updatedUser.CustomerTier,
             updatedUser.Status,
             updatedUser.CreatedAt,
-            updatedUser.UpdatedAt);
+            updatedUser.UpdatedAt,
+            updatedUser.IsEmailVerified);
     }
 }

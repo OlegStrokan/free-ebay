@@ -1,8 +1,8 @@
 using Domain.Entities.User;
 
-namespace Application.UseCases.UpdateUser;
+namespace Application.UseCases.GetUserByEmail;
 
-public record UpdateUserResponse(
+public record GetUserByEmailResponse(
     string Id,
     string Email,
     string Fullname,
@@ -12,4 +12,5 @@ public record UpdateUserResponse(
     UserStatus Status,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    bool IsEmailVerified = false);
+    bool IsEmailVerified,
+    string PasswordHash);
