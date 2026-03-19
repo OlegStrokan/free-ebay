@@ -19,7 +19,7 @@ public sealed class CreateShipmentStep(
     ) : ISagaStep<OrderSagaData, OrderSagaContext>
 {
     public string StepName => "CreateShipment";
-    public int Order => 4;
+    public int Order => 5;
     
     public async Task<StepResult> ExecuteAsync(OrderSagaData data, OrderSagaContext context, CancellationToken cancellationToken)
     {

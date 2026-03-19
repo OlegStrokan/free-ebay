@@ -31,6 +31,7 @@ public static class ApplicationModule
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, CancelOrderOnFailureStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, ReserveInventoryStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, ProcessPaymentStep>();
+        services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, AwaitPaymentConfirmationStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, UpdateOrderStatusStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, CreateShipmentStep>();
         services.AddScoped<ISagaStep<OrderSagaData, OrderSagaContext>, CompleteOrderStep>();
@@ -56,11 +57,19 @@ public static class ApplicationModule
         services.AddScoped<ReturnShipmentDeliveredEventHandler>();
         services.AddScoped<ISagaEventHandler>(sp => sp.GetRequiredService<ReturnShipmentDeliveredEventHandler>());
 
+        services.AddScoped<PaymentSucceededEventHandler>();
+        services.AddScoped<ISagaEventHandler>(sp => sp.GetRequiredService<PaymentSucceededEventHandler>());
+
+        services.AddScoped<PaymentFailedEventHandler>();
+        services.AddScoped<ISagaEventHandler>(sp => sp.GetRequiredService<PaymentFailedEventHandler>());
+
         // lightweight type-only descriptors used by SagaHandlerFactory (singleton).
         // these carry just EventType string + handler .NET Type - no DI chains involved.
-        services.AddSingleton(new SagaHandlerDescriptor("OrderCreatedEvent",              typeof(OrderCreatedEventHandler)));
-        services.AddSingleton(new SagaHandlerDescriptor("ReturnRequestCreatedEvent",      typeof(ReturnRequestCreatedEventHandler)));
-        services.AddSingleton(new SagaHandlerDescriptor("ReturnShipmentDeliveredEvent",   typeof(ReturnShipmentDeliveredEventHandler)));
+        services.AddSingleton(new SagaHandlerDescriptor("OrderCreatedEvent",typeof(OrderCreatedEventHandler)));
+        services.AddSingleton(new SagaHandlerDescriptor("ReturnRequestCreatedEvent",typeof(ReturnRequestCreatedEventHandler)));
+        services.AddSingleton(new SagaHandlerDescriptor("ReturnShipmentDeliveredEvent",typeof(ReturnShipmentDeliveredEventHandler)));
+        services.AddSingleton(new SagaHandlerDescriptor("PaymentSucceededEvent",typeof(PaymentSucceededEventHandler)));
+        services.AddSingleton(new SagaHandlerDescriptor("PaymentFailedEvent",typeof(PaymentFailedEventHandler)));
 
         return services;
     }

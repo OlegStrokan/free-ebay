@@ -13,7 +13,7 @@ public class UpdateOrderStatusStep(
     : ISagaStep<OrderSagaData, OrderSagaContext>
 {
     public string StepName => "UpdateOrderStatus";
-    public int Order => 3;
+    public int Order => 4;
 
     public async Task<StepResult> ExecuteAsync(
         OrderSagaData data,
@@ -29,6 +29,12 @@ public class UpdateOrderStatusStep(
                     "Order {OrderId} status already updated, skipping",
                     data.CorrelationId);
                 return StepResult.SuccessResult();
+            }
+
+            if (context.PaymentStatus != OrderSagaPaymentStatus.Succeeded)
+            {
+                return StepResult.Failure(
+                    $"Payment is not confirmed as succeeded. Current status: {context.PaymentStatus}");
             }
 
             if (string.IsNullOrEmpty(context.PaymentId))
@@ -63,7 +69,7 @@ public class UpdateOrderStatusStep(
         catch (OrderNotFoundException ex)
         { 
             //return StepResult.Failure($"Order {data.CorrelationId} not found");
-            // Specific handling: Maybe this order shouldn't exist? 
+            //@think: Specific handling: Maybe this order shouldn't exist? 
             // We return a failure that tells the Saga to stop and compensate.
             return StepResult.Failure($"Critical Error: {ex.Message}");
         }
