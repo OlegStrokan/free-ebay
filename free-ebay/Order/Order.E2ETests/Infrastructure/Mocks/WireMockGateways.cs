@@ -27,7 +27,7 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
         _client = new PaymentService.PaymentServiceClient(channel);
     }
 
-    public async Task<string> ProcessPaymentAsync(
+    public async Task<PaymentProcessingResult> ProcessPaymentAsync(
         Guid orderId, 
         Guid customerId,
         decimal amount,
@@ -45,11 +45,43 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
                 PaymentMethod = paymentMethod
             });
 
-        if (!response.Success)
+        var status = MapPaymentStatus(response);
+
+        if (status == PaymentProcessingStatus.Failed)
             throw new PaymentDeclinedException(
                 $"[{response.ErrorCode}] {response.ErrorMessage}");
 
-        return response.PaymentId;
+        return new PaymentProcessingResult(
+            PaymentId: response.PaymentId,
+            Status: status,
+            ProviderPaymentIntentId: string.IsNullOrWhiteSpace(response.ProviderPaymentIntentId)
+                ? null
+                : response.ProviderPaymentIntentId,
+            ClientSecret: string.IsNullOrWhiteSpace(response.ClientSecret)
+                ? null
+                : response.ClientSecret,
+            ErrorCode: string.IsNullOrWhiteSpace(response.ErrorCode)
+                ? null
+                : response.ErrorCode,
+            ErrorMessage: string.IsNullOrWhiteSpace(response.ErrorMessage)
+                ? null
+                : response.ErrorMessage);
+    }
+
+    private static PaymentProcessingStatus MapPaymentStatus(ProcessPaymentResponse response)
+    {
+        var rawStatus = (int)response.Status;
+
+        return rawStatus switch
+        {
+            1 => PaymentProcessingStatus.Succeeded,
+            2 => PaymentProcessingStatus.Pending,
+            3 => PaymentProcessingStatus.Failed,
+            4 => PaymentProcessingStatus.RequiresAction,
+            _ => response.Success
+                ? PaymentProcessingStatus.Succeeded
+                : PaymentProcessingStatus.Failed,
+        };
     }
 
     public async Task<string> RefundAsync(

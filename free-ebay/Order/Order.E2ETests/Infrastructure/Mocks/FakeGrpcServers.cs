@@ -55,7 +55,10 @@ public abstract class FakeGrpcServerBase : IAsyncDisposable
 public class FakePaymentGrpcServer : FakeGrpcServerBase
 {
     public bool ProcessShouldSucceed { get; set; } = true;
+    public ProcessPaymentStatus ProcessStatusToReturn { get; set; } = ProcessPaymentStatus.Succeeded;
     public string PaymentIdToReturn { get; set; } = "PAY-DEFAULT";
+    public string ProviderPaymentIntentIdToReturn { get; set; } = "pi_test_default";
+    public string ClientSecretToReturn { get; set; } = "cs_test_default";
     public string ErrorCode { get; set; } = string.Empty;
     public string ErrorMessage { get; set; } = string.Empty;
 
@@ -68,7 +71,10 @@ public class FakePaymentGrpcServer : FakeGrpcServerBase
     public void Reset()
     {
         ProcessShouldSucceed = true;
+        ProcessStatusToReturn = ProcessPaymentStatus.Succeeded;
         PaymentIdToReturn = "PAY-" + Guid.NewGuid().ToString()[..8];
+        ProviderPaymentIntentIdToReturn = "pi_test_" + Guid.NewGuid().ToString("N")[..8];
+        ClientSecretToReturn = "cs_test_" + Guid.NewGuid().ToString("N")[..8];
         ErrorCode = string.Empty;
         ErrorMessage = string.Empty;
         RefundShouldSucceed = true;
@@ -105,14 +111,33 @@ public class FakePaymentServiceImpl : PaymentService.PaymentServiceBase
             return Task.FromResult(new ProcessPaymentResponse
             {
                 Success = false,
+                Status = ProcessPaymentStatus.Failed,
                 ErrorCode = string.IsNullOrEmpty(_cfg.ErrorCode) ? "PAYMENT_DECLINED" : _cfg.ErrorCode,
                 ErrorMessage = string.IsNullOrEmpty(_cfg.ErrorMessage) ? "Card declined" : _cfg.ErrorMessage
             });
 
+        if (_cfg.ProcessStatusToReturn == ProcessPaymentStatus.Failed)
+            return Task.FromResult(new ProcessPaymentResponse
+            {
+                Success = false,
+                Status = ProcessPaymentStatus.Failed,
+                ErrorCode = string.IsNullOrEmpty(_cfg.ErrorCode) ? "PAYMENT_DECLINED" : _cfg.ErrorCode,
+                ErrorMessage = string.IsNullOrEmpty(_cfg.ErrorMessage) ? "Card declined" : _cfg.ErrorMessage
+            });
+
+        var isAsyncPending = _cfg.ProcessStatusToReturn is
+            ProcessPaymentStatus.Pending or
+            ProcessPaymentStatus.RequiresAction;
+
         return Task.FromResult(new ProcessPaymentResponse
         {
             Success = true,
-            PaymentId = _cfg.PaymentIdToReturn
+            PaymentId = _cfg.PaymentIdToReturn,
+            Status = _cfg.ProcessStatusToReturn,
+            ProviderPaymentIntentId = isAsyncPending ? _cfg.ProviderPaymentIntentIdToReturn : string.Empty,
+            ClientSecret = _cfg.ProcessStatusToReturn == ProcessPaymentStatus.RequiresAction
+                ? _cfg.ClientSecretToReturn
+                : string.Empty,
         });
     }
 

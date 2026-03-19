@@ -26,7 +26,11 @@ public class UpdateOrderStatusStepTests
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_WhenOrderIsUpdated()
     {
-        var context = new OrderSagaContext { PaymentId = "PAY-123" };
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
         var data = CreateSampleData();
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
@@ -44,7 +48,12 @@ public class UpdateOrderStatusStepTests
     [Fact]
     public async Task ExecuteAsync_ShouldSkip_WhenOrderStatusAlreadyUpdated_Idempotency()
     {
-        var context = new OrderSagaContext { PaymentId = "PAY-123", OrderStatusUpdated = true };
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+            OrderStatusUpdated = true,
+        };
         var data = CreateSampleData();
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
@@ -56,9 +65,32 @@ public class UpdateOrderStatusStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenPaymentNotSucceeded()
+    {
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Pending,
+        };
+        var data = CreateSampleData();
+
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("Payment is not confirmed as succeeded", result.ErrorMessage);
+
+        await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
+            Arg.Any<Guid>(), Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenPaymentIdMissingInContext()
     {
-        var context = new OrderSagaContext { PaymentId = null };
+        var context = new OrderSagaContext
+        {
+            PaymentId = null,
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
         var data = CreateSampleData();
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
@@ -74,7 +106,11 @@ public class UpdateOrderStatusStepTests
     [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderNotFound()
     {
-        var context = new OrderSagaContext { PaymentId = "PAY-123" };
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
         var data = CreateSampleData();
 
         _orderPersistenceService
@@ -90,7 +126,11 @@ public class UpdateOrderStatusStepTests
     [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenUnexpectedExceptionOccurs()
     {
-        var context = new OrderSagaContext { PaymentId = "PAY-123" };
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
         var data = CreateSampleData();
 
         _orderPersistenceService

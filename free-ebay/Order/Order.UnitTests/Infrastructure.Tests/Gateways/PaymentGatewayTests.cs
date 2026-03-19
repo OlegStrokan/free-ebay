@@ -37,18 +37,72 @@ public class PaymentGatewayTests
             () => { });
 
     [Fact]
-    public async Task ProcessPaymentAsync_ShouldReturnPaymentId_WhenSucceeds()
+    public async Task ProcessPaymentAsync_ShouldReturnSucceededResult_WhenSucceeds()
     {
         var paymentId = "pay-123";
         _client
             .ProcessPaymentAsync(Arg.Any<ProcessPaymentRequest>(),
                 Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(GrpcCall(new ProcessPaymentResponse { Success = true, PaymentId = paymentId }));
+            .Returns(GrpcCall(new ProcessPaymentResponse
+            {
+                Success = true,
+                PaymentId = paymentId,
+                Status = (ProcessPaymentStatus)1
+            }));
 
         var result = await Build().ProcessPaymentAsync(
             Guid.NewGuid(), Guid.NewGuid(), 100m, "USD", "CARD", CancellationToken.None);
 
-        Assert.Equal(paymentId, result);
+        Assert.Equal(paymentId, result.PaymentId);
+        Assert.Equal(Application.Gateways.PaymentProcessingStatus.Succeeded, result.Status);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_ShouldReturnPendingResult_WhenProviderReturnsPending()
+    {
+        var paymentId = "pay-pending";
+        _client
+            .ProcessPaymentAsync(Arg.Any<ProcessPaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new ProcessPaymentResponse
+            {
+                Success = true,
+                PaymentId = paymentId,
+                Status = (ProcessPaymentStatus)2,
+                ProviderPaymentIntentId = "pi_123"
+            }));
+
+        var result = await Build().ProcessPaymentAsync(
+            Guid.NewGuid(), Guid.NewGuid(), 100m, "USD", "CARD", CancellationToken.None);
+
+        Assert.Equal(paymentId, result.PaymentId);
+        Assert.Equal(Application.Gateways.PaymentProcessingStatus.Pending, result.Status);
+        Assert.Equal("pi_123", result.ProviderPaymentIntentId);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_ShouldReturnRequiresActionResult_WhenProviderRequiresAction()
+    {
+        var paymentId = "pay-3ds";
+        _client
+            .ProcessPaymentAsync(Arg.Any<ProcessPaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new ProcessPaymentResponse
+            {
+                Success = true,
+                PaymentId = paymentId,
+                Status = (ProcessPaymentStatus)4,
+                ProviderPaymentIntentId = "pi_3ds",
+                ClientSecret = "cs_3ds"
+            }));
+
+        var result = await Build().ProcessPaymentAsync(
+            Guid.NewGuid(), Guid.NewGuid(), 100m, "USD", "CARD", CancellationToken.None);
+
+        Assert.Equal(paymentId, result.PaymentId);
+        Assert.Equal(Application.Gateways.PaymentProcessingStatus.RequiresAction, result.Status);
+        Assert.Equal("pi_3ds", result.ProviderPaymentIntentId);
+        Assert.Equal("cs_3ds", result.ClientSecret);
     }
 
     [Fact]
