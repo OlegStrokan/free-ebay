@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Commands.EnqueueOrderCallback;
 
+// should be used only for manual investigation of failed payments. probably will be exposed as rest api for admin
+// It only enqueues callback events to outbox for delivery
 internal sealed class EnqueueOrderCallbackCommandHandler(
     IPaymentRepository paymentRepository,
     IRefundRepository refundRepository,
