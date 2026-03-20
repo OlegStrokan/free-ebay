@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Commands.ReconcilePendingPayments;
 
+// periodically run by bg worker
 internal sealed class ReconcilePendingPaymentsCommandHandler(
     IPaymentRepository paymentRepository,
     IRefundRepository refundRepository,

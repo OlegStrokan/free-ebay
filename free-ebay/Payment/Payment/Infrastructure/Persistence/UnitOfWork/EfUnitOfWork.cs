@@ -1,12 +1,34 @@
+using Domain.Exceptions;
 using Application.Interfaces;
 using Infrastructure.Persistence.DbContext;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Infrastructure.Persistence.UnitOfWork;
 
 internal sealed class EfUnitOfWork(PaymentDbContext dbContext) : IUnitOfWork
 {
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            return await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex, out var constraintName))
+        {
+            throw new UniqueConstraintViolationException(constraintName, ex);
+        }
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex, out string? constraintName)
+    {
+        if (ex.InnerException is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            constraintName = pg.ConstraintName;
+            return true;
+        }
+
+        constraintName = null;
+        return false;
     }
 }

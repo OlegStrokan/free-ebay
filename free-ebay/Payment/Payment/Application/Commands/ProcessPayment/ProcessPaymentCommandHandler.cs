@@ -119,7 +119,39 @@ internal sealed class ProcessPaymentCommandHandler(
             }
 
             await paymentRepository.AddAsync(payment, cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (UniqueConstraintViolationException ex)
+            {
+                logger.LogInformation(
+                    ex,
+                    "Detected concurrent idempotent payment create for order {OrderId} and key {IdempotencyKey}. Returning persisted payment.",
+                    request.OrderId,
+                    request.IdempotencyKey);
+
+                var persistedPayment = await paymentRepository.GetByOrderIdAndIdempotencyKeyAsync(
+                    request.OrderId,
+                    idempotencyKey,
+                    cancellationToken);
+
+                if (persistedPayment is not null)
+                {
+                    return Result<ProcessPaymentResultDto>.Success(
+                        PaymentDtoMapper.ToProcessPaymentResult(persistedPayment));
+                }
+
+                logger.LogWarning(
+                    ex,
+                    "Unique constraint violation occurred for order {OrderId}, key {IdempotencyKey}, but no persisted idempotent payment was found after conflict.",
+                    request.OrderId,
+                    request.IdempotencyKey);
+
+                return Result<ProcessPaymentResultDto>.Failure(
+                    "Concurrent idempotent payment conflict. Please retry the request.");
+            }
 
             return Result<ProcessPaymentResultDto>.Success(
                 PaymentDtoMapper.ToProcessPaymentResult(

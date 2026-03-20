@@ -120,7 +120,40 @@ internal sealed class RefundPaymentCommandHandler(
 
             await refundRepository.AddAsync(refund, cancellationToken);
             await paymentRepository.UpdateAsync(payment, cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (UniqueConstraintViolationException ex)
+            {
+                logger.LogInformation(
+                    ex,
+                    "Detected concurrent idempotent refund create for payment {PaymentId} and key {IdempotencyKey}. Returning persisted refund.",
+                    request.PaymentId,
+                    request.IdempotencyKey);
+
+                var persistedRefund = await refundRepository.GetByPaymentIdAndIdempotencyKeyAsync(
+                    paymentId,
+                    idempotencyKey,
+                    cancellationToken);
+
+                if (persistedRefund is not null)
+                {
+                    var persistedPayment = await paymentRepository.GetByIdAsync(paymentId, cancellationToken) ?? payment;
+                    return Result<RefundPaymentResultDto>.Success(
+                        PaymentDtoMapper.ToRefundPaymentResult(persistedPayment, persistedRefund));
+                }
+
+                logger.LogWarning(
+                    ex,
+                    "Unique constraint violation occurred for payment {PaymentId}, key {IdempotencyKey}, but no persisted idempotent refund was found after conflict.",
+                    request.PaymentId,
+                    request.IdempotencyKey);
+
+                return Result<RefundPaymentResultDto>.Failure(
+                    "Concurrent idempotent refund conflict. Please retry the request.");
+            }
 
             return Result<RefundPaymentResultDto>.Success(
                 PaymentDtoMapper.ToRefundPaymentResult(
