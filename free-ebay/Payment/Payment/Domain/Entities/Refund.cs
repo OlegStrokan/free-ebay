@@ -71,12 +71,12 @@ public sealed class Refund : Entity<RefundId>
         return new Refund(RefundId.CreateUnique(), paymentId, amount, reason.Trim(), idempotencyKey, now);
     }
 
-    public void MarkPendingProviderConfirmation(ProviderRefundId? providerRefundId = null, DateTime? pendingAt = null)
+    public void MarkPendingProviderConfirmation(ProviderRefundId providerRefundId, DateTime? pendingAt = null)
     {
         RefundStateMachine.EnsureCanTransition(Status, RefundStatus.PendingProviderConfirmation);
 
         var now = pendingAt ?? DateTime.UtcNow;
-        ProviderRefundId = providerRefundId ?? ProviderRefundId;
+        ProviderRefundId = providerRefundId;
         Status = RefundStatus.PendingProviderConfirmation;
         FailureReason = null;
         UpdatedAt = now;

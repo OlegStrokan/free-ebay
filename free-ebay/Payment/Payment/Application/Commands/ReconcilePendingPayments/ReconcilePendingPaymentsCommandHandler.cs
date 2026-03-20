@@ -108,19 +108,38 @@ internal sealed class ReconcilePendingPaymentsCommandHandler(
             {
                 refundsChecked++;
 
+                  var payment = await paymentRepository.GetByIdAsync(refund.PaymentId, cancellationToken);
+                  if (payment is null)
+                  {
+                      logger.LogWarning(
+                          "Skipping refund reconciliation for refund {RefundId} because payment {PaymentId} was not found",
+                          refund.Id.Value,
+                          refund.PaymentId.Value);
+                      continue;
+                  }
+
+                // probability is near 0%: all pending requests must have providerRefundIdValue
+                // but shit happens, it is near zero runtime cost so why not
                 var providerRefundIdValue = refund.ProviderRefundId?.Value;
                 if (string.IsNullOrWhiteSpace(providerRefundIdValue))
                 {
-                    continue;
-                }
+                      var reason = FailureReason.Create(
+                          "missing_provider_refund_id",
+                          "Pending refund is missing ProviderRefundId and cannot be reconciled.");
 
-                var payment = await paymentRepository.GetByIdAsync(refund.PaymentId, cancellationToken);
-                if (payment is null)
-                {
-                    logger.LogWarning(
-                        "Skipping refund reconciliation for refund {RefundId} because payment {PaymentId} was not found",
-                        refund.Id.Value,
-                        refund.PaymentId.Value);
+                      refund.MarkFailed(reason, clock.UtcNow);
+                      await refundRepository.UpdateAsync(refund, cancellationToken);
+
+                      if (payment.Status == PaymentStatus.RefundPending)
+                      {
+                          payment.MarkRefundFailed(refund.Id, reason, clock.UtcNow);
+                          await paymentRepository.UpdateAsync(payment, cancellationToken);
+                      }
+
+                      await orderCallbackQueueService.QueueRefundFailedAsync(payment, refund, reason, cancellationToken);
+
+                      refundsFailed++;
+                      callbacksQueued++;
                     continue;
                 }
 

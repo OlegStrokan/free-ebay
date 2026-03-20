@@ -138,6 +138,7 @@ public sealed class Payment : AggregateRoot<PaymentId>
 
         var now = failedAt ?? DateTime.UtcNow;
         Status = PaymentStatus.Failed;
+        FailureReason = reason;
         FailedAt = now;
         UpdatedAt = now;
 

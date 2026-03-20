@@ -95,9 +95,13 @@ internal sealed class RefundPaymentCommandHandler(
                 }
                 case ProviderRefundPaymentStatus.Pending:
                 {
-                    var providerRefundId = string.IsNullOrWhiteSpace(providerResult.ProviderRefundId)
-                        ? null
-                        : ProviderRefundId.From(providerResult.ProviderRefundId);
+                      if (string.IsNullOrWhiteSpace(providerResult.ProviderRefundId))
+                      {
+                          return Result<RefundPaymentResultDto>.Failure(
+                              "ProviderRefundId is required when provider refund status is Pending");
+                      }
+
+                      var providerRefundId = ProviderRefundId.From(providerResult.ProviderRefundId);
 
                     refund.MarkPendingProviderConfirmation(providerRefundId, now);
                     responseStatus = RefundPaymentStatus.Pending;
