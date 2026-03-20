@@ -15,6 +15,14 @@ internal sealed class RefundRepository(PaymentDbContext dbContext) : IRefundRepo
             .FirstOrDefaultAsync(x => x.Id == refundId, cancellationToken);
     }
 
+    public async Task<Refund?> GetByProviderRefundIdAsync(
+        ProviderRefundId providerRefundId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Refunds
+            .FirstOrDefaultAsync(x => x.ProviderRefundId == providerRefundId, cancellationToken);
+    }
+
     public async Task<Refund?> GetPendingByPaymentIdAsync(
         PaymentId paymentId,
         CancellationToken cancellationToken = default)

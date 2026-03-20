@@ -7,6 +7,10 @@ public interface IPaymentRepository
 {
     Task<Payment?> GetByIdAsync(PaymentId paymentId, CancellationToken cancellationToken = default);
 
+    Task<Payment?> GetByProviderPaymentIntentIdAsync(
+        ProviderPaymentIntentId providerPaymentIntentId,
+        CancellationToken cancellationToken = default);
+
     Task<Payment?> GetByOrderIdAndIdempotencyKeyAsync(
         string orderId,
         IdempotencyKey idempotencyKey,

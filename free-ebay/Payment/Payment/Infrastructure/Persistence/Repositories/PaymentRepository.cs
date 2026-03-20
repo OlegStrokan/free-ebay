@@ -9,11 +9,18 @@ namespace Infrastructure.Persistence.Repositories;
 
 internal sealed class PaymentRepository(PaymentDbContext dbContext) : IPaymentRepository
 {
-    // @think: should i use paymentId string? because of PaymentId argument, i always need to cast this type from request.PaymentId
     public async Task<Payment?> GetByIdAsync(PaymentId paymentId, CancellationToken cancellationToken = default)
     {
         return await dbContext.Payments
             .FirstOrDefaultAsync(x => x.Id == paymentId, cancellationToken);
+    }
+
+    public async Task<Payment?> GetByProviderPaymentIntentIdAsync(
+        ProviderPaymentIntentId providerPaymentIntentId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Payments
+            .FirstOrDefaultAsync(x => x.ProviderPaymentIntentId == providerPaymentIntentId, cancellationToken);
     }
 
     public async Task<Payment?> GetByOrderIdAndIdempotencyKeyAsync(

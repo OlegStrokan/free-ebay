@@ -7,6 +7,10 @@ public interface IRefundRepository
 {
     Task<Refund?> GetByIdAsync(RefundId refundId, CancellationToken cancellationToken = default);
 
+    Task<Refund?> GetByProviderRefundIdAsync(
+        ProviderRefundId providerRefundId,
+        CancellationToken cancellationToken = default);
+
     Task<Refund?> GetPendingByPaymentIdAsync(PaymentId paymentId, CancellationToken cancellationToken = default);
 
     Task<Refund?> GetByPaymentIdAndIdempotencyKeyAsync(
