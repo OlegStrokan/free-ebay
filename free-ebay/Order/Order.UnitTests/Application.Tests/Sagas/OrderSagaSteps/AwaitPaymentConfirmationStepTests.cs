@@ -93,6 +93,23 @@ public class AwaitPaymentConfirmationStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShouldReturnWaitingMetadata_WhenPaymentIsUncertain()
+    {
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-TIMEOUT",
+            PaymentStatus = OrderSagaPaymentStatus.Uncertain,
+        };
+
+        var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.True(result.Metadata.ContainsKey("SagaState"));
+        Assert.Equal("WaitingForEvent", result.Metadata["SagaState"]);
+        Assert.Equal("PAY-TIMEOUT", result.Data?["PaymentId"]);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenPaymentStatusUnknown()
     {
         var context = new OrderSagaContext

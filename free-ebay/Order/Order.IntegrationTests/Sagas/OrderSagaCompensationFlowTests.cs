@@ -1,5 +1,6 @@
 using Application.DTOs;
 using Application.Gateways;
+using Application.Gateways.Exceptions;
 using Application.Interfaces;
 using Application.Sagas;
 using Application.Sagas.OrderSaga;
@@ -12,6 +13,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Order.IntegrationTests.Infrastructure;
+using System.Text.Json;
 using Xunit;
 using OrderAggregate = Domain.Entities.Order.Order;
 
@@ -83,6 +85,100 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         var reloadedOrder = await realOrderPersistence.LoadOrderAsync(data.CorrelationId, CancellationToken.None);
         reloadedOrder.Should().NotBeNull();
         reloadedOrder!.Status.Should().Be(OrderStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldPauseSaga_WhenPaymentGatewayTimesOut()
+    {
+        await using var scope = _fixture.CreateScope();
+
+        var sagaRepository = scope.ServiceProvider.GetRequiredService<ISagaRepository>();
+
+        var (_, data) = BuildPendingOrderAndData();
+
+        var steps = new ISagaStep<OrderSagaData, OrderSagaContext>[]
+        {
+            new ProcessPaymentStep(
+                new TimeoutPaymentGateway(),
+                new NoopIncidentReporter(),
+                NullLogger<ProcessPaymentStep>.Instance)
+        };
+
+        var saga = new Application.Sagas.OrderSaga.OrderSaga(
+            sagaRepository,
+            steps,
+            new NonTransientErrorClassifier(),
+            NullLogger<Application.Sagas.OrderSaga.OrderSaga>.Instance);
+
+        var result = await saga.ExecuteAsync(data, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Status.Should().Be(SagaStatus.Completed);
+
+        var persistedSaga = await sagaRepository.GetByCorrelationIdAsync(
+            data.CorrelationId,
+            "OrderSaga",
+            CancellationToken.None);
+
+        persistedSaga.Should().NotBeNull();
+        persistedSaga!.Status.Should().Be(SagaStatus.WaitingForEvent);
+
+        var persistedContext = JsonSerializer.Deserialize<OrderSagaContext>(persistedSaga.Context);
+        persistedContext.Should().NotBeNull();
+        persistedContext!.PaymentStatus.Should().Be(OrderSagaPaymentStatus.Uncertain);
+
+        var stepLogs = await sagaRepository.GetStepLogsAsync(persistedSaga.Id, CancellationToken.None);
+        stepLogs.Single(s => s.StepName == "ProcessPayment").Status.Should().Be(StepStatus.Completed);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldCompensate_WhenPaymentServiceIsUnavailable()
+    {
+        await using var scope = _fixture.CreateScope();
+
+        var sagaRepository = scope.ServiceProvider.GetRequiredService<ISagaRepository>();
+        var compensationSequence = new List<string>();
+
+        var (_, data) = BuildPendingOrderAndData();
+
+        var steps = new ISagaStep<OrderSagaData, OrderSagaContext>[]
+        {
+            new RecordingSuccessfulStep("ReserveInventory", 1, compensationSequence),
+            new ProcessPaymentStep(
+                new UnavailablePaymentGateway(),
+                new NoopIncidentReporter(),
+                NullLogger<ProcessPaymentStep>.Instance)
+        };
+
+        var saga = new Application.Sagas.OrderSaga.OrderSaga(
+            sagaRepository,
+            steps,
+            new NonTransientErrorClassifier(),
+            NullLogger<Application.Sagas.OrderSaga.OrderSaga>.Instance);
+
+        var result = await saga.ExecuteAsync(data, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Status.Should().Be(SagaStatus.Failed);
+
+        compensationSequence.Should().Equal("ReserveInventory.Compensate");
+
+        var persistedSaga = await sagaRepository.GetByCorrelationIdAsync(
+            data.CorrelationId,
+            "OrderSaga",
+            CancellationToken.None);
+
+        persistedSaga.Should().NotBeNull();
+        persistedSaga!.Status.Should().Be(SagaStatus.Compensated);
+
+        var persistedContext = JsonSerializer.Deserialize<OrderSagaContext>(persistedSaga.Context);
+        persistedContext.Should().NotBeNull();
+        persistedContext!.PaymentStatus.Should().Be(OrderSagaPaymentStatus.Failed);
+        persistedContext.PaymentFailureCode.Should().Be("PAYMENT_GATEWAY_UNAVAILABLE");
+
+        var stepLogs = await sagaRepository.GetStepLogsAsync(persistedSaga.Id, CancellationToken.None);
+        stepLogs.Single(s => s.StepName == "ProcessPayment").Status.Should().Be(StepStatus.Failed);
+        stepLogs.Single(s => s.StepName == "ReserveInventory").Status.Should().Be(StepStatus.Compensated);
     }
 
     private static (OrderAggregate Order, OrderSagaData Data) BuildPendingOrderAndData()
@@ -194,5 +290,47 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
 
         public Task CreateInterventionTicketAsync(InterventionTicket ticket, CancellationToken cancellationToken)
             => Task.CompletedTask;
+    }
+
+    private sealed class TimeoutPaymentGateway : IPaymentGateway
+    {
+        public Task<PaymentProcessingResult> ProcessPaymentAsync(
+            Guid orderId,
+            Guid customerId,
+            decimal amount,
+            string currency,
+            string paymentMethod,
+            CancellationToken cancellationToken)
+            => throw new GatewayUnavailableException(
+                GatewayUnavailableReason.Timeout,
+                "simulated deadline exceeded");
+
+        public Task<string> RefundAsync(
+            string paymentId,
+            decimal amount,
+            string reason,
+            CancellationToken cancellationToken)
+            => Task.FromResult("REF-NOT-USED");
+    }
+
+    private sealed class UnavailablePaymentGateway : IPaymentGateway
+    {
+        public Task<PaymentProcessingResult> ProcessPaymentAsync(
+            Guid orderId,
+            Guid customerId,
+            decimal amount,
+            string currency,
+            string paymentMethod,
+            CancellationToken cancellationToken)
+            => throw new GatewayUnavailableException(
+                GatewayUnavailableReason.ServiceUnavailable,
+                "simulated service unavailable");
+
+        public Task<string> RefundAsync(
+            string paymentId,
+            decimal amount,
+            string reason,
+            CancellationToken cancellationToken)
+            => Task.FromResult("REF-NOT-USED");
     }
 }

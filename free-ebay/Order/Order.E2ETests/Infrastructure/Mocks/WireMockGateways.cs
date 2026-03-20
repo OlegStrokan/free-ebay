@@ -2,6 +2,7 @@ using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
+using Grpc.Core;
 using Grpc.Net.Client;
 using Infrastructure.Extensions;
 using Org.BouncyCastle.Bcpg;
@@ -35,37 +36,75 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
         string paymentMethod,
         CancellationToken cancellationToken)
     {
-        var response = await _client.ProcessPaymentAsync(
-            new ProcessPaymentRequest
+        try
+        {
+            var response = await _client.ProcessPaymentAsync(
+                new ProcessPaymentRequest
+                {
+                    OrderId = orderId.ToString(),
+                    CustomerId = customerId.ToString(),
+                    Amount = amount.ToDecimalValue(),
+                    Currency = currency,
+                    PaymentMethod = paymentMethod
+                },
+                cancellationToken: cancellationToken);
+
+            var status = MapPaymentStatus(response);
+
+            if (status == PaymentProcessingStatus.Failed)
             {
-                OrderId = orderId.ToString(),
-                CustomerId = customerId.ToString(),
-                Amount = amount.ToDecimalValue(),
-                Currency = currency,
-                PaymentMethod = paymentMethod
-            });
+                throw string.IsNullOrWhiteSpace(response.ErrorCode) ? new PaymentDeclinedException(
+                    $"[{response.ErrorCode}] {response.ErrorMessage}") : response.ErrorCode switch
+                {
+                    "INSUFFICIENT_FUNDS" => new InsufficientFundsException(
+                        $"Payment failed: insufficient funds. OrderId={orderId}, Amount={amount} {currency}"),
+                    "PAYMENT_DECLINED" => new PaymentDeclinedException(
+                        $"Payment declined by provider. OrderId={orderId}, Reason={response.ErrorMessage}"),
+                    _ => new InvalidOperationException(
+                        $"Payment processing failed. OrderId={orderId}, Error={response.ErrorMessage}")
+                };
+            }
 
-        var status = MapPaymentStatus(response);
-
-        if (status == PaymentProcessingStatus.Failed)
+            return new PaymentProcessingResult(
+                PaymentId: response.PaymentId,
+                Status: status,
+                ProviderPaymentIntentId: string.IsNullOrWhiteSpace(response.ProviderPaymentIntentId)
+                    ? null
+                    : response.ProviderPaymentIntentId,
+                ClientSecret: string.IsNullOrWhiteSpace(response.ClientSecret)
+                    ? null
+                    : response.ClientSecret,
+                ErrorCode: string.IsNullOrWhiteSpace(response.ErrorCode)
+                    ? null
+                    : response.ErrorCode,
+                ErrorMessage: string.IsNullOrWhiteSpace(response.ErrorMessage)
+                    ? null
+                    : response.ErrorMessage);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.InvalidArgument)
+        {
             throw new PaymentDeclinedException(
-                $"[{response.ErrorCode}] {response.ErrorMessage}");
-
-        return new PaymentProcessingResult(
-            PaymentId: response.PaymentId,
-            Status: status,
-            ProviderPaymentIntentId: string.IsNullOrWhiteSpace(response.ProviderPaymentIntentId)
-                ? null
-                : response.ProviderPaymentIntentId,
-            ClientSecret: string.IsNullOrWhiteSpace(response.ClientSecret)
-                ? null
-                : response.ClientSecret,
-            ErrorCode: string.IsNullOrWhiteSpace(response.ErrorCode)
-                ? null
-                : response.ErrorCode,
-            ErrorMessage: string.IsNullOrWhiteSpace(response.ErrorMessage)
-                ? null
-                : response.ErrorMessage);
+                $"Invalid payment data for OrderId={orderId}. Detail={ex.Status.Detail}");
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
+        {
+            throw new InsufficientFundsException(
+                $"Payment precondition failed for OrderId={orderId}. Detail={ex.Status.Detail}");
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.DeadlineExceeded)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.Timeout,
+                $"Payment service deadline exceeded for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.ServiceUnavailable,
+                $"Payment service unavailable for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
     }
 
     private static PaymentProcessingStatus MapPaymentStatus(ProcessPaymentResponse response)

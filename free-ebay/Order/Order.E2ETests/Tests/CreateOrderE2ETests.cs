@@ -1,12 +1,15 @@
 using Application.Sagas;
+using Application.Sagas.OrderSaga;
 using Application.Sagas.Persistence;
 using Domain.Common;
 using Confluent.Kafka;
 using Domain.ValueObjects;
 using FluentAssertions;
+using Grpc.Core;
 using Infrastructure.Extensions;
 using Order.E2ETests.Infrastructure;
 using Protos.Order;
+using System.Text.Json;
 using WireMock.ResponseBuilders;
 using Xunit;
 using Xunit.Abstractions;
@@ -134,6 +137,79 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         
         _output.WriteLine("Passed: Full order flow end-to-end type shit");
 
+    }
+
+    [Fact]
+    public async Task CreateOrder_PaymentDeadlineExceeded_SagaWaitsWithoutCompensation()
+    {
+        _output.WriteLine("Payment timeout => uncertain waiting state");
+
+        _server.InventoryService.ReserveShouldSucceed = true;
+        _server.InventoryService.ReservationIdToReturn = "reservation-timeout";
+        _server.ProductService.ShouldSucceed = true;
+
+        _server.PaymentService.ProcessRpcStatusCodeToThrow = StatusCode.DeadlineExceeded;
+        _server.PaymentService.ProcessRpcErrorDetailToThrow = "simulated payment timeout";
+
+        var request = BuildCreateOrderRequest(Guid.NewGuid());
+        var response = await _client.CreateOrderAsync(request);
+
+        response.Success.Should().BeTrue("order command should be accepted");
+        var orderId = Guid.Parse(response.OrderId);
+
+        var saga = await _server.WaitForSagaStatusAsync(
+            orderId, SagaTypes.OrderSaga, SagaStatus.WaitingForEvent, timeoutSeconds: 30);
+
+        saga.Should().NotBeNull("saga should pause while payment status is uncertain");
+
+        var steps = await _server.GetSagaStepLogsAsync(saga!.Id);
+        steps.Single(s => s.StepName == "ReserveInventory").Status.Should().Be(StepStatus.Completed);
+        steps.Single(s => s.StepName == "ProcessPayment").Status.Should().Be(StepStatus.Completed);
+
+        _server.InventoryService.ReleaseCalls.Should().BeEmpty(
+            "timeout should not trigger compensation/refund flow immediately");
+
+        var context = JsonSerializer.Deserialize<OrderSagaContext>(saga.Context);
+        context.Should().NotBeNull();
+        context!.PaymentStatus.Should().Be(OrderSagaPaymentStatus.Uncertain);
+
+        _output.WriteLine("PASSED: timeout correctly mapped to uncertain waiting state");
+    }
+
+    [Fact]
+    public async Task CreateOrder_PaymentServiceUnavailable_SagaCompensatesAndCancelsOrder()
+    {
+        _output.WriteLine("Payment service unavailable => compensation");
+
+        _server.InventoryService.ReserveShouldSucceed = true;
+        _server.InventoryService.ReservationIdToReturn = "reservation-unavailable";
+        _server.InventoryService.ReleaseShouldSucceed = true;
+        _server.ProductService.ShouldSucceed = true;
+
+        _server.PaymentService.ProcessRpcStatusCodeToThrow = StatusCode.Unavailable;
+        _server.PaymentService.ProcessRpcErrorDetailToThrow = "simulated payment service down";
+
+        var request = BuildCreateOrderRequest(Guid.NewGuid());
+        var response = await _client.CreateOrderAsync(request);
+
+        response.Success.Should().BeTrue("order command should be accepted");
+        var orderId = Guid.Parse(response.OrderId);
+
+        var saga = await _server.WaitForSagaStatusAsync(
+            orderId, SagaTypes.OrderSaga, SagaStatus.Compensated, timeoutSeconds: 30);
+
+        saga.Should().NotBeNull("unavailable payment service should fail payment step and compensate");
+
+        var steps = await _server.GetSagaStepLogsAsync(saga!.Id);
+        steps.Single(s => s.StepName == "ProcessPayment").Status.Should().Be(StepStatus.Failed);
+        steps.Single(s => s.StepName == "ReserveInventory").Status.Should().Be(StepStatus.Compensated);
+
+        _server.InventoryService.ReleaseCalls.Should().HaveCountGreaterOrEqualTo(1);
+
+        var events = await _server.GetEventsAsync(orderId, AggregateTypes.Order);
+        events.Select(e => e.GetType().Name).Should().Contain("OrderCancelledEvent");
+
+        _output.WriteLine("PASSED: unavailable payment correctly triggers compensation flow");
     }
 
     [Fact]

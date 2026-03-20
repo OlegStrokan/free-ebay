@@ -169,6 +169,44 @@ public class ProcessPaymentStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShouldMarkUncertainAndWait_WhenGatewayTimeoutOccurs()
+    {
+        var data = CreateSampleData();
+        var context = new OrderSagaContext();
+
+        _paymentGateway.ProcessPaymentAsync(
+                Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<decimal>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new GatewayUnavailableException(GatewayUnavailableReason.Timeout, "deadline exceeded"));
+
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(OrderSagaPaymentStatus.Uncertain, context.PaymentStatus);
+        Assert.Equal("PAYMENT_RESULT_UNCERTAIN", context.PaymentFailureCode);
+        Assert.True(result.Metadata.ContainsKey("SagaState"));
+        Assert.Equal("WaitingForEvent", result.Metadata["SagaState"]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenGatewayServiceIsUnavailable()
+    {
+        var data = CreateSampleData();
+        var context = new OrderSagaContext();
+
+        _paymentGateway.ProcessPaymentAsync(
+                Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<decimal>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new GatewayUnavailableException(GatewayUnavailableReason.ServiceUnavailable, "service unavailable"));
+
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(OrderSagaPaymentStatus.Failed, context.PaymentStatus);
+        Assert.Equal("PAYMENT_GATEWAY_UNAVAILABLE", context.PaymentFailureCode);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenUnexpectedExceptionOccurs()
     {
         var context = new OrderSagaContext();

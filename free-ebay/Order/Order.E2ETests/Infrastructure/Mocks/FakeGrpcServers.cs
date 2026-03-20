@@ -55,6 +55,8 @@ public abstract class FakeGrpcServerBase : IAsyncDisposable
 public class FakePaymentGrpcServer : FakeGrpcServerBase
 {
     public bool ProcessShouldSucceed { get; set; } = true;
+    public StatusCode? ProcessRpcStatusCodeToThrow { get; set; }
+    public string ProcessRpcErrorDetailToThrow { get; set; } = "simulated rpc failure";
     public ProcessPaymentStatus ProcessStatusToReturn { get; set; } = ProcessPaymentStatus.Succeeded;
     public string PaymentIdToReturn { get; set; } = "PAY-DEFAULT";
     public string ProviderPaymentIntentIdToReturn { get; set; } = "pi_test_default";
@@ -71,6 +73,8 @@ public class FakePaymentGrpcServer : FakeGrpcServerBase
     public void Reset()
     {
         ProcessShouldSucceed = true;
+        ProcessRpcStatusCodeToThrow = null;
+        ProcessRpcErrorDetailToThrow = "simulated rpc failure";
         ProcessStatusToReturn = ProcessPaymentStatus.Succeeded;
         PaymentIdToReturn = "PAY-" + Guid.NewGuid().ToString()[..8];
         ProviderPaymentIntentIdToReturn = "pi_test_" + Guid.NewGuid().ToString("N")[..8];
@@ -106,6 +110,13 @@ public class FakePaymentServiceImpl : PaymentService.PaymentServiceBase
         )
     {
         _cfg.ProcessCalls.Add(request);
+
+        if (_cfg.ProcessRpcStatusCodeToThrow.HasValue)
+        {
+            throw new RpcException(new Status(
+                _cfg.ProcessRpcStatusCodeToThrow.Value,
+                _cfg.ProcessRpcErrorDetailToThrow));
+        }
 
         if (!_cfg.ProcessShouldSucceed)
             return Task.FromResult(new ProcessPaymentResponse

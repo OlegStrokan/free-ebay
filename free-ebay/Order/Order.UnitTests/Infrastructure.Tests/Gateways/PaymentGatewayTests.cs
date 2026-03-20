@@ -166,6 +166,34 @@ public class PaymentGatewayTests
     }
 
     [Fact]
+    public async Task ProcessPaymentAsync_ShouldThrowGatewayUnavailable_WithTimeoutReason_WhenRpcDeadlineExceeded()
+    {
+        _client
+            .ProcessPaymentAsync(Arg.Any<ProcessPaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<ProcessPaymentResponse>(StatusCode.DeadlineExceeded, "timeout"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().ProcessPaymentAsync(Guid.NewGuid(), Guid.NewGuid(), 100m, "USD", "CARD", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.Timeout, ex.Reason);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_ShouldThrowGatewayUnavailable_WithServiceUnavailableReason_WhenRpcUnavailable()
+    {
+        _client
+            .ProcessPaymentAsync(Arg.Any<ProcessPaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<ProcessPaymentResponse>(StatusCode.Unavailable, "service down"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().ProcessPaymentAsync(Guid.NewGuid(), Guid.NewGuid(), 100m, "USD", "CARD", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.ServiceUnavailable, ex.Reason);
+    }
+
+    [Fact]
     public async Task RefundAsync_ShouldReturnRefundId_WhenSucceeds()
     {
         var refundId = "ref-456";
