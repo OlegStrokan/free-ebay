@@ -35,7 +35,7 @@ public sealed class AwaitPaymentConfirmationStep(
         {
             OrderSagaPaymentStatus.Succeeded => HandleSucceeded(data, context),
             OrderSagaPaymentStatus.Failed => HandleFailed(data, context),
-            OrderSagaPaymentStatus.Pending or OrderSagaPaymentStatus.RequiresAction => HandleWaiting(data, context),
+            OrderSagaPaymentStatus.Pending or OrderSagaPaymentStatus.RequiresAction or OrderSagaPaymentStatus.Uncertain => HandleWaiting(data, context),
             _ => StepResult.Failure("Payment state is unknown. Cannot continue order saga."),
         });
     }
@@ -72,10 +72,15 @@ public sealed class AwaitPaymentConfirmationStep(
 
     private StepResult HandleWaiting(OrderSagaData data, OrderSagaContext context)
     {
+        var statusDetail = context.PaymentStatus == OrderSagaPaymentStatus.Uncertain
+            ? "Payment result uncertain due to timeout - waiting for webhook/reconciliation to resolve"
+            : $"Waiting for payment finalization from provider";
+
         logger.LogInformation(
-            "Order {OrderId} is still waiting for payment finalization. Status: {Status}",
+            "Order {OrderId} is still waiting for payment finalization. Status: {Status}. {Detail}",
             data.CorrelationId,
-            context.PaymentStatus);
+            context.PaymentStatus,
+            statusDetail);
 
         return StepResult.SuccessResult(
             data: new Dictionary<string, object>

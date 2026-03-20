@@ -7,4 +7,5 @@ public enum OrderSagaPaymentStatus
     RequiresAction = 2,
     Succeeded = 3,
     Failed = 4,
+    Uncertain = 5,
 }

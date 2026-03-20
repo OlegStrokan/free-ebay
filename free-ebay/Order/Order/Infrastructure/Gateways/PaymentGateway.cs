@@ -97,10 +97,19 @@ public sealed class PaymentGateway(
             throw new InsufficientFundsException(
                 $"Payment precondition failed for OrderId={orderId}. Detail={ex.Status.Detail}");
         }
-        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.DeadlineExceeded)
         {
             throw new GatewayUnavailableException(
-                $"Payment service unavailable for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}", ex);
+                GatewayUnavailableReason.Timeout,
+                $"Payment service deadline exceeded for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.ServiceUnavailable,
+                $"Payment service unavailable for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
         }
     }
 

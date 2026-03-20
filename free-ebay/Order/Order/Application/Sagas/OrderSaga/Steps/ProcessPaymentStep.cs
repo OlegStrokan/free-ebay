@@ -52,7 +52,10 @@ public sealed class ProcessPaymentStep(
                 return StepResult.Failure($"Payment failed: {error}");
             }
 
-            if (context.PaymentStatus is OrderSagaPaymentStatus.Pending or OrderSagaPaymentStatus.RequiresAction)
+            if (context.PaymentStatus is
+                OrderSagaPaymentStatus.Pending or 
+                OrderSagaPaymentStatus.RequiresAction or
+                OrderSagaPaymentStatus.Uncertain)
             {
                 logger.LogInformation(
                     "Payment is still awaiting provider confirmation for order {OrderId}. " +
@@ -188,6 +191,41 @@ public sealed class ProcessPaymentStep(
 
             return StepResult.Failure($"Insufficient funds: {ex.Message}");
         }
+        catch (GatewayUnavailableException ex) when (ex.Reason == GatewayUnavailableReason.Timeout)
+        {
+           context.PaymentStatus = OrderSagaPaymentStatus.Uncertain;
+            context.PaymentFailureCode = "PAYMENT_RESULT_UNCERTAIN";
+            context.PaymentFailureMessage = ex.Message;
+
+            logger.LogWarning(
+                ex,
+                "Payment call timed out for order {OrderId}. Marking as Uncertain and waiting for webhook/reconciliation",
+                data.CorrelationId);
+
+            return StepResult.SuccessResult(
+                data: new Dictionary<string, object>
+                {
+                    ["PaymentId"] = context.PaymentId ?? string.Empty,
+                    ["Status"] = context.PaymentStatus.ToString(),
+                },
+                metadata: new Dictionary<string, object>
+                {
+                    ["SagaState"] = "WaitingForEvent"
+                });
+        }
+        catch (GatewayUnavailableException ex)
+        {
+            context.PaymentStatus = OrderSagaPaymentStatus.Failed;
+            context.PaymentFailureCode = "PAYMENT_GATEWAY_UNAVAILABLE";
+            context.PaymentFailureMessage = ex.Message;
+
+            logger.LogError(
+                ex,
+                "Payment service unavailable for order {OrderId}. Cannot determine payment result",
+                data.CorrelationId);
+
+            return StepResult.Failure($"Payment gateway unavailable: {ex.Message}");
+        }
 
         catch (Exception ex)
         {
@@ -222,6 +260,18 @@ public sealed class ProcessPaymentStep(
                 "No payment to refund for order {OrderId}",
                 data.CorrelationId
                 );
+            return;
+        }
+
+        // Skip refund if payment is Uncertain - it might succeed later via webhook/reconciliation
+        // Skip if Failed - we can't refund what wasn't charged
+        // @think: is this correct?
+        if (context.PaymentStatus is OrderSagaPaymentStatus.Uncertain or OrderSagaPaymentStatus.Failed)
+        {
+            logger.LogInformation(
+                "Skipping refund for order {OrderId}. Payment status is {Status}.",
+                data.CorrelationId,
+                context.PaymentStatus);
             return;
         }
 
