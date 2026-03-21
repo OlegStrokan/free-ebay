@@ -66,6 +66,7 @@ public class ProcessRefundStep(
             var refundId = await paymentGateway.RefundAsync(
                 paymentId: order.PaymentId,
                 amount: data.RefundAmount,
+                currency: data.Currency,
                 reason: $"Return request: {data.ReturnReason}",
                 cancellationToken);
 

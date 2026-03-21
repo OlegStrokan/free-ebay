@@ -25,6 +25,7 @@ message ProcessPaymentRequest {
   common.DecimalValue amount = 3;
   string currency = 4;
   string payment_method = 5;
+  string idempotency_key = 6;
 }
 
 message ProcessPaymentResponse {
@@ -41,6 +42,8 @@ message RefundPaymentRequest {
   string payment_id = 1;
   common.DecimalValue amount = 2;
   string reason = 3;
+  string currency = 4;
+  string idempotency_key = 5;
 }
 
 message RefundPaymentResponse {

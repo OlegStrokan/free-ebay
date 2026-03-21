@@ -295,6 +295,7 @@ public sealed class ProcessPaymentStep(
             await paymentGateway.RefundAsync(
                 paymentId: context.PaymentId,
                 amount: data.TotalAmount,
+                currency: data.Currency,
                 reason: "Order cancelled - saga compensation",
                 cancellationToken);
 

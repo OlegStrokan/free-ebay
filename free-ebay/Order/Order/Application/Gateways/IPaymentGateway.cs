@@ -15,6 +15,7 @@ public interface IPaymentGateway
     Task<string> RefundAsync(
         string paymentId, 
         decimal amount,
+        string currency,
         string reason,
         CancellationToken cancellationToken
         );
