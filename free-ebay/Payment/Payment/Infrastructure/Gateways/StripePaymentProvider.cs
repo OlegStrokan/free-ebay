@@ -3,6 +3,8 @@ using Application.Gateways.Models;
 using Domain.Enums;
 using Infrastructure.Options;
 using Microsoft.Extensions.Options;
+using Stripe;
+using DomainPaymentMethod = Domain.Enums.PaymentMethod;
 
 namespace Infrastructure.Gateways;
 
@@ -11,102 +13,239 @@ internal sealed class StripePaymentProvider(
     ILogger<StripePaymentProvider> logger) : IStripePaymentProvider
 {
     private readonly StripeOptions _stripeOptions = stripeOptions.Value;
-    private int _realModeWarningLogged;
 
-    public Task<ProcessPaymentProviderResult> ProcessPaymentAsync(
+    public async Task<ProcessPaymentProviderResult> ProcessPaymentAsync(
         ProcessPaymentProviderRequest request,
         CancellationToken cancellationToken = default)
     {
-        WarnIfRealModeIsRequested();
-        return Task.FromResult(SimulateProcessPayment(request));
+        if (_stripeOptions.UseFakeProvider)
+        {
+            return SimulateProcessPayment(request);
+        }
+
+        if (!HasSecretKey())
+        {
+            return new ProcessPaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: null,
+                ClientSecret: null,
+                ErrorCode: "stripe_secret_not_configured",
+                ErrorMessage: "Stripe secret key is not configured.");
+        }
+
+        try
+        {
+            var currency = NormalizeCurrency(request.Currency);
+            var amountInMinorUnits = ConvertToMinorUnits(request.Amount, currency);
+            var createOptions = BuildPaymentIntentCreateOptions(request, currency, amountInMinorUnits);
+            var requestOptions = new RequestOptions
+            {
+                IdempotencyKey = request.IdempotencyKey,
+            };
+
+            var paymentIntentService = new PaymentIntentService(CreateStripeClient());
+            var paymentIntent = await paymentIntentService.CreateAsync(createOptions, requestOptions, cancellationToken);
+
+            return MapProcessPaymentResult(paymentIntent);
+        }
+        catch (StripeException ex)
+        {
+            logger.LogWarning(ex, "Stripe process payment call failed. PaymentId={PaymentId}", request.PaymentId);
+            return new ProcessPaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: ex.StripeError?.PaymentIntent?.Id,
+                ClientSecret: ex.StripeError?.PaymentIntent?.ClientSecret,
+                ErrorCode: ex.StripeError?.Code ?? "stripe_error",
+                ErrorMessage: ex.StripeError?.Message ?? ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected Stripe process payment error. PaymentId={PaymentId}", request.PaymentId);
+            return new ProcessPaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: null,
+                ClientSecret: null,
+                ErrorCode: "unexpected_provider_error",
+                ErrorMessage: "Unexpected error while creating Stripe payment intent.");
+        }
     }
 
-    public Task<RefundPaymentProviderResult> RefundPaymentAsync(
+    public async Task<RefundPaymentProviderResult> RefundPaymentAsync(
         RefundPaymentProviderRequest request,
         CancellationToken cancellationToken = default)
     {
-        WarnIfRealModeIsRequested();
-        return Task.FromResult(SimulateRefundPayment(request));
+        if (_stripeOptions.UseFakeProvider)
+        {
+            return SimulateRefundPayment(request);
+        }
+
+        if (!HasSecretKey())
+        {
+            return new RefundPaymentProviderResult(
+                Status: ProviderRefundPaymentStatus.Failed,
+                ProviderRefundId: null,
+                ErrorCode: "stripe_secret_not_configured",
+                ErrorMessage: "Stripe secret key is not configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ProviderPaymentIntentId))
+        {
+            return new RefundPaymentProviderResult(
+                Status: ProviderRefundPaymentStatus.Failed,
+                ProviderRefundId: null,
+                ErrorCode: "missing_provider_payment_intent_id",
+                ErrorMessage: "Provider payment intent id is required for refunds.");
+        }
+
+        try
+        {
+            var currency = NormalizeCurrency(request.Currency);
+            var amountInMinorUnits = ConvertToMinorUnits(request.Amount, currency);
+
+            var createOptions = new RefundCreateOptions
+            {
+                PaymentIntent = request.ProviderPaymentIntentId,
+                Amount = amountInMinorUnits,
+                Reason = "requested_by_customer",
+                Metadata = new Dictionary<string, string>
+                {
+                    ["payment_id"] = request.PaymentId,
+                    ["reason_text"] = request.Reason,
+                },
+            };
+
+            var requestOptions = new RequestOptions
+            {
+                IdempotencyKey = request.IdempotencyKey,
+            };
+
+            var refundService = new RefundService(CreateStripeClient());
+            var refund = await refundService.CreateAsync(createOptions, requestOptions, cancellationToken);
+
+            return MapRefundPaymentResult(refund);
+        }
+        catch (StripeException ex)
+        {
+            logger.LogWarning(ex, "Stripe refund call failed. PaymentId={PaymentId}", request.PaymentId);
+            return new RefundPaymentProviderResult(
+                Status: ProviderRefundPaymentStatus.Failed,
+                ProviderRefundId: null,
+                ErrorCode: ex.StripeError?.Code ?? "stripe_error",
+                ErrorMessage: ex.StripeError?.Message ?? ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected Stripe refund error. PaymentId={PaymentId}", request.PaymentId);
+            return new RefundPaymentProviderResult(
+                Status: ProviderRefundPaymentStatus.Failed,
+                ProviderRefundId: null,
+                ErrorCode: "unexpected_provider_error",
+                ErrorMessage: "Unexpected error while creating Stripe refund.");
+        }
     }
 
-    public Task<ProviderPaymentStatusResult> GetPaymentStatusAsync(
+    public async Task<ProviderPaymentStatusResult> GetPaymentStatusAsync(
         string providerPaymentIntentId,
         CancellationToken cancellationToken = default)
     {
-        WarnIfRealModeIsRequested();
+        if (_stripeOptions.UseFakeProvider)
+        {
+            return SimulatePaymentStatus(providerPaymentIntentId);
+        }
 
         if (string.IsNullOrWhiteSpace(providerPaymentIntentId))
         {
-            return Task.FromResult(new ProviderPaymentStatusResult(
+            return new ProviderPaymentStatusResult(
                 Status: ProviderPaymentLifecycleStatus.Unknown,
                 ErrorCode: "missing_provider_payment_intent_id",
-                ErrorMessage: "Provider payment intent id is required."));
+                ErrorMessage: "Provider payment intent id is required.");
         }
 
-        var loweredId = providerPaymentIntentId.Trim().ToLowerInvariant();
-
-        if (loweredId.Contains("fail", StringComparison.Ordinal))
+        if (!HasSecretKey())
         {
-            return Task.FromResult(new ProviderPaymentStatusResult(
-                Status: ProviderPaymentLifecycleStatus.Failed,
-                ErrorCode: "provider_marked_failed",
-                ErrorMessage: "Provider marked payment as failed."));
+            return new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Unknown,
+                ErrorCode: "stripe_secret_not_configured",
+                ErrorMessage: "Stripe secret key is not configured.");
         }
 
-        if (loweredId.Contains("pending", StringComparison.Ordinal)
-            || loweredId.Contains("action", StringComparison.Ordinal))
+        try
         {
-            return Task.FromResult(new ProviderPaymentStatusResult(
-                Status: ProviderPaymentLifecycleStatus.Pending,
-                ErrorCode: null,
-                ErrorMessage: null));
-        }
+            var paymentIntentService = new PaymentIntentService(CreateStripeClient());
+            var paymentIntent = await paymentIntentService.GetAsync(providerPaymentIntentId, null, null, cancellationToken);
 
-        return Task.FromResult(new ProviderPaymentStatusResult(
-            Status: ProviderPaymentLifecycleStatus.Succeeded,
-            ErrorCode: null,
-            ErrorMessage: null));
+            return MapPaymentStatusResult(paymentIntent);
+        }
+        catch (StripeException ex)
+        {
+            logger.LogWarning(ex, "Stripe get payment status failed. ProviderPaymentIntentId={ProviderPaymentIntentId}", providerPaymentIntentId);
+            return new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Unknown,
+                ErrorCode: ex.StripeError?.Code ?? "stripe_error",
+                ErrorMessage: ex.StripeError?.Message ?? ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected Stripe get payment status error. ProviderPaymentIntentId={ProviderPaymentIntentId}", providerPaymentIntentId);
+            return new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Unknown,
+                ErrorCode: "unexpected_provider_error",
+                ErrorMessage: "Unexpected error while fetching Stripe payment status.");
+        }
     }
 
-    public Task<ProviderRefundStatusResult> GetRefundStatusAsync(
+    public async Task<ProviderRefundStatusResult> GetRefundStatusAsync(
         string providerRefundId,
         CancellationToken cancellationToken = default)
     {
-        WarnIfRealModeIsRequested();
+        if (_stripeOptions.UseFakeProvider)
+        {
+            return SimulateRefundStatus(providerRefundId);
+        }
 
         if (string.IsNullOrWhiteSpace(providerRefundId))
         {
-            return Task.FromResult(new ProviderRefundStatusResult(
+            return new ProviderRefundStatusResult(
                 Status: ProviderRefundLifecycleStatus.Unknown,
                 ErrorCode: "missing_provider_refund_id",
-                ErrorMessage: "Provider refund id is required."));
+                ErrorMessage: "Provider refund id is required.");
         }
 
-        var loweredId = providerRefundId.Trim().ToLowerInvariant();
-
-        if (loweredId.Contains("fail", StringComparison.Ordinal))
+        if (!HasSecretKey())
         {
-            return Task.FromResult(new ProviderRefundStatusResult(
-                Status: ProviderRefundLifecycleStatus.Failed,
-                ErrorCode: "provider_marked_failed",
-                ErrorMessage: "Provider marked refund as failed."));
+            return new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Unknown,
+                ErrorCode: "stripe_secret_not_configured",
+                ErrorMessage: "Stripe secret key is not configured.");
         }
 
-        if (loweredId.Contains("pending", StringComparison.Ordinal))
+        try
         {
-            return Task.FromResult(new ProviderRefundStatusResult(
-                Status: ProviderRefundLifecycleStatus.Pending,
-                ErrorCode: null,
-                ErrorMessage: null));
-        }
+            var refundService = new RefundService(CreateStripeClient());
+            var refund = await refundService.GetAsync(providerRefundId, null, null, cancellationToken);
 
-        return Task.FromResult(new ProviderRefundStatusResult(
-            Status: ProviderRefundLifecycleStatus.Succeeded,
-            ErrorCode: null,
-            ErrorMessage: null));
+            return MapRefundStatusResult(refund);
+        }
+        catch (StripeException ex)
+        {
+            logger.LogWarning(ex, "Stripe get refund status failed. ProviderRefundId={ProviderRefundId}", providerRefundId);
+            return new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Unknown,
+                ErrorCode: ex.StripeError?.Code ?? "stripe_error",
+                ErrorMessage: ex.StripeError?.Message ?? ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected Stripe get refund status error. ProviderRefundId={ProviderRefundId}", providerRefundId);
+            return new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Unknown,
+                ErrorCode: "unexpected_provider_error",
+                ErrorMessage: "Unexpected error while fetching Stripe refund status.");
+        }
     }
 
-    private ProcessPaymentProviderResult SimulateProcessPayment(ProcessPaymentProviderRequest request)
+    // @todo: simulation helpers should be moved to another file
+    private static ProcessPaymentProviderResult SimulateProcessPayment(ProcessPaymentProviderRequest request)
     {
         if (request.Amount <= 0)
         {
@@ -118,7 +257,7 @@ internal sealed class StripePaymentProvider(
                 ErrorMessage: "Payment amount must be greater than zero.");
         }
 
-        if (request.PaymentMethod == PaymentMethod.Unknown)
+        if (request.PaymentMethod == DomainPaymentMethod.Unknown)
         {
             return new ProcessPaymentProviderResult(
                 Status: ProviderProcessPaymentStatus.Failed,
@@ -170,7 +309,7 @@ internal sealed class StripePaymentProvider(
             ErrorMessage: null);
     }
 
-    private RefundPaymentProviderResult SimulateRefundPayment(RefundPaymentProviderRequest request)
+    private static RefundPaymentProviderResult SimulateRefundPayment(RefundPaymentProviderRequest request)
     {
         if (request.Amount <= 0)
         {
@@ -218,19 +357,73 @@ internal sealed class StripePaymentProvider(
             ErrorMessage: null);
     }
 
-    private void WarnIfRealModeIsRequested()
+    private static ProviderPaymentStatusResult SimulatePaymentStatus(string providerPaymentIntentId)
     {
-        if (_stripeOptions.UseFakeProvider)
+        if (string.IsNullOrWhiteSpace(providerPaymentIntentId))
         {
-            return;
+            return new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Unknown,
+                ErrorCode: "missing_provider_payment_intent_id",
+                ErrorMessage: "Provider payment intent id is required.");
         }
 
-        if (Interlocked.Exchange(ref _realModeWarningLogged, 1) == 0)
+        var loweredId = providerPaymentIntentId.Trim().ToLowerInvariant();
+
+        if (loweredId.Contains("fail", StringComparison.Ordinal))
         {
-            logger.LogWarning(
-                "Stripe:UseFakeProvider=false is configured, but this branch uses the in-memory provider simulator. " +
-                "Set Stripe:UseFakeProvider=true or wire a real Stripe adapter before production deployment.");
+            return new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Failed,
+                ErrorCode: "provider_marked_failed",
+                ErrorMessage: "Provider marked payment as failed.");
         }
+
+        if (loweredId.Contains("pending", StringComparison.Ordinal)
+            || loweredId.Contains("action", StringComparison.Ordinal))
+        {
+            return new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Pending,
+                ErrorCode: null,
+                ErrorMessage: null);
+        }
+
+        return new ProviderPaymentStatusResult(
+            Status: ProviderPaymentLifecycleStatus.Succeeded,
+            ErrorCode: null,
+            ErrorMessage: null);
+    }
+
+    private static ProviderRefundStatusResult SimulateRefundStatus(string providerRefundId)
+    {
+        if (string.IsNullOrWhiteSpace(providerRefundId))
+        {
+            return new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Unknown,
+                ErrorCode: "missing_provider_refund_id",
+                ErrorMessage: "Provider refund id is required.");
+        }
+
+        var loweredId = providerRefundId.Trim().ToLowerInvariant();
+
+        if (loweredId.Contains("fail", StringComparison.Ordinal))
+        {
+            return new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Failed,
+                ErrorCode: "provider_marked_failed",
+                ErrorMessage: "Provider marked refund as failed.");
+        }
+
+        if (loweredId.Contains("pending", StringComparison.Ordinal))
+        {
+            return new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Pending,
+                ErrorCode: null,
+                ErrorMessage: null);
+        }
+
+        return new ProviderRefundStatusResult(
+            Status: ProviderRefundLifecycleStatus.Succeeded,
+            ErrorCode: null,
+            ErrorMessage: null);
     }
 
     private static string BuildStableToken(string paymentId, string idempotencyKey)
@@ -238,5 +431,209 @@ internal sealed class StripePaymentProvider(
         var raw = $"{paymentId.Trim()}|{idempotencyKey.Trim()}";
         var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(raw));
         return Convert.ToHexString(bytes.AsSpan(0, 8)).ToLowerInvariant();
+    }
+
+    // @todo: mappers should be moved to new files
+    private static ProcessPaymentProviderResult MapProcessPaymentResult(PaymentIntent paymentIntent)
+    {
+        var status = paymentIntent.Status?.Trim().ToLowerInvariant();
+
+        return status switch
+        {
+            "succeeded" => new ProcessPaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Succeeded,
+                ProviderPaymentIntentId: paymentIntent.Id,
+                ClientSecret: paymentIntent.ClientSecret,
+                ErrorCode: null,
+                ErrorMessage: null),
+
+            "requires_action" => new ProcessPaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.RequiresAction,
+                ProviderPaymentIntentId: paymentIntent.Id,
+                ClientSecret: paymentIntent.ClientSecret,
+                ErrorCode: null,
+                ErrorMessage: null),
+
+            "canceled" => new ProcessPaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: paymentIntent.Id,
+                ClientSecret: paymentIntent.ClientSecret,
+                ErrorCode: paymentIntent.CancellationReason ?? "payment_intent_canceled",
+                ErrorMessage: paymentIntent.LastPaymentError?.Message ?? "Stripe payment intent was canceled."),
+
+            _ => new ProcessPaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Pending,
+                ProviderPaymentIntentId: paymentIntent.Id,
+                ClientSecret: paymentIntent.ClientSecret,
+                ErrorCode: null,
+                ErrorMessage: null),
+        };
+    }
+
+    private static RefundPaymentProviderResult MapRefundPaymentResult(Refund refund)
+    {
+        var status = refund.Status?.Trim().ToLowerInvariant();
+
+        return status switch
+        {
+            "succeeded" => new RefundPaymentProviderResult(
+                Status: ProviderRefundPaymentStatus.Succeeded,
+                ProviderRefundId: refund.Id,
+                ErrorCode: null,
+                ErrorMessage: null),
+
+            "failed" or "canceled" => new RefundPaymentProviderResult(
+                Status: ProviderRefundPaymentStatus.Failed,
+                ProviderRefundId: refund.Id,
+                ErrorCode: refund.FailureReason ?? "refund_failed",
+                ErrorMessage: "Stripe refund failed."),
+
+            _ => new RefundPaymentProviderResult(
+                Status: ProviderRefundPaymentStatus.Pending,
+                ProviderRefundId: refund.Id,
+                ErrorCode: null,
+                ErrorMessage: null),
+        };
+    }
+
+    private static ProviderPaymentStatusResult MapPaymentStatusResult(PaymentIntent paymentIntent)
+    {
+        var status = paymentIntent.Status?.Trim().ToLowerInvariant();
+
+        return status switch
+        {
+            "succeeded" => new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Succeeded,
+                ErrorCode: null,
+                ErrorMessage: null),
+
+            "canceled" or "requires_payment_method" => new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Failed,
+                ErrorCode: paymentIntent.CancellationReason ?? paymentIntent.LastPaymentError?.Code,
+                ErrorMessage: paymentIntent.LastPaymentError?.Message),
+
+            "requires_action" or "requires_confirmation" or "requires_capture" or "processing" =>
+                new ProviderPaymentStatusResult(
+                    Status: ProviderPaymentLifecycleStatus.Pending,
+                    ErrorCode: null,
+                    ErrorMessage: null),
+
+            _ => new ProviderPaymentStatusResult(
+                Status: ProviderPaymentLifecycleStatus.Unknown,
+                ErrorCode: null,
+                ErrorMessage: null),
+        };
+    }
+
+    private static ProviderRefundStatusResult MapRefundStatusResult(Refund refund)
+    {
+        var status = refund.Status?.Trim().ToLowerInvariant();
+
+        return status switch
+        {
+            "succeeded" => new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Succeeded,
+                ErrorCode: null,
+                ErrorMessage: null),
+
+            "failed" or "canceled" => new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Failed,
+                ErrorCode: refund.FailureReason ?? "refund_failed",
+                ErrorMessage: "Stripe refund failed."),
+
+            "pending" or "requires_action" => new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Pending,
+                ErrorCode: null,
+                ErrorMessage: null),
+
+            _ => new ProviderRefundStatusResult(
+                Status: ProviderRefundLifecycleStatus.Unknown,
+                ErrorCode: null,
+                ErrorMessage: null),
+        };
+    }
+
+    private PaymentIntentCreateOptions BuildPaymentIntentCreateOptions(
+        ProcessPaymentProviderRequest request,
+        string currency,
+        long amountInMinorUnits)
+    {
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = amountInMinorUnits,
+            Currency = currency,
+            Confirm = false,
+            ReceiptEmail = request.CustomerEmail,
+            Description = $"Order {request.OrderId}",
+            Metadata = new Dictionary<string, string>
+            {
+                ["payment_id"] = request.PaymentId,
+                ["order_id"] = request.OrderId,
+                ["customer_id"] = request.CustomerId,
+                ["idempotency_key"] = request.IdempotencyKey,
+            },
+        };
+
+        var mappedPaymentMethodType = MapPaymentMethodType(request.PaymentMethod);
+        if (mappedPaymentMethodType is null)
+        {
+            options.AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+            {
+                Enabled = true,
+            };
+        }
+        else
+        {
+            options.PaymentMethodTypes = [mappedPaymentMethodType];
+        }
+
+        return options;
+    }
+
+    private static string? MapPaymentMethodType(DomainPaymentMethod paymentMethod)
+    {
+        return paymentMethod switch
+        {
+            DomainPaymentMethod.Card => "card",
+            DomainPaymentMethod.BankTransfer => "us_bank_account",
+            DomainPaymentMethod.Wallet => "card",
+            _ => null,
+        };
+    }
+
+    private bool HasSecretKey() => !string.IsNullOrWhiteSpace(_stripeOptions.SecretKey);
+
+    private StripeClient CreateStripeClient()
+    {
+        return new StripeClient(_stripeOptions.SecretKey);
+    }
+
+    private string NormalizeCurrency(string? currency)
+    {
+        var value = string.IsNullOrWhiteSpace(currency)
+            ? _stripeOptions.DefaultCurrency
+            : currency;
+
+        return value.Trim().ToLowerInvariant();
+    }
+
+    private static long ConvertToMinorUnits(decimal amount, string currency)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be greater than zero.");
+        }
+
+        var normalizedCurrency = currency.Trim().ToLowerInvariant();
+        var multiplier = IsZeroDecimalCurrency(normalizedCurrency) ? 1m : 100m;
+
+        var rounded = decimal.Round(amount * multiplier, 0, MidpointRounding.AwayFromZero);
+        return (long)rounded;
+    }
+
+    private static bool IsZeroDecimalCurrency(string currency)
+    {
+        return currency is "bif" or "clp" or "djf" or "gnf" or "jpy" or "kmf" or "krw" or
+               "mga" or "pyg" or "rwf" or "ugx" or "vnd" or "vuv" or "xaf" or "xof" or "xpf";
     }
 }
