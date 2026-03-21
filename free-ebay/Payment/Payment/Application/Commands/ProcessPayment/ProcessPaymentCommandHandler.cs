@@ -92,7 +92,7 @@ internal sealed class ProcessPaymentCommandHandler(
                     if (string.IsNullOrWhiteSpace(providerResult.ProviderPaymentIntentId))
                     {
                         return Result<ProcessPaymentResultDto>.Failure(
-                            "ProviderPaymentIntentId is required when provider status is Pending or RequiresAction.");
+                            "ProviderPaymentIntentId is required when provider status is Pending or RequiresAction");
                     }
 
                     payment.MarkPendingProviderConfirmation(

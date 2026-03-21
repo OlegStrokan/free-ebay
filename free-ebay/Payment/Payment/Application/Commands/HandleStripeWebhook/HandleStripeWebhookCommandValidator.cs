@@ -15,12 +15,16 @@ public sealed class HandleStripeWebhookCommandValidator : AbstractValidator<Hand
         RuleFor(x => x.PayloadJson)
             .NotEmpty().WithMessage("PayloadJson is required.");
 
-        RuleFor(x => x.PaymentId)
-            .NotEmpty().WithMessage("PaymentId is required for this webhook outcome.")
+        RuleFor(x => x)
+            .Must(HaveResolutionData)
+            .WithMessage("PaymentId, ProviderPaymentIntentId, or ProviderRefundId is required for this webhook outcome.")
             .When(x => x.Outcome is not StripeWebhookOutcome.Unknown);
+    }
 
-        RuleFor(x => x.ProviderPaymentIntentId)
-            .NotEmpty().WithMessage("ProviderPaymentIntentId is required for PaymentSucceeded outcome.")
-            .When(x => x.Outcome == StripeWebhookOutcome.PaymentSucceeded);
+    private static bool HaveResolutionData(HandleStripeWebhookCommand command)
+    {
+        return !string.IsNullOrWhiteSpace(command.PaymentId)
+               || !string.IsNullOrWhiteSpace(command.ProviderPaymentIntentId)
+               || !string.IsNullOrWhiteSpace(command.ProviderRefundId);
     }
 }

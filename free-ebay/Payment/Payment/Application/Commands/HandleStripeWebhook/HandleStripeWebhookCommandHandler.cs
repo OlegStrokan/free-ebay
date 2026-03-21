@@ -53,7 +53,7 @@ internal sealed class HandleStripeWebhookCommandHandler(
 
             await paymentWebhookEventRepository.AddAsync(webhookEvent, cancellationToken);
 
-            if (request.Outcome == StripeWebhookOutcome.Unknown || string.IsNullOrWhiteSpace(request.PaymentId))
+            if (request.Outcome == StripeWebhookOutcome.Unknown)
             {
                 webhookEvent.MarkProcessed(now);
                 await paymentWebhookEventRepository.UpdateAsync(webhookEvent, cancellationToken);
@@ -69,12 +69,13 @@ internal sealed class HandleStripeWebhookCommandHandler(
                     Error: null));
             }
 
-            var paymentId = PaymentId.From(request.PaymentId);
-            var payment = await paymentRepository.GetByIdAsync(paymentId, cancellationToken);
+            var payment = await ResolvePaymentAsync(request, cancellationToken);
 
             if (payment is null)
             {
-                var error = $"Payment '{request.PaymentId}' was not found for webhook event '{request.ProviderEventId}'.";
+                var error =
+                    $"Payment could not be resolved for webhook event '{request.ProviderEventId}'. " +
+                    $"PaymentId='{request.PaymentId}', ProviderPaymentIntentId='{request.ProviderPaymentIntentId}', ProviderRefundId='{request.ProviderRefundId}'.";
                 webhookEvent.MarkFailed(error, now);
                 await paymentWebhookEventRepository.UpdateAsync(webhookEvent, cancellationToken);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -209,5 +210,38 @@ internal sealed class HandleStripeWebhookCommandHandler(
             default:
                 return;
         }
+    }
+
+    private async Task<Payment?> ResolvePaymentAsync(
+        HandleStripeWebhookCommand request,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(request.PaymentId))
+        {
+            return await paymentRepository.GetByIdAsync(PaymentId.From(request.PaymentId), cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProviderPaymentIntentId))
+        {
+            return await paymentRepository.GetByProviderPaymentIntentIdAsync(
+                ProviderPaymentIntentId.From(request.ProviderPaymentIntentId),
+                cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProviderRefundId))
+        {
+            var refund = await refundRepository.GetByProviderRefundIdAsync(
+                ProviderRefundId.From(request.ProviderRefundId),
+                cancellationToken);
+
+            if (refund is null)
+            {
+                return null;
+            }
+
+            return await paymentRepository.GetByIdAsync(refund.PaymentId, cancellationToken);
+        }
+
+        return null;
     }
 }
