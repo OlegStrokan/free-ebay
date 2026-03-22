@@ -308,6 +308,7 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         public Task<string> RefundAsync(
             string paymentId,
             decimal amount,
+            string currency,
             string reason,
             CancellationToken cancellationToken)
             => Task.FromResult("REF-NOT-USED");
@@ -329,6 +330,7 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         public Task<string> RefundAsync(
             string paymentId,
             decimal amount,
+            string currency,
             string reason,
             CancellationToken cancellationToken)
             => Task.FromResult("REF-NOT-USED");

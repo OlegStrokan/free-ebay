@@ -40,8 +40,9 @@ public class PaymentGatewayTests
     public async Task ProcessPaymentAsync_ShouldReturnSucceededResult_WhenSucceeds()
     {
         var paymentId = "pay-123";
+        ProcessPaymentRequest? capturedRequest = null;
         _client
-            .ProcessPaymentAsync(Arg.Any<ProcessPaymentRequest>(),
+            .ProcessPaymentAsync(Arg.Do<ProcessPaymentRequest>(x => capturedRequest = x),
                 Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(GrpcCall(new ProcessPaymentResponse
             {
@@ -55,6 +56,8 @@ public class PaymentGatewayTests
 
         Assert.Equal(paymentId, result.PaymentId);
         Assert.Equal(Application.Gateways.PaymentProcessingStatus.Succeeded, result.Status);
+        Assert.Equal("USD", capturedRequest?.Currency);
+        Assert.False(string.IsNullOrWhiteSpace(capturedRequest?.IdempotencyKey));
     }
 
     [Fact]
@@ -197,14 +200,17 @@ public class PaymentGatewayTests
     public async Task RefundAsync_ShouldReturnRefundId_WhenSucceeds()
     {
         var refundId = "ref-456";
+        RefundPaymentRequest? capturedRequest = null;
         _client
-            .RefundPaymentAsync(Arg.Any<RefundPaymentRequest>(),
+            .RefundPaymentAsync(Arg.Do<RefundPaymentRequest>(x => capturedRequest = x),
                 Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(GrpcCall(new RefundPaymentResponse { Success = true, RefundId = refundId }));
 
-        var result = await Build().RefundAsync("pay-123", 50m, "duplicate", CancellationToken.None);
+        var result = await Build().RefundAsync("pay-123", 50m, "usd", "duplicate", CancellationToken.None);
 
         Assert.Equal(refundId, result);
+        Assert.Equal("USD", capturedRequest?.Currency);
+        Assert.False(string.IsNullOrWhiteSpace(capturedRequest?.IdempotencyKey));
     }
 
     [Fact]
@@ -216,7 +222,7 @@ public class PaymentGatewayTests
             .Returns(GrpcCall(new RefundPaymentResponse { Success = false, ErrorMessage = "already refunded" }));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            Build().RefundAsync("pay-123", 50m, "duplicate", CancellationToken.None));
+            Build().RefundAsync("pay-123", 50m, "USD", "duplicate", CancellationToken.None));
     }
 
     [Fact]
@@ -228,6 +234,6 @@ public class PaymentGatewayTests
             .Returns(GrpcFail<RefundPaymentResponse>(StatusCode.NotFound, "payment not found"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            Build().RefundAsync("pay-xyz", 50m, "test", CancellationToken.None));
+            Build().RefundAsync("pay-xyz", 50m, "USD", "test", CancellationToken.None));
     }
 }

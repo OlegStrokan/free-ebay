@@ -42,7 +42,7 @@ public class ProcessRefundStepTests
             .Returns(order);
 
         _paymentGateway
-            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(expectedRefundId);
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
@@ -55,6 +55,7 @@ public class ProcessRefundStepTests
         await _paymentGateway.Received(1).RefundAsync(
             "PAY-1",
             data.RefundAmount,
+            data.Currency,
             Arg.Is<string>(s => s.Contains(data.ReturnReason)),
             Arg.Any<CancellationToken>());
         
@@ -74,7 +75,7 @@ public class ProcessRefundStepTests
         Assert.True(result.Success);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
-            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class ProcessRefundStepTests
         Assert.Contains("not found", result.ErrorMessage);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
-            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -116,7 +117,7 @@ public class ProcessRefundStepTests
         Assert.Contains("no payment ID", result.ErrorMessage);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
-            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public class ProcessRefundStepTests
             .Returns(order);
 
         _paymentGateway
-            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("Payment Provider Unavailable"));
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
@@ -150,7 +151,7 @@ public class ProcessRefundStepTests
             .Returns(order);
 
         _paymentGateway
-            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .RefundAsync(Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("REF-OK");
 
         _returnRequestPersistenceService
@@ -180,7 +181,7 @@ public class ProcessRefundStepTests
 
         // no actual re-charge - just alerts
         await _paymentGateway.DidNotReceive().RefundAsync(
-            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

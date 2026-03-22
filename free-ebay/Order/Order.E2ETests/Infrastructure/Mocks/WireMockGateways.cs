@@ -5,11 +5,12 @@ using Application.Gateways.Exceptions;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Infrastructure.Extensions;
-using Org.BouncyCastle.Bcpg;
 using Protos.Accounting;
 using Protos.Inventory;
 using Protos.Payment;
 using Protos.Product;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Order.E2ETests.Infrastructure.Mocks;
 
@@ -36,6 +37,11 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
         string paymentMethod,
         CancellationToken cancellationToken)
     {
+        var normalizedCurrency = NormalizeCurrency(currency);
+        var idempotencyKey = BuildIdempotencyKey(
+            "grpc-process",
+            $"{orderId}|{customerId}|{amount:F4}|{normalizedCurrency}");
+
         try
         {
             var response = await _client.ProcessPaymentAsync(
@@ -44,8 +50,9 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
                     OrderId = orderId.ToString(),
                     CustomerId = customerId.ToString(),
                     Amount = amount.ToDecimalValue(),
-                    Currency = currency,
-                    PaymentMethod = paymentMethod
+                    Currency = normalizedCurrency,
+                    PaymentMethod = paymentMethod,
+                    IdempotencyKey = idempotencyKey,
                 },
                 cancellationToken: cancellationToken);
 
@@ -57,7 +64,7 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
                     $"[{response.ErrorCode}] {response.ErrorMessage}") : response.ErrorCode switch
                 {
                     "INSUFFICIENT_FUNDS" => new InsufficientFundsException(
-                        $"Payment failed: insufficient funds. OrderId={orderId}, Amount={amount} {currency}"),
+                        $"Payment failed: insufficient funds. OrderId={orderId}, Amount={amount} {normalizedCurrency}"),
                     "PAYMENT_DECLINED" => new PaymentDeclinedException(
                         $"Payment declined by provider. OrderId={orderId}, Reason={response.ErrorMessage}"),
                     _ => new InvalidOperationException(
@@ -126,16 +133,24 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
     public async Task<string> RefundAsync(
         string paymentId, 
         decimal amount,
+        string currency,
         string reason, 
         CancellationToken cancellationToken
         )
     {
+        var normalizedCurrency = NormalizeCurrency(currency);
+        var idempotencyKey = BuildIdempotencyKey(
+            "grpc-refund",
+            $"{paymentId}|{amount:F4}|{normalizedCurrency}|{reason}");
+
         var response = await _client.RefundPaymentAsync(
             new RefundPaymentRequest
             {
                 PaymentId = paymentId,
                 Amount = amount.ToDecimalValue(),
-                Reason = reason
+                Currency = normalizedCurrency,
+                Reason = reason,
+                IdempotencyKey = idempotencyKey,
             },
             cancellationToken: cancellationToken);
 
@@ -143,6 +158,22 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
             throw new Exception($"Refund failed: {response.ErrorMessage}");
 
         return response.RefundId;
+    }
+
+    private static string BuildIdempotencyKey(string prefix, string seed)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
+        return $"{prefix}:{Convert.ToHexString(hash.AsSpan(0, 12)).ToLowerInvariant()}";
+    }
+
+    private static string NormalizeCurrency(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "USD";
+        }
+
+        return value.Trim().ToUpperInvariant();
     }
 }
 

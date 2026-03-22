@@ -238,6 +238,7 @@ public class ProcessPaymentStepTests
         await _paymentGateway.Received(1).RefundAsync(
             "PAY-123",
             data.TotalAmount,
+            data.Currency,
             Arg.Is<string>(s => s.Contains("saga compensation")),
             Arg.Any<CancellationToken>());
     }
@@ -250,7 +251,7 @@ public class ProcessPaymentStepTests
         await BuildStep().CompensateAsync(CreateSampleData(), context, CancellationToken.None);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
-            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -265,7 +266,7 @@ public class ProcessPaymentStepTests
         await BuildStep().CompensateAsync(CreateSampleData(), context, CancellationToken.None);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
-            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -284,6 +285,7 @@ public class ProcessPaymentStepTests
         await _paymentGateway.Received(1).RefundAsync(
             "LEGACY-PAY",
             data.TotalAmount,
+            data.Currency,
             Arg.Any<string>(),
             Arg.Any<CancellationToken>());
     }
@@ -298,7 +300,7 @@ public class ProcessPaymentStepTests
         };
 
         _paymentGateway.RefundAsync(
-                Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("Refund service down"));
 
         var exception = await Record.ExceptionAsync(() =>
@@ -307,7 +309,7 @@ public class ProcessPaymentStepTests
         Assert.Null(exception);
 
         await _paymentGateway.Received(1).RefundAsync(
-            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
 
