@@ -1,6 +1,7 @@
 using Application.Common.Enums;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
+using Application.Interfaces;
 using Application.Sagas.Steps;
 using Microsoft.Extensions.Logging;
 
@@ -9,6 +10,7 @@ namespace Application.Sagas.OrderSaga.Steps;
 
 public sealed class ProcessPaymentStep(
     IPaymentGateway paymentGateway,
+    ICompensationRefundRetryRepository compensationRefundRetryRepository,
     IIncidentReporter incidentReporter,
     ILogger<ProcessPaymentStep> logger)
     : ISagaStep<OrderSagaData, OrderSagaContext>
@@ -23,6 +25,7 @@ public sealed class ProcessPaymentStep(
     {
         try
         {
+             // @todo: we can delete it
             // Backward compatibility for snapshots saved before PaymentStatus existed.
             if (context.PaymentStatus == OrderSagaPaymentStatus.NotStarted && !string.IsNullOrEmpty(context.PaymentId))
             {
@@ -248,6 +251,7 @@ public sealed class ProcessPaymentStep(
         OrderSagaContext context,
         CancellationToken cancellationToken)
     {
+        // @todo: we can delete it
         // Backward compatibility for snapshots saved before PaymentStatus existed.
         if (context.PaymentStatus == OrderSagaPaymentStatus.NotStarted && !string.IsNullOrEmpty(context.PaymentId))
         {
@@ -292,19 +296,50 @@ public sealed class ProcessPaymentStep(
                 data.CorrelationId
             );
 
-            await paymentGateway.RefundAsync(
+            var refundResult = await paymentGateway.RefundWithStatusAsync(
                 paymentId: context.PaymentId,
                 amount: data.TotalAmount,
                 currency: data.Currency,
                 reason: "Order cancelled - saga compensation",
                 cancellationToken);
 
-            logger.LogInformation(
-                "Successfully refunded payment {PaymentId}",
-                context.PaymentId);
+            if (refundResult.Status == RefundProcessingStatus.Pending)
+            {
+                logger.LogWarning(
+                    "Refund {RefundId} for payment {PaymentId} is pending provider confirmation during compensation for order {OrderId}",
+                    refundResult.RefundId,
+                    context.PaymentId,
+                    data.CorrelationId);
+            }
+            else
+            {
+                logger.LogInformation(
+                    "Successfully refunded payment {PaymentId} with refund {RefundId}",
+                    context.PaymentId,
+                    refundResult.RefundId);
+            }
         }
         catch (Exception ex)
         {
+            if (IsRetriableRefundFailure(ex))
+            {
+                await compensationRefundRetryRepository.EnqueueIfNotExistsAsync(
+                    orderId: data.CorrelationId,
+                    paymentId: context.PaymentId,
+                    amount: data.TotalAmount,
+                    currency: data.Currency,
+                    reason: "Order cancelled - saga compensation",
+                    cancellationToken);
+
+                logger.LogWarning(
+                    ex,
+                    "Refund compensation for payment {PaymentId} failed with retriable error. Retry has been enqueued for order {OrderId}",
+                    context.PaymentId,
+                    data.CorrelationId);
+
+                return;
+            }
+
             logger.LogError(
                 ex,
                 "Failed to refund payment {PaymentId}. Manual refund required!",
@@ -321,5 +356,20 @@ public sealed class ProcessPaymentStep(
         }
 
         
+    }
+
+    private static bool IsRetriableRefundFailure(Exception ex)
+    {
+        if (ex is GatewayUnavailableException)
+        {
+            return true;
+        }
+
+        if (ex is TimeoutException || ex is HttpRequestException || ex is TaskCanceledException)
+        {
+            return true;
+        }
+
+        return ex.InnerException is not null && IsRetriableRefundFailure(ex.InnerException);
     }
 }

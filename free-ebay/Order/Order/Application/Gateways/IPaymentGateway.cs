@@ -19,6 +19,14 @@ public interface IPaymentGateway
         string reason,
         CancellationToken cancellationToken
         );
+
+    Task<RefundProcessingResult> RefundWithStatusAsync(
+        string paymentId,
+        decimal amount,
+        string currency,
+        string reason,
+        CancellationToken cancellationToken
+        );
 }
 
 public enum PaymentProcessingStatus
@@ -29,6 +37,12 @@ public enum PaymentProcessingStatus
     Failed = 3,
 }
 
+public enum RefundProcessingStatus
+{
+    Succeeded = 0,
+    Pending = 1,
+}
+
 public sealed record PaymentProcessingResult(
     string? PaymentId,
     PaymentProcessingStatus Status,
@@ -36,3 +50,10 @@ public sealed record PaymentProcessingResult(
     string? ClientSecret = null,
     string? ErrorCode = null,
     string? ErrorMessage = null);
+
+public sealed record RefundProcessingResult(
+    string RefundId,
+    RefundProcessingStatus Status,
+    string? ErrorCode = null,
+    string? ErrorMessage = null,
+    string? ProviderRefundId = null);
