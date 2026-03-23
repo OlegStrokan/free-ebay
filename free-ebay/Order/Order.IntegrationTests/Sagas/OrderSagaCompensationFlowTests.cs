@@ -2,6 +2,7 @@ using Application.DTOs;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
 using Application.Interfaces;
+using Application.Models;
 using Application.Sagas;
 using Application.Sagas.OrderSaga;
 using Application.Sagas.OrderSaga.Steps;
@@ -100,6 +101,7 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         {
             new ProcessPaymentStep(
                 new TimeoutPaymentGateway(),
+                new NoopCompensationRefundRetryRepository(),
                 new NoopIncidentReporter(),
                 NullLogger<ProcessPaymentStep>.Instance)
         };
@@ -146,6 +148,7 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
             new RecordingSuccessfulStep("ReserveInventory", 1, compensationSequence),
             new ProcessPaymentStep(
                 new UnavailablePaymentGateway(),
+                new NoopCompensationRefundRetryRepository(),
                 new NoopIncidentReporter(),
                 NullLogger<ProcessPaymentStep>.Instance)
         };
@@ -312,6 +315,14 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
             string reason,
             CancellationToken cancellationToken)
             => Task.FromResult("REF-NOT-USED");
+
+        public Task<RefundProcessingResult> RefundWithStatusAsync(
+            string paymentId,
+            decimal amount,
+            string currency,
+            string reason,
+            CancellationToken cancellationToken)
+            => Task.FromResult(new RefundProcessingResult("REF-NOT-USED", RefundProcessingStatus.Succeeded));
     }
 
     private sealed class UnavailablePaymentGateway : IPaymentGateway
@@ -334,5 +345,34 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
             string reason,
             CancellationToken cancellationToken)
             => Task.FromResult("REF-NOT-USED");
+
+        public Task<RefundProcessingResult> RefundWithStatusAsync(
+            string paymentId,
+            decimal amount,
+            string currency,
+            string reason,
+            CancellationToken cancellationToken)
+            => Task.FromResult(new RefundProcessingResult("REF-NOT-USED", RefundProcessingStatus.Succeeded));
+    }
+
+    private sealed class NoopCompensationRefundRetryRepository : ICompensationRefundRetryRepository
+    {
+        public Task<CompensationRefundRetry> EnqueueIfNotExistsAsync(
+            Guid orderId,
+            string paymentId,
+            decimal amount,
+            string currency,
+            string reason,
+            CancellationToken cancellationToken)
+            => Task.FromResult(CompensationRefundRetry.Create(orderId, paymentId, amount, currency, reason));
+
+        public Task<IReadOnlyList<CompensationRefundRetry>> GetDuePendingAsync(
+            DateTime nowUtc,
+            int batchSize,
+            CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<CompensationRefundRetry>>(new List<CompensationRefundRetry>());
+
+        public Task SaveAsync(CompensationRefundRetry retry, CancellationToken cancellationToken)
+            => Task.CompletedTask;
     }
 }

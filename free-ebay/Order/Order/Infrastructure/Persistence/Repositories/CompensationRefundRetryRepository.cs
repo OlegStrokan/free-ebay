@@ -92,7 +92,7 @@ public sealed class CompensationRefundRetryRepository(
         var entry = dbContext.Entry(retry);
         if (entry.State == EntityState.Detached)
         {
-            dbContext.CompensationRefundRetries.Attach(retry);
+            dbContext.CompensationRefundRetries.Update(retry);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

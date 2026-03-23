@@ -131,33 +131,97 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
     }
 
     public async Task<string> RefundAsync(
-        string paymentId, 
+        string paymentId,
         decimal amount,
         string currency,
-        string reason, 
-        CancellationToken cancellationToken
-        )
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var result = await RefundWithStatusAsync(paymentId, amount, currency, reason, cancellationToken);
+        return result.RefundId;
+    }
+
+    public async Task<RefundProcessingResult> RefundWithStatusAsync(
+        string paymentId,
+        decimal amount,
+        string currency,
+        string reason,
+        CancellationToken cancellationToken)
     {
         var normalizedCurrency = NormalizeCurrency(currency);
         var idempotencyKey = BuildIdempotencyKey(
             "grpc-refund",
             $"{paymentId}|{amount:F4}|{normalizedCurrency}|{reason}");
 
-        var response = await _client.RefundPaymentAsync(
-            new RefundPaymentRequest
+        try
+        {
+            var response = await _client.RefundPaymentAsync(
+                new RefundPaymentRequest
+                {
+                    PaymentId = paymentId,
+                    Amount = amount.ToDecimalValue(),
+                    Currency = normalizedCurrency,
+                    Reason = reason,
+                    IdempotencyKey = idempotencyKey,
+                },
+                cancellationToken: cancellationToken);
+
+            if (!response.Success)
             {
-                PaymentId = paymentId,
-                Amount = amount.ToDecimalValue(),
-                Currency = normalizedCurrency,
-                Reason = reason,
-                IdempotencyKey = idempotencyKey,
-            },
-            cancellationToken: cancellationToken);
+                throw new InvalidOperationException($"Refund failed: {response.ErrorMessage}");
+            }
 
-        if (!response.Success)
-            throw new Exception($"Refund failed: {response.ErrorMessage}");
+            var status = MapRefundStatus(response);
 
-        return response.RefundId;
+            if (string.IsNullOrWhiteSpace(response.RefundId))
+            {
+                throw new InvalidOperationException(
+                    $"Payment service returned empty RefundId for non-failed status. PaymentId={paymentId}");
+            }
+
+            return new RefundProcessingResult(
+                RefundId: response.RefundId,
+                Status: status,
+                ErrorCode: string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode,
+                ErrorMessage: string.IsNullOrWhiteSpace(response.ErrorMessage) ? null : response.ErrorMessage,
+                ProviderRefundId: string.IsNullOrWhiteSpace(response.ProviderRefundId) ? null : response.ProviderRefundId);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+            throw new InvalidOperationException(
+                $"Payment not found for refund. PaymentId={paymentId}. Detail={ex.Status.Detail}");
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.DeadlineExceeded)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.Timeout,
+                $"Refund service deadline exceeded for PaymentId={paymentId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.ServiceUnavailable,
+                $"Refund service unavailable for PaymentId={paymentId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+    }
+
+    private static RefundProcessingStatus MapRefundStatus(RefundPaymentResponse response)
+    {
+        var rawStatus = (int)response.Status;
+
+        return rawStatus switch
+        {
+            1 => RefundProcessingStatus.Succeeded,
+            2 => RefundProcessingStatus.Pending,
+            3 => throw new InvalidOperationException(
+                $"Payment service returned failed refund status for successful response. Error={response.ErrorMessage}"),
+            _ => response.Success
+                ? RefundProcessingStatus.Succeeded
+                : throw new InvalidOperationException(
+                    $"Payment service returned unsuccessful refund response. Error={response.ErrorMessage}")
+        };
     }
 
     private static string BuildIdempotencyKey(string prefix, string seed)
