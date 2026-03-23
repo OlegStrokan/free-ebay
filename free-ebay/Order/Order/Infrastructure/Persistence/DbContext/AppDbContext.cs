@@ -12,6 +12,7 @@ namespace Infrastructure.Persistence.DbContext;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.EntityFrameworkCore.DbContext(options)
 {
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<CompensationRefundRetry> CompensationRefundRetries => Set<CompensationRefundRetry>();
     public DbSet<SagaState> SagaStates => Set<SagaState>();
     public DbSet<SagaStepLog> SagaStepLogs => Set<SagaStepLog>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
@@ -24,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfiguration(new OutboxMessageConfiguration());
+        builder.ApplyConfiguration(new CompensationRefundRetryConfiguration());
         builder.ApplyConfiguration(new SagaStateConfiguration());
         builder.ApplyConfiguration(new SagaStepLogConfiguration());
         builder.ApplyConfiguration(new IdempotencyRecordConfiguration());

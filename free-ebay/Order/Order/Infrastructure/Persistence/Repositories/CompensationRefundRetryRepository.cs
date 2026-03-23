@@ -1,0 +1,100 @@
+using Application.Interfaces;
+using Application.Models;
+using Infrastructure.Persistence.DbContext;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Persistence.Repositories;
+
+public sealed class CompensationRefundRetryRepository(
+    AppDbContext dbContext,
+    ILogger<CompensationRefundRetryRepository> logger) : ICompensationRefundRetryRepository
+{
+    public async Task<CompensationRefundRetry> EnqueueIfNotExistsAsync(
+        Guid orderId,
+        string paymentId,
+        decimal amount,
+        string currency,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var normalizedPaymentId = paymentId.Trim();
+
+        var existing = await dbContext.CompensationRefundRetries
+            .FirstOrDefaultAsync(
+                x => x.OrderId == orderId
+                     && x.PaymentId == normalizedPaymentId
+                     && x.Status == CompensationRefundRetryStatus.Pending,
+                cancellationToken);
+
+        if (existing is not null)
+        {
+            logger.LogInformation(
+                "Compensation refund retry already queued for order {OrderId}, payment {PaymentId}",
+                orderId,
+                normalizedPaymentId);
+            return existing;
+        }
+
+        var retry = CompensationRefundRetry.Create(
+            orderId,
+            normalizedPaymentId,
+            amount,
+            currency,
+            reason,
+            DateTime.UtcNow);
+
+        await dbContext.CompensationRefundRetries.AddAsync(retry, cancellationToken);
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return retry;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            logger.LogInformation(
+                ex,
+                "Detected concurrent enqueue for order {OrderId}, payment {PaymentId}. Returning existing pending row.",
+                orderId,
+                normalizedPaymentId);
+
+            var concurrent = await dbContext.CompensationRefundRetries
+                .FirstOrDefaultAsync(
+                    x => x.OrderId == orderId
+                         && x.PaymentId == normalizedPaymentId
+                         && x.Status == CompensationRefundRetryStatus.Pending,
+                    cancellationToken);
+
+            if (concurrent is not null)
+            {
+                return concurrent;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<CompensationRefundRetry>> GetDuePendingAsync(
+        DateTime nowUtc,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        return await dbContext.CompensationRefundRetries
+            .Where(x => x.Status == CompensationRefundRetryStatus.Pending && x.NextAttemptAtUtc <= nowUtc)
+            .OrderBy(x => x.NextAttemptAtUtc)
+            .ThenBy(x => x.CreatedAtUtc)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task SaveAsync(CompensationRefundRetry retry, CancellationToken cancellationToken)
+    {
+        var entry = dbContext.Entry(retry);
+        if (entry.State == EntityState.Detached)
+        {
+            dbContext.CompensationRefundRetries.Attach(retry);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+}

@@ -72,6 +72,7 @@ public static class InfrastructureModule
         services.AddScoped<IEventStoreRepository, EventStoreRepository>();
         services.AddScoped<ISnapshotRepository, SnapshotRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<ICompensationRefundRetryRepository, CompensationRefundRetryRepository>();
         services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
         services.AddScoped<IDeadLetterRepository, DeadLetterRepository>();
         services.AddScoped<ISagaRepository, SagaRepository>();
@@ -118,6 +119,7 @@ public static class InfrastructureModule
         services.AddHostedService<KafkaReadModelSynchronizer>();
         services.AddHostedService<SagaWatchdogService>();
         services.AddHostedService<ProcessedEventsCleanupService>();
+        services.AddHostedService<CompensationRefundRetryWorker>();
 
         return services;
         

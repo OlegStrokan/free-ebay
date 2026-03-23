@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Services.EventIdempotencyChecker;
 
 // prevent duplicates for at-least-once kafka settings
+// inbox pattern
 public class EventIdempotencyChecker(
     AppDbContext dbContext, 
     ILogger<EventIdempotencyChecker> logger) : IEventIdempotencyChecker{
