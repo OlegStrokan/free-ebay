@@ -19,6 +19,13 @@ enum ProcessPaymentStatus {
   PROCESS_PAYMENT_STATUS_REQUIRES_ACTION = 4;
 }
 
+enum RefundPaymentStatus {
+  REFUND_PAYMENT_STATUS_UNSPECIFIED = 0;
+  REFUND_PAYMENT_STATUS_SUCCEEDED = 1;
+  REFUND_PAYMENT_STATUS_PENDING = 2;
+  REFUND_PAYMENT_STATUS_FAILED = 3;
+}
+
 message ProcessPaymentRequest {
   string order_id = 1;
   string customer_id = 2;
@@ -50,4 +57,8 @@ message RefundPaymentResponse {
   bool success = 1;
   string refund_id = 2;
   string error_message = 3;
+  string error_code = 4;
+  RefundPaymentStatus status = 5;
+  string provider_refund_id = 6;
+  string payment_id = 7;
 }

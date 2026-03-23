@@ -84,6 +84,8 @@ it forces saga to fail + compensation attempt, if compensation fails marks Faile
 
 ------------------
 
+also we use inbox pattern for read model, but not for whole project
+
 
 cool as shit visual diagram
 
@@ -179,39 +181,6 @@ communicate between steps and saga without need access to saga state (which is v
 
 for direct approach step should need access to saga state, and this violates all shit
 using metadata we signal about shit and saga base class will handle thi shit - event driven saga
-
-
-Isolation in domain entity:
-
-Orders over $1000 require manual approval
-
-Year 2024: You put this check inside the Apply method. You save an order for $1200.
-
-Year 2025: The business changes the rule: "Orders over $500 require manual approval." You update the code.
-
-The Disaster: You try to load that $1200 order from 2024. The Apply method runs, sees $1200, checks the new $500 limit, finds it wasn't "approved" under the new rules, and throws an error. Your historical data is now unreadable.
-
-By isolating the state change, you ensure that once an event is written to the store, the Apply method will always be able to rebuild that state, regardless of how business rules change in the future.
-
-
-T0: Customer in EU clicks "Place Order"
-→ Request goes to EU-WEST-1
-→ Network latency to US (300ms)
-
-T1 (100ms): EU processes request
-OrderCreatedEvent { OrderId: <guid-A>, CustomerId: 123, Items: [ProductA] }
-→ Starts replicating to US...
-
-T2 (200ms): Customer gets impatient, clicks again
-→ Browser sends ANOTHER request
-→ Round-robin load balancer routes to US-EAST-1 (because EU is "slow")
-
-T3 (250ms): US processes SECOND request (doesn't know about first)
-OrderCreatedEvent { OrderId: <guid-B>, CustomerId: 123, Items: [ProductA] }
-→ Starts replicating to EU...
-
-T4 (500ms): Both regions see TWO orders from same customer
-❓ Which one is real? Did customer intend 1 order or 2?
 
 
 it's still one method for everything, but we don't use dispatchProxy via reflection
