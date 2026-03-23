@@ -204,13 +204,44 @@ public class PaymentGatewayTests
         _client
             .RefundPaymentAsync(Arg.Do<RefundPaymentRequest>(x => capturedRequest = x),
                 Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(GrpcCall(new RefundPaymentResponse { Success = true, RefundId = refundId }));
+            .Returns(GrpcCall(new RefundPaymentResponse
+            {
+                Success = true,
+                RefundId = refundId,
+                Status = (RefundPaymentStatus)1,
+            }));
 
         var result = await Build().RefundAsync("pay-123", 50m, "usd", "duplicate", CancellationToken.None);
 
         Assert.Equal(refundId, result);
         Assert.Equal("USD", capturedRequest?.Currency);
         Assert.False(string.IsNullOrWhiteSpace(capturedRequest?.IdempotencyKey));
+    }
+
+    [Fact]
+    public async Task RefundWithStatusAsync_ShouldReturnPendingStatus_WhenProviderReturnsPending()
+    {
+        _client
+            .RefundPaymentAsync(Arg.Any<RefundPaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new RefundPaymentResponse
+            {
+                Success = true,
+                RefundId = "ref-pending",
+                Status = (RefundPaymentStatus)2,
+                ProviderRefundId = "re_pending_123",
+            }));
+
+        var result = await Build().RefundWithStatusAsync(
+            "pay-123",
+            50m,
+            "USD",
+            "duplicate",
+            CancellationToken.None);
+
+        Assert.Equal("ref-pending", result.RefundId);
+        Assert.Equal(Application.Gateways.RefundProcessingStatus.Pending, result.Status);
+        Assert.Equal("re_pending_123", result.ProviderRefundId);
     }
 
     [Fact]
@@ -235,5 +266,33 @@ public class PaymentGatewayTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             Build().RefundAsync("pay-xyz", 50m, "USD", "test", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RefundWithStatusAsync_ShouldThrowGatewayUnavailable_WithTimeoutReason_WhenRpcDeadlineExceeded()
+    {
+        _client
+            .RefundPaymentAsync(Arg.Any<RefundPaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<RefundPaymentResponse>(StatusCode.DeadlineExceeded, "timeout"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().RefundWithStatusAsync("pay-xyz", 50m, "USD", "test", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.Timeout, ex.Reason);
+    }
+
+    [Fact]
+    public async Task RefundWithStatusAsync_ShouldThrowGatewayUnavailable_WithServiceUnavailableReason_WhenRpcUnavailable()
+    {
+        _client
+            .RefundPaymentAsync(Arg.Any<RefundPaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<RefundPaymentResponse>(StatusCode.Unavailable, "service down"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().RefundWithStatusAsync("pay-xyz", 50m, "USD", "test", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.ServiceUnavailable, ex.Reason);
     }
 }

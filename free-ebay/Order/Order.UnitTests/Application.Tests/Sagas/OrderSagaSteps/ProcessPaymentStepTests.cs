@@ -1,6 +1,8 @@
 using Application.DTOs;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
+using Application.Interfaces;
+using Application.Models;
 using Application.Sagas.OrderSaga;
 using Application.Sagas.OrderSaga.Steps;
 using Microsoft.Extensions.Logging;
@@ -12,10 +14,42 @@ namespace Application.Tests.Sagas.OrderSagaSteps;
 public class ProcessPaymentStepTests
 {
     private readonly IPaymentGateway _paymentGateway = Substitute.For<IPaymentGateway>();
+    private readonly ICompensationRefundRetryRepository _compensationRefundRetryRepository = Substitute.For<ICompensationRefundRetryRepository>();
     private readonly IIncidentReporter _incidentReporter = Substitute.For<IIncidentReporter>();
     private readonly ILogger<ProcessPaymentStep> _logger = Substitute.For<ILogger<ProcessPaymentStep>>();
 
-    private ProcessPaymentStep BuildStep() => new(_paymentGateway, _incidentReporter, _logger);
+    public ProcessPaymentStepTests()
+    {
+        _paymentGateway
+            .RefundWithStatusAsync(
+                Arg.Any<string>(),
+                Arg.Any<decimal>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new RefundProcessingResult("REF-DEFAULT", RefundProcessingStatus.Succeeded));
+
+        _compensationRefundRetryRepository
+            .EnqueueIfNotExistsAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<decimal>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo => CompensationRefundRetry.Create(
+                callInfo.ArgAt<Guid>(0),
+                callInfo.ArgAt<string>(1),
+                callInfo.ArgAt<decimal>(2),
+                callInfo.ArgAt<string>(3),
+                callInfo.ArgAt<string>(4)));
+    }
+
+    private ProcessPaymentStep BuildStep() => new(
+        _paymentGateway,
+        _compensationRefundRetryRepository,
+        _incidentReporter,
+        _logger);
 
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_AndSetPaymentContext_WhenGatewaySucceeds()
@@ -235,7 +269,7 @@ public class ProcessPaymentStepTests
 
         await BuildStep().CompensateAsync(data, context, CancellationToken.None);
 
-        await _paymentGateway.Received(1).RefundAsync(
+        await _paymentGateway.Received(1).RefundWithStatusAsync(
             "PAY-123",
             data.TotalAmount,
             data.Currency,
@@ -250,7 +284,7 @@ public class ProcessPaymentStepTests
 
         await BuildStep().CompensateAsync(CreateSampleData(), context, CancellationToken.None);
 
-        await _paymentGateway.DidNotReceive().RefundAsync(
+        await _paymentGateway.DidNotReceive().RefundWithStatusAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -265,7 +299,7 @@ public class ProcessPaymentStepTests
 
         await BuildStep().CompensateAsync(CreateSampleData(), context, CancellationToken.None);
 
-        await _paymentGateway.DidNotReceive().RefundAsync(
+        await _paymentGateway.DidNotReceive().RefundWithStatusAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -282,7 +316,7 @@ public class ProcessPaymentStepTests
         await BuildStep().CompensateAsync(data, context, CancellationToken.None);
 
         Assert.Equal(OrderSagaPaymentStatus.Succeeded, context.PaymentStatus);
-        await _paymentGateway.Received(1).RefundAsync(
+        await _paymentGateway.Received(1).RefundWithStatusAsync(
             "LEGACY-PAY",
             data.TotalAmount,
             data.Currency,
@@ -299,7 +333,7 @@ public class ProcessPaymentStepTests
             PaymentStatus = OrderSagaPaymentStatus.Succeeded,
         };
 
-        _paymentGateway.RefundAsync(
+        _paymentGateway.RefundWithStatusAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("Refund service down"));
 
@@ -308,8 +342,82 @@ public class ProcessPaymentStepTests
 
         Assert.Null(exception);
 
-        await _paymentGateway.Received(1).RefundAsync(
+        await _paymentGateway.Received(1).RefundWithStatusAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        await _incidentReporter.Received(1).SendAlertAsync(
+            Arg.Is<IncidentAlert>(x => x.AlertType == "PaymentRefundCompensationFailed"),
+            Arg.Any<CancellationToken>());
+
+        await _compensationRefundRetryRepository.DidNotReceive().EnqueueIfNotExistsAsync(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompensateAsync_ShouldTreatPendingRefundAsAccepted_WithoutEnqueue()
+    {
+        var data = CreateSampleData();
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
+
+        _paymentGateway.RefundWithStatusAsync(
+                Arg.Any<string>(),
+                Arg.Any<decimal>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new RefundProcessingResult("REF-PENDING", RefundProcessingStatus.Pending));
+
+        var exception = await Record.ExceptionAsync(() =>
+            BuildStep().CompensateAsync(data, context, CancellationToken.None));
+
+        Assert.Null(exception);
+
+        await _compensationRefundRetryRepository.DidNotReceive().EnqueueIfNotExistsAsync(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        await _incidentReporter.DidNotReceive().SendAlertAsync(
+            Arg.Any<IncidentAlert>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompensateAsync_ShouldEnqueueRetry_WhenRefundFailsWithTransientGatewayError()
+    {
+        var data = CreateSampleData();
+        var context = new OrderSagaContext
+        {
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
+
+        _paymentGateway.RefundWithStatusAsync(
+                Arg.Any<string>(),
+                Arg.Any<decimal>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Throws(new GatewayUnavailableException(GatewayUnavailableReason.Timeout, "deadline exceeded"));
+
+        var exception = await Record.ExceptionAsync(() =>
+            BuildStep().CompensateAsync(data, context, CancellationToken.None));
+
+        Assert.Null(exception);
+
+        await _compensationRefundRetryRepository.Received(1).EnqueueIfNotExistsAsync(
+            data.CorrelationId,
+            "PAY-123",
+            data.TotalAmount,
+            data.Currency,
+            Arg.Is<string>(x => x.Contains("saga compensation")),
+            Arg.Any<CancellationToken>());
+
+        await _incidentReporter.DidNotReceive().SendAlertAsync(
+            Arg.Any<IncidentAlert>(),
+            Arg.Any<CancellationToken>());
     }
 
 
