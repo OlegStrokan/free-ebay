@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Application.Common;
 using Application.DTOs;
 using Application.Gateways;
@@ -18,6 +17,7 @@ public class CreateOrderCommandHandler
     (
         IOrderPersistenceService orderPersistenceService,
         IIdempotencyRepository idempotencyRepository,
+    IWriteRegionOwnershipResolver writeRegionOwnershipResolver,
         IProductGateway productGateway,
         IUserGateway userGateway,
         ILogger<CreateOrderCommandHandler> logger
@@ -29,6 +29,20 @@ public class CreateOrderCommandHandler
     {
         try
         {
+            var ownership = writeRegionOwnershipResolver.ResolveForCustomer(request.CustomerId);
+            if (ownership.IsEnabled && !ownership.IsCurrentRegionOwner)
+            {
+                logger.LogWarning(
+                    "CreateOrder rejected in region {CurrentRegion}. Owner region for customer {CustomerId} is {OwnerRegion}",
+                    ownership.CurrentRegion,
+                    request.CustomerId,
+                    ownership.OwnerRegion);
+
+                return Result<Guid>.Failure(
+                    $"Write ownership mismatch. Current region '{ownership.CurrentRegion}' is not owner for customer {request.CustomerId}. " +
+                    $"Forward to owner region '{ownership.OwnerRegion}'.");
+            }
+
             var existingRecord = await idempotencyRepository.GetByKeyAsync(
                 request.IdempotencyKey,
                 cancellationToken);

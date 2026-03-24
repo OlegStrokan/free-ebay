@@ -30,6 +30,7 @@ public static class InfrastructureModule
     {
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
         services.Configure<ShippingApiOptions>(configuration.GetSection("Shipping"));
+        services.Configure<WriteRoutingOptions>(configuration.GetSection("WriteRouting"));
 
         services.AddGrpcGatewayClients(configuration);
 
@@ -101,6 +102,7 @@ public static class InfrastructureModule
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<B2BOrderReadModelUpdater>());
         services.AddScoped<RecurringOrderReadModelUpdater>();
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<RecurringOrderReadModelUpdater>());
+        services.AddSingleton<IWriteRegionOwnershipResolver, DeterministicWriteRegionOwnershipResolver>();
 
         // Gateways
         services.AddScoped<IProductGateway, ProductGateway>();
