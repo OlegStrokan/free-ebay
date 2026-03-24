@@ -15,6 +15,7 @@ namespace Infrastructure.Messaging;
 public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
 {
     private static readonly ActivitySource _activitySource = new("OrderService.Kafka");
+    private const string OrderConfirmationEmailRequestedEventType = "OrderConfirmationEmailRequested";
 
     private readonly IProducer<string, string> _producer;
     private readonly ILogger<KafkaEventPublisher> _logger;
@@ -135,11 +136,13 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
                 Headers = headers
             };
 
-            var result = await _producer.ProduceAsync(_options.OrderEventsTopic, message, cancellationToken);
+            var targetTopic = ResolveTopicForRawEvent(typeName);
+            var result = await _producer.ProduceAsync(targetTopic, message, cancellationToken);
 
             _logger.LogInformation(
-                "Published {EventType} to Kafka Partition: {Partition}, Offset: {Offset}",
+                "Published {EventType} to Kafka Topic: {Topic}, Partition: {Partition}, Offset: {Offset}",
                 typeName,
+                targetTopic,
                 result.Partition,
                 result.Offset);
 
@@ -153,6 +156,13 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
 
 
     public string Serialize(IDomainEvent @event) => SerializeEvent(@event);
+
+    private string ResolveTopicForRawEvent(string typeName)
+    {
+        return typeName == OrderConfirmationEmailRequestedEventType
+            ? _options.EmailEventsTopic
+            : _options.OrderEventsTopic;
+    }
 
     private string SerializeEvent<TEvent>(TEvent @event) where TEvent : IDomainEvent
     {

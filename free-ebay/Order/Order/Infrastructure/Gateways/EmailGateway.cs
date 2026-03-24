@@ -1,18 +1,19 @@
-﻿using System.Net;
-using System.Net.Mail;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
+using Application.Interfaces;
+using Infrastructure.Persistence.DbContext;
 
 namespace Infrastructure.Gateways;
 
 
-// @todo, change this to sending kafka events to email topic
-// in external email system listen for kafka messages.....i guess
 public class EmailGateway
 (IConfiguration configuration,
     IUserGateway userGateway,
+    IOutboxRepository outboxRepository,
+    AppDbContext dbContext,
     ILogger<EmailGateway> logger) : IEmailGateway
 {
 
@@ -27,30 +28,16 @@ public class EmailGateway
         CancellationToken cancellationToken)
     {
         logger.LogInformation(
-            "Sending order confirmation for Order {OrderId} to Customer {CustomerId}. " +
+            "Preparing order confirmation email request for Order {OrderId} and Customer {CustomerId}. " +
             "Total: {Total} {Currency}. Estimated delivery: {EstimatedDelivery}",
             orderId, customerId, orderTotal, currency, estimatedDelivery);
 
-        var smtpHost = configuration["Email:SmtpHost"];
-
-        if (string.IsNullOrEmpty(smtpHost))
-        {
-            logger.LogWarning(
-                "Email:SmtpHost is not configured. Order confirmation email for Order {OrderId} was not sent.",
-                orderId);
-            return;
-        }
-        
-
-        var smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? "587");
-        var smtpUser = configuration["Email:Username"] ?? string.Empty;
-        var smtpPassword = configuration["Email:Password"] ?? string.Empty;
         var fromAddress = configuration["Email:FromAddress"] ?? "no-reply@free-ebay.com";
 
         var subject = $"Order Confirmation #{orderId}";
         var body = BuildOrderConfirmationBody(orderId, orderTotal, currency, items, deliveryDelivery,
             estimatedDelivery);
-    // @todo: should be refactored
+
         string recipientEmail;
         try
         {
@@ -75,31 +62,55 @@ public class EmailGateway
             return;
         }
 
-        using var client = new SmtpClient(smtpHost, smtpPort)
-        {
-            Credentials = new NetworkCredential(smtpUser, smtpPassword),
-            EnableSsl = true
-        };
-
-        var message = new MailMessage(fromAddress, recipientEmail, subject, body)
-        {
-            IsBodyHtml = true
-        };
+        var eventId = Guid.NewGuid();
+        var payload = new OrderConfirmationEmailRequested(
+            eventId,
+            customerId,
+            orderId,
+            recipientEmail,
+            fromAddress,
+            subject,
+            body,
+            DateTime.UtcNow);
 
         try
         {
-            await client.SendMailAsync(message, cancellationToken);
-            logger.LogInformation("Order confirmation email send for Order {OrderId}", orderId);
+            await outboxRepository.AddAsync(
+                eventId,
+                nameof(OrderConfirmationEmailRequested),
+                JsonSerializer.Serialize(payload),
+                payload.RequestedAtUtc,
+                orderId.ToString(),
+                cancellationToken);
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Enqueued {EventType} for Order {OrderId} in outbox for async Kafka delivery",
+                nameof(OrderConfirmationEmailRequested),
+                orderId);
         }
 
         catch (Exception ex)
         {
-            // email failure must never fail the saga step, just log and move on
+            // Notification dispatch must never fail the saga step.
             logger.LogError(ex,
-                "Failed to send order confirmation email for Order {OrderId}." +
-                "Customer {CustomerId} will not receive email notification.", orderId, customerId);
+                "Failed to enqueue order confirmation email request for Order {OrderId}. " +
+                "Customer {CustomerId} will not receive email notification.",
+                orderId,
+                customerId);
         }
     }
+
+    private sealed record OrderConfirmationEmailRequested(
+        Guid MessageId,
+        Guid CustomerId,
+        Guid OrderId,
+        string To,
+        string From,
+        string Subject,
+        string HtmlBody,
+        DateTime RequestedAtUtc);
 
     private static string BuildOrderConfirmationBody(
         Guid orderId,
