@@ -96,13 +96,13 @@ public sealed class KafkaEmailConsumer(
         }
         catch (Exception ex)
         {
-            await PublishToDlqAsync(producer, message.Key, message.Value, "Invalid event wrapper JSON", ex, cancellationToken);
+            await PublishToDlqAsync(producer, message.Key, message.Value, GetReplayAttempt(message.Headers), "Invalid event wrapper JSON", ex, cancellationToken);
             return true;
         }
 
         if (wrapper is null)
         {
-            await PublishToDlqAsync(producer, message.Key, message.Value, "Event wrapper is null", null, cancellationToken);
+            await PublishToDlqAsync(producer, message.Key, message.Value, GetReplayAttempt(message.Headers), "Event wrapper is null", null, cancellationToken);
             return true;
         }
 
@@ -119,23 +119,27 @@ public sealed class KafkaEmailConsumer(
         }
         catch (Exception ex)
         {
-            await PublishToDlqAsync(producer, message.Key, message.Value, "Invalid email payload JSON", ex, cancellationToken);
+            await PublishToDlqAsync(producer, message.Key, message.Value, GetReplayAttempt(message.Headers), "Invalid email payload JSON", ex, cancellationToken);
             return true;
         }
 
         if (request is null)
         {
-            await PublishToDlqAsync(producer, message.Key, message.Value, "Email payload is null", null, cancellationToken);
+            await PublishToDlqAsync(producer, message.Key, message.Value, GetReplayAttempt(message.Headers), "Email payload is null", null, cancellationToken);
             return true;
         }
 
         if (await processedMessageStore.IsProcessedAsync(wrapper.EventId, cancellationToken))
         {
-            logger.LogInformation("Skipping duplicate email message {MessageId}", wrapper.EventId);
+            logger.LogInformation(
+                "Skipping duplicate email message {MessageId}",
+                wrapper.EventId);
             return true;
         }
 
-        for (var attempt = 1; attempt <= _options.MaxDeliveryAttempts; attempt++)
+        var maxAttempts = request.IsImportant ? _options.MaxDeliveryAttempts : 1;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {
@@ -151,17 +155,32 @@ public sealed class KafkaEmailConsumer(
                     "Failed to deliver email message {MessageId} on attempt {Attempt}/{MaxAttempts}",
                     wrapper.EventId,
                     attempt,
-                    _options.MaxDeliveryAttempts);
+                    maxAttempts);
 
-                if (attempt == _options.MaxDeliveryAttempts)
+                if (attempt == maxAttempts)
                 {
-                    await PublishToDlqAsync(
-                        producer,
-                        message.Key,
-                        message.Value,
-                        "Email delivery failed after max retries",
-                        ex,
-                        cancellationToken);
+                    if (request.IsImportant)
+                    {
+                        await PublishToDlqAsync(
+                            producer,
+                            message.Key,
+                            message.Value,
+                            GetReplayAttempt(message.Headers),
+                            "Important email delivery failed after max retries",
+                            ex,
+                            cancellationToken);
+                    }
+                    else
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "Non-important email {MessageId} failed and will not be sent to DLQ",
+                            wrapper.EventId);
+                    }
+
+                    // Mark as handled to avoid repeated retries for non-important messages
+                    // and to prevent hot-loop duplicates for important terminal failures.
+                    await processedMessageStore.MarkProcessedAsync(wrapper.EventId, cancellationToken);
                     return true;
                 }
 
@@ -176,6 +195,7 @@ public sealed class KafkaEmailConsumer(
         IProducer<string, string> producer,
         string key,
         string value,
+        int replayAttempt,
         string reason,
         Exception? exception,
         CancellationToken cancellationToken)
@@ -187,7 +207,8 @@ public sealed class KafkaEmailConsumer(
             Headers = new Headers
             {
                 { "dlq-reason", Encoding.UTF8.GetBytes(reason) },
-                { "failed-at", Encoding.UTF8.GetBytes(DateTime.UtcNow.ToString("O")) }
+                { "failed-at", Encoding.UTF8.GetBytes(DateTime.UtcNow.ToString("O")) },
+                { "dlq-replay-attempt", Encoding.UTF8.GetBytes(replayAttempt.ToString()) }
             }
         };
 
@@ -202,5 +223,16 @@ public sealed class KafkaEmailConsumer(
             "Published failed email message to DLQ topic {Topic}. Reason: {Reason}",
             _options.EmailDlqTopic,
             reason);
+    }
+
+    private static int GetReplayAttempt(Headers headers)
+    {
+        var raw = headers.FirstOrDefault(h => h.Key == "dlq-replay-attempt")?.GetValueBytes();
+        if (raw is null)
+        {
+            return 0;
+        }
+
+        return int.TryParse(Encoding.UTF8.GetString(raw), out var parsed) ? parsed : 0;
     }
 }

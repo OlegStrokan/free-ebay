@@ -11,4 +11,10 @@ public sealed class KafkaOptions
     public bool EnableAutoCommit { get; set; } = false;
     public int MaxDeliveryAttempts { get; set; } = 3;
     public int RetryDelayMs { get; set; } = 500;
+
+    public bool EnableDlqReplay { get; set; } = true;
+    public bool DlqReplayRunOnce { get; set; } = false;
+    public string DlqReplayConsumerGroupId { get; set; } = "email-service-dlq-replay";
+    public int MaxDlqReplayAttempts { get; set; } = 5;
+    public int DlqReplayBaseDelayMs { get; set; } = 1000;
 }

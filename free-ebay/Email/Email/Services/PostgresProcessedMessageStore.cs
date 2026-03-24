@@ -37,7 +37,6 @@ public sealed class PostgresProcessedMessageStore(
 
         await using var command = new NpgsqlCommand(sql, connection);
         command.Parameters.AddWithValue("message_id", messageId);
-
         var result = await command.ExecuteScalarAsync(cancellationToken);
         return result is not null;
     }

@@ -10,6 +10,7 @@ builder.Services.Configure<EmailDeliveryOptions>(builder.Configuration.GetSectio
 builder.Services.AddSingleton<IProcessedMessageStore, PostgresProcessedMessageStore>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHostedService<KafkaEmailConsumer>();
+builder.Services.AddHostedService<KafkaEmailDlqReplayWorker>();
 
 var host = builder.Build();
 host.Run();
