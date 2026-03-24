@@ -8,7 +8,8 @@ using Infrastructure.Persistence.DbContext;
 
 namespace Infrastructure.Gateways;
 
-
+// before this implementation the gateway was directly sending emails, but now it's just saving email to outbox
+// maybe we should move it directly to saga step but for now i keep it here to keep saga focused on business
 public class EmailGateway
 (IConfiguration configuration,
     IUserGateway userGateway,
@@ -63,10 +64,12 @@ public class EmailGateway
         }
 
         var eventId = Guid.NewGuid();
+        var isImportant = configuration.GetValue<bool>("Email:IsImportant", true);
         var payload = new OrderConfirmationEmailRequested(
             eventId,
             customerId,
             orderId,
+            isImportant,
             recipientEmail,
             fromAddress,
             subject,
@@ -106,6 +109,7 @@ public class EmailGateway
         Guid MessageId,
         Guid CustomerId,
         Guid OrderId,
+        bool IsImportant,
         string To,
         string From,
         string Subject,
