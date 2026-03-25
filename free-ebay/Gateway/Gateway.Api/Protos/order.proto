@@ -1,0 +1,307 @@
+syntax = "proto3";
+
+import "common.proto";
+
+option csharp_namespace = "Protos.Order";
+
+package order;
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns(CreateOrderResponse);
+  rpc RequestReturn(RequestReturnRequest) returns(RequestReturnResponse);
+  rpc GetOrder(GetOrderRequest) returns(GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns(ListOrdersResponse);
+  rpc GetCustomerOrders(GetCustomerOrdersRequest) returns(GetCustomerOrdersResponse);
+}
+
+service B2BOrderService {
+  rpc StartB2BOrder(StartB2BOrderRequest) returns(B2BOrderResponse);
+  rpc UpdateQuoteDraft(UpdateQuoteDraftRequest) returns(B2BOrderResponse);
+  rpc FinalizeQuote(FinalizeQuoteRequest) returns(FinalizeQuoteResponse);
+  rpc CancelB2BOrder(CancelB2BOrderRequest) returns(B2BOrderResponse);
+  rpc GetB2BOrder(GetB2BOrderRequest) returns(GetB2BOrderResponse);
+}
+
+service RecurringOrderService {
+  rpc CreateRecurringOrder(CreateRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc PauseRecurringOrder(PauseRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc ResumeRecurringOrder(ResumeRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc CancelRecurringOrder(CancelRecurringOrderRequest) returns (RecurringOrderResponse);
+  rpc GetRecurringOrder(GetRecurringOrderRequest) returns (GetRecurringOrderResponse);
+  rpc GetCustomerRecurringOrders(GetCustomerRecurringOrdersRequest) returns (GetCustomerRecurringOrdersResponse);
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+  repeated OrderItem items = 2;
+  Address delivery_address = 3;
+  string payment_method = 4;
+  string idempotency_key = 5;
+}
+
+message RequestReturnRequest {
+  string order_id = 1;
+  string reason = 2;
+  repeated OrderItem items_to_return = 3;
+  string idempotency_key = 4;
+}
+
+message CreateOrderResponse {
+  bool success = 1;
+  string order_id = 2;
+  string error_message = 3;
+}
+
+message RequestReturnResponse {
+  bool success = 1;
+  string return_request_id = 2;
+  string error_message = 3;
+}
+
+message OrderItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  common.DecimalValue price = 3;
+  string currency = 4;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  string country = 3;
+  string postal_code = 4;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  bool success = 1;
+  OrderDetails order = 2;
+  string error_message = 3;
+}
+
+message ListOrdersRequest {
+  int32 page_number = 1;
+  int32 page_size = 2;
+}
+
+message ListOrdersResponse {
+  bool success = 1;
+  repeated OrderSummary orders = 2;
+  string error_message = 3;
+}
+
+message GetCustomerOrdersRequest {
+  string customer_id = 1;
+}
+
+message GetCustomerOrdersResponse {
+  bool success = 1;
+  repeated OrderSummary orders = 2;
+  string error_message = 3;
+}
+
+message OrderDetails {
+  string id = 1;
+  string customer_id = 2;
+  string tracking_id = 3;
+  string payment_id = 4;
+  string status = 5;
+  common.DecimalValue total_amount = 6;
+  string currency = 7;
+  Address delivery_address = 8;
+  repeated OrderItemDetail items = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  int32 version = 12;
+}
+
+message OrderSummary {
+  string id = 1;
+  string tracking_id = 2;
+  string status = 3;
+  common.DecimalValue total_amount = 4;
+  string currency = 5;
+  string created_at = 6;
+}
+
+message OrderItemDetail {
+  string product_id = 1;
+  int32 quantity = 2;
+  common.DecimalValue price = 3;
+  string currency = 4;
+}
+
+message StartB2BOrderRequest {
+  string customer_id = 1;
+  string company_name = 2;
+  Address delivery_address = 3;
+  string idempotency_key = 4;
+}
+
+message QuoteItemChange {
+  string change_type = 1;
+  string product_id = 2;
+  int32 quantity = 3;
+  common.DecimalValue price = 4;
+  string currency = 5;
+}
+
+message UpdateQuoteDraftRequest {
+  string b2b_order_id = 1;
+  repeated QuoteItemChange changes = 2;
+  string comment = 3;
+  string comment_author = 4;
+}
+
+message FinalizeQuoteRequest {
+  string b2b_order_id = 1;
+  string payment_method = 2;
+  string idempotency_key = 3;
+}
+
+message CancelB2BOrderRequest {
+  string b2b_order_id = 1;
+  repeated string reasons = 2;
+}
+
+message GetB2BOrderRequest {
+  string b2b_order_id = 1;
+}
+
+message B2BOrderResponse {
+  bool success = 1;
+  string b2b_order_id = 2;
+  string error_message = 3;
+}
+
+message FinalizeQuoteResponse {
+  bool success = 1;
+  string b2b_order_id = 2;
+  string order_id = 3;
+  string error_message = 4;
+}
+
+message GetB2BOrderResponse {
+  bool success = 1;
+  B2BOrderDetails b2b_order = 2;
+  string error_message = 3;
+}
+
+message B2BOrderDetails {
+  string id = 1;
+  string customer_id = 2;
+  string company_name = 3;
+  string status = 4;
+  common.DecimalValue total_price = 5;
+  string currency = 6;
+  common.DecimalValue discount_percent = 7;
+  Address delivery_address = 8;
+  repeated B2BLineItemDetail items = 9;
+  repeated string comments = 10;
+  string requested_delivery_date = 11;
+  string finalized_order_id = 12;
+  int32 version = 13;
+}
+
+message B2BLineItemDetail {
+  string line_item_id = 1;
+  string product_id = 2;
+  int32 quantity = 3;
+  common.DecimalValue unit_price = 4;
+  common.DecimalValue adjusted_unit_price = 5;
+  string currency = 6;
+  bool is_removed = 7;
+}
+
+message RecurringItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  common.DecimalValue price = 3;
+  string currency = 4;
+}
+
+message CreateRecurringOrderRequest {
+  string customer_id = 1;
+  string payment_method = 2;
+  string frequency = 3;
+  repeated RecurringItem items = 4;
+  Address delivery_address = 5;
+  string first_run_at = 6;
+  int32 max_executions = 7;
+  string idempotency_key = 8;
+}
+
+message PauseRecurringOrderRequest {
+  string recurring_order_id = 1;
+}
+
+message ResumeRecurringOrderRequest {
+  string recurring_order_id = 1;
+}
+
+message CancelRecurringOrderRequest {
+  string recurring_order_id = 1;
+  string reason = 2;
+}
+
+message RecurringOrderResponse {
+  bool success = 1;
+  string recurring_order_id = 2;
+  string error_message = 3;
+}
+
+message GetRecurringOrderRequest {
+  string recurring_order_id = 1;
+}
+
+message GetRecurringOrderResponse {
+  bool success = 1;
+  RecurringOrderDetails order = 2;
+  string error_message = 3;
+}
+
+message GetCustomerRecurringOrdersRequest {
+  string customer_id = 1;
+}
+
+message GetCustomerRecurringOrdersResponse {
+  bool success = 1;
+  repeated RecurringOrderSummaryProto orders = 2;
+  string error_message = 3;
+}
+
+message RecurringOrderDetails {
+  string id = 1;
+  string customer_id = 2;
+  string payment_method = 3;
+  string frequency = 4;
+  string status = 5;
+  string next_run_at = 6;
+  string last_run_at = 7;
+  int32 total_executions = 8;
+  int32 max_executions = 9;
+  Address delivery_address = 10;
+  repeated RecurringOrderItemDetail items = 11;
+  string created_at = 12;
+  string updated_at = 13;
+  int32 version = 14;
+}
+
+message RecurringOrderSummaryProto {
+  string id = 1;
+  string frequency = 2;
+  string status = 3;
+  string next_run_at = 4;
+  int32 total_executions = 5;
+  string created_at = 6;
+}
+
+message RecurringOrderItemDetail {
+  string product_id = 1;
+  int32 quantity = 2;
+  common.DecimalValue price = 3;
+  string currency = 4;
+}
