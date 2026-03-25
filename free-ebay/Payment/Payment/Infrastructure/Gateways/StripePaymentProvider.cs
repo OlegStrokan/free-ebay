@@ -18,6 +18,7 @@ internal sealed class StripePaymentProvider(
         ProcessPaymentProviderRequest request,
         CancellationToken cancellationToken = default)
     {
+        // for tests
         if (_stripeOptions.UseFakeProvider)
         {
             return SimulateProcessPayment(request);

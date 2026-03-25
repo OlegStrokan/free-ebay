@@ -74,8 +74,8 @@ internal sealed class HandleStripeWebhookCommandHandler(
             if (payment is null)
             {
                 var error =
-                    $"Payment could not be resolved for webhook event '{request.ProviderEventId}'. " +
-                    $"PaymentId='{request.PaymentId}', ProviderPaymentIntentId='{request.ProviderPaymentIntentId}', ProviderRefundId='{request.ProviderRefundId}'.";
+                    $"Payment could not be resolved for webhook event '{request.ProviderEventId}' " +
+                    $"PaymentId='{request.PaymentId}', ProviderPaymentIntentId='{request.ProviderPaymentIntentId}', ProviderRefundId='{request.ProviderRefundId}'";
                 webhookEvent.MarkFailed(error, now);
                 await paymentWebhookEventRepository.UpdateAsync(webhookEvent, cancellationToken);
                 await unitOfWork.SaveChangesAsync(cancellationToken);

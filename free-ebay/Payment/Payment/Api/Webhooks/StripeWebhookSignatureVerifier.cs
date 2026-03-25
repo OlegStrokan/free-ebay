@@ -14,6 +14,7 @@ internal static class StripeWebhookSignatureVerifier
     {
         error = null;
 
+        // for tests
         if (options.UseFakeProvider)
         {
             return true;
