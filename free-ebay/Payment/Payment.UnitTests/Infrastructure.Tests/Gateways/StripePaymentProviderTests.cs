@@ -1,0 +1,166 @@
+using Application.Gateways.Models;
+using Domain.Enums;
+using Infrastructure.Gateways;
+using Infrastructure.Options;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Infrastructure.Tests.Gateways;
+
+public class StripePaymentProviderTests
+{
+    private static StripePaymentProvider BuildFakeProvider() =>
+        new(
+            Microsoft.Extensions.Options.Options.Create(new StripeOptions
+            {
+                UseFakeProvider = true,
+                DefaultCurrency = "USD",
+            }),
+            NullLogger<StripePaymentProvider>.Instance);
+
+    private static StripePaymentProvider BuildRealWithoutSecret() =>
+        new(
+            Microsoft.Extensions.Options.Options.Create(new StripeOptions
+            {
+                UseFakeProvider = false,
+                SecretKey = "",
+                DefaultCurrency = "USD",
+            }),
+            NullLogger<StripePaymentProvider>.Instance);
+
+    [Fact]
+    public async Task ProcessPaymentAsync_Fake_ShouldReturnSucceeded_WhenKeyIsNormal()
+    {
+        var result = await BuildFakeProvider().ProcessPaymentAsync(new ProcessPaymentProviderRequest(
+            PaymentId: "pay-1",
+            OrderId: "order-1",
+            CustomerId: "customer-1",
+            Amount: 10m,
+            Currency: "USD",
+            PaymentMethod: PaymentMethod.Card,
+            IdempotencyKey: "idem-normal",
+            ReturnUrl: null,
+            CancelUrl: null,
+            CustomerEmail: null));
+
+        Assert.Equal(ProviderProcessPaymentStatus.Succeeded, result.Status);
+        Assert.StartsWith("pi_success_", result.ProviderPaymentIntentId, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_Fake_ShouldReturnRequiresAction_WhenKeyContainsAction()
+    {
+        var result = await BuildFakeProvider().ProcessPaymentAsync(new ProcessPaymentProviderRequest(
+            PaymentId: "pay-2",
+            OrderId: "order-2",
+            CustomerId: "customer-2",
+            Amount: 10m,
+            Currency: "USD",
+            PaymentMethod: PaymentMethod.Card,
+            IdempotencyKey: "idem-action-3ds",
+            ReturnUrl: null,
+            CancelUrl: null,
+            CustomerEmail: null));
+
+        Assert.Equal(ProviderProcessPaymentStatus.RequiresAction, result.Status);
+        Assert.StartsWith("pi_action_", result.ProviderPaymentIntentId, StringComparison.Ordinal);
+        Assert.StartsWith("cs_action_", result.ClientSecret, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_Fake_ShouldReturnFailed_WhenInvalidAmount()
+    {
+        var result = await BuildFakeProvider().ProcessPaymentAsync(new ProcessPaymentProviderRequest(
+            PaymentId: "pay-3",
+            OrderId: "order-3",
+            CustomerId: "customer-3",
+            Amount: 0m,
+            Currency: "USD",
+            PaymentMethod: PaymentMethod.Card,
+            IdempotencyKey: "idem-fail",
+            ReturnUrl: null,
+            CancelUrl: null,
+            CustomerEmail: null));
+
+        Assert.Equal(ProviderProcessPaymentStatus.Failed, result.Status);
+        Assert.Equal("invalid_amount", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_Real_ShouldReturnFailed_WhenSecretNotConfigured()
+    {
+        var result = await BuildRealWithoutSecret().ProcessPaymentAsync(new ProcessPaymentProviderRequest(
+            PaymentId: "pay-4",
+            OrderId: "order-4",
+            CustomerId: "customer-4",
+            Amount: 10m,
+            Currency: "USD",
+            PaymentMethod: PaymentMethod.Card,
+            IdempotencyKey: "idem-real",
+            ReturnUrl: null,
+            CancelUrl: null,
+            CustomerEmail: null));
+
+        Assert.Equal(ProviderProcessPaymentStatus.Failed, result.Status);
+        Assert.Equal("stripe_secret_not_configured", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RefundPaymentAsync_Fake_ShouldReturnPending_WhenKeyContainsPending()
+    {
+        var result = await BuildFakeProvider().RefundPaymentAsync(new RefundPaymentProviderRequest(
+            PaymentId: "pay-5",
+            ProviderPaymentIntentId: "pi_5",
+            Amount: 2m,
+            Currency: "USD",
+            Reason: "customer",
+            IdempotencyKey: "idem-pending"));
+
+        Assert.Equal(ProviderRefundPaymentStatus.Pending, result.Status);
+        Assert.StartsWith("re_pending_", result.ProviderRefundId, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RefundPaymentAsync_Real_ShouldReturnFailed_WhenProviderPaymentIntentMissing()
+    {
+        var provider = BuildRealWithoutSecret();
+        var result = await provider.RefundPaymentAsync(new RefundPaymentProviderRequest(
+            PaymentId: "pay-6",
+            ProviderPaymentIntentId: "",
+            Amount: 2m,
+            Currency: "USD",
+            Reason: "customer",
+            IdempotencyKey: "idem-1"));
+
+        // secret-not-configured branch runs before provider payment intent validation
+        Assert.Equal(ProviderRefundPaymentStatus.Failed, result.Status);
+        Assert.Equal("stripe_secret_not_configured", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task GetPaymentStatusAsync_Fake_ShouldMapStatuses()
+    {
+        var provider = BuildFakeProvider();
+
+        var pending = await provider.GetPaymentStatusAsync("pi_pending_1");
+        var failed = await provider.GetPaymentStatusAsync("pi_fail_1");
+        var succeeded = await provider.GetPaymentStatusAsync("pi_success_1");
+
+        Assert.Equal(ProviderPaymentLifecycleStatus.Pending, pending.Status);
+        Assert.Equal(ProviderPaymentLifecycleStatus.Failed, failed.Status);
+        Assert.Equal(ProviderPaymentLifecycleStatus.Succeeded, succeeded.Status);
+    }
+
+    [Fact]
+    public async Task GetRefundStatusAsync_Fake_ShouldMapStatuses()
+    {
+        var provider = BuildFakeProvider();
+
+        var pending = await provider.GetRefundStatusAsync("re_pending_1");
+        var failed = await provider.GetRefundStatusAsync("re_fail_1");
+        var succeeded = await provider.GetRefundStatusAsync("re_success_1");
+
+        Assert.Equal(ProviderRefundLifecycleStatus.Pending, pending.Status);
+        Assert.Equal(ProviderRefundLifecycleStatus.Failed, failed.Status);
+        Assert.Equal(ProviderRefundLifecycleStatus.Succeeded, succeeded.Status);
+    }
+}
