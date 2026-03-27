@@ -17,5 +17,5 @@ class LLMQueryClient:
             raw_query=data["raw_query"],
         )
 
-    async def alose(self) -> None:
+    async def aclose(self) -> None:
         await self._http.aclose()

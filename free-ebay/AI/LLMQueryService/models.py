@@ -10,7 +10,7 @@ class Filters(BaseModel):
 
 class ParsedQuery(BaseModel):
     semantic_query: str
-    filters: Filters = Field(default_factory=list)
+    filters: Filters = Field(default_factory=Filters)
     keywords: list[str] = Field(default_factory=list)
     confidence: float = 0.0
     raw_query: str = ""

@@ -31,6 +31,6 @@ class QdrantIndexClient:
     async def delete(self, product_id: str) -> None:
         from qdrant_client.models import PointIdsList
         await self._client.delete(
-            collections_name=settings.qdrant_collection,
+            collection_name=settings.qdrant_collection,
             points_selector=PointIdsList(points=[product_id]),
         )

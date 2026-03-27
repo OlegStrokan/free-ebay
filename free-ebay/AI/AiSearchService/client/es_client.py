@@ -26,9 +26,9 @@ class ElasticsearchClient:
             query["bool"]["filter"].append({ "range": { "price": { "lte": parsed.filters.price_max}}})
 
         if parsed.filters.price_min:
-            query["bool"]["filter"].append({"term": { "color": parsed.filters.color.lower()}})
+            query["bool"]["filter"].append({"range": {"price": {"gte": parsed.filters.price_min}}})
 
-        result = await self._es.search(index=self.index, query=query, size=top_k)
+        result = await self._es.search(index=self._index, query=query, size=top_k)
         return [
             ScoredResult(product_id=h["_source"]["id"], score=h["_score"])
             for h in result["hits"]["hits"]
