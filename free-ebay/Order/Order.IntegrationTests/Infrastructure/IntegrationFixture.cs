@@ -56,6 +56,13 @@ public sealed class IntegrationFixture : IAsyncLifetime
         services.AddSingleton<IConnectionMultiplexer>(
             _ => ConnectionMultiplexer.Connect(_redis.GetConnectionString()));
         services.AddSingleton<ISagaDistributedLock, RedisSagaDistributedLock>();
+        services.Configure<WriteRoutingOptions>(opts =>
+        {
+            opts.Enabled = true;
+            opts.CurrentRegion = "eu-west-1";
+            opts.Regions = ["eu-west-1", "us-east-1", "ap-southeast-1"];
+        });
+        services.AddSingleton<IWriteRegionOwnershipResolver, DeterministicWriteRegionOwnershipResolver>();
 
         services.AddScoped<IEventStoreRepository, EventStoreRepository>();
         services.AddScoped<ISnapshotRepository, SnapshotRepository>();

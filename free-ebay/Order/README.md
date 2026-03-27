@@ -138,7 +138,8 @@ flowchart TD
 		end
 ```
 
-## recent fix: payment timeout vs unavailable
+good practice it's to - differentiate gRPC `DeadlineExceeded` vs `Unavailable` in payment gateway. if timeout => `Uncertain` status and we keep saga in `WaitingForEvent`, if unavailable => fail payment step and run compensation
+ 
 
 issue we fixed:
 - previously payment transport errors were handled too generically in create order flow.
@@ -182,6 +183,9 @@ communicate between steps and saga without need access to saga state (which is v
 for direct approach step should need access to saga state, and this violates all shit
 using metadata we signal about shit and saga base class will handle thi shit - event driven saga
 
-
 it's still one method for everything, but we don't use dispatchProxy via reflection
 which is more voodoo than Reagan economic type shit
+
+
+this is missing but it's not big deal: 
+- server returns an error message containing owner region if user gets on wrong region master. upstream gateway/client must read that and perform forwarding/retry to us-east-1.
