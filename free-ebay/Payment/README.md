@@ -38,4 +38,16 @@ kafka publishing done by bg worker
 
 clean schema:
 Sync final: request -> Stripe final status (Succeeded or Failed) -> save -> immediate response
-Async final: request -> Stripe Pending/RequiresAction -> immediate response -> later webhook or reconciliation finalizes -> enqueue outbox row -> delivery worker publishes Kafka event -> Order saga resumes
+Async final: request -> Stripe Pending/RequiresAction -> immediate response -> later webhook or reconciliation finalizes -> enqueue outbox row -> delivery worker publishes Kafka event -> Order saga resumes 
+
+
+this service dont have proper exact one kafka semantic. We use "Effectively-once" for business outcomes which is good fit for payment systems.
+stack is: at-least-once + idempotency + db unique constrains + outbox + reconciliation
+
+
+small note about refund compensation with order:
+- refund response now has status semantics (Succeeded or Pending), not just "ok/failed"
+- if refund is Pending, order compensation can continue, because provider accepted it async
+- if refund call is temporary unavailable/timeout, Order service persist retry record to db
+- then Order bg worker (CompensationRefundRetryWorker) polls and retries with backoff
+- if retries exhausted -> critical incident for manual ops intervention
