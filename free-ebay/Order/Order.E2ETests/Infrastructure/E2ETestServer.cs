@@ -1,4 +1,5 @@
 using Application.Gateways;
+using Application.Interfaces;
 using Confluent.Kafka;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -45,6 +46,7 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
     public WireMockServer ShipmentServer => _wireMockServer;
 
     public string KafkaBootstrapServers { get; private set; } = string.Empty;
+    private Func<Guid, WriteRegionOwnershipDecision>? _writeOwnershipOverride;
     
 
     public async Task InitializeAsync()
@@ -184,6 +186,10 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<IShippingGateway>();
             services.AddScoped<IShippingGateway>(_ =>
                 new WireMockShippingGateway(_wireMockServer.Urls[0]));
+
+            services.RemoveAll<IWriteRegionOwnershipResolver>();
+            services.AddSingleton<IWriteRegionOwnershipResolver>(
+                _ => new TestWriteRegionOwnershipResolver(() => _writeOwnershipOverride));
             
             // email-service: not replaced, IEmailGateway published to kafka, tests verify the kafka message
         });
@@ -238,6 +244,12 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         _inventoryService.Reset();
         _productService.Reset();
         _wireMockServer.Reset();
+        _writeOwnershipOverride = null;
+    }
+
+    public void SetWriteOwnershipOverride(Func<Guid, WriteRegionOwnershipDecision>? resolver)
+    {
+        _writeOwnershipOverride = resolver;
     }
 
     public new async Task DisposeAsync()
@@ -251,5 +263,25 @@ public class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifetime
         await _productService.DisposeAsync();
         _wireMockServer.Dispose();
         await base.DisposeAsync();
+    }
+
+    private sealed class TestWriteRegionOwnershipResolver(
+        Func<Func<Guid, WriteRegionOwnershipDecision>?> getOverride)
+        : IWriteRegionOwnershipResolver
+    {
+        public WriteRegionOwnershipDecision ResolveForCustomer(Guid customerId)
+        {
+            var resolver = getOverride();
+            if (resolver is not null)
+            {
+                return resolver(customerId);
+            }
+
+            return new WriteRegionOwnershipDecision(
+                IsEnabled: false,
+                IsCurrentRegionOwner: true,
+                CurrentRegion: "test",
+                OwnerRegion: "test");
+        }
     }
 }

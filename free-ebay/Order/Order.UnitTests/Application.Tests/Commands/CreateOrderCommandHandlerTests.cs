@@ -21,6 +21,9 @@ public class CreateOrderCommandHandlerTests
     private readonly IIdempotencyRepository _idempotencyRepository =
         Substitute.For<IIdempotencyRepository>();
 
+    private readonly IWriteRegionOwnershipResolver _writeRegionOwnershipResolver =
+        Substitute.For<IWriteRegionOwnershipResolver>();
+
     private readonly IProductGateway _productGateway =
         Substitute.For<IProductGateway>();
 
@@ -30,8 +33,25 @@ public class CreateOrderCommandHandlerTests
     private readonly ILogger<CreateOrderCommandHandler> _logger =
         Substitute.For<ILogger<CreateOrderCommandHandler>>();
 
+    public CreateOrderCommandHandlerTests()
+    {
+        _writeRegionOwnershipResolver
+            .ResolveForCustomer(Arg.Any<Guid>())
+            .Returns(new WriteRegionOwnershipDecision(
+                IsEnabled: false,
+                IsCurrentRegionOwner: true,
+                CurrentRegion: "local",
+                OwnerRegion: "local"));
+    }
+
     private CreateOrderCommandHandler BuildHandler() =>
-        new(_orderPersistenceService, _idempotencyRepository, _productGateway, _userGateway, _logger);
+        new(
+            _orderPersistenceService,
+            _idempotencyRepository,
+            _writeRegionOwnershipResolver,
+            _productGateway,
+            _userGateway,
+            _logger);
 
     // default setup: gateway returns 99.50 USD - intentionally different from the
     // 200 USD baked into CreateValidCommand() so tests can verify the override
@@ -217,6 +237,32 @@ public class CreateOrderCommandHandlerTests
 
         await _productGateway.DidNotReceive().GetCurrentPricesAsync(
             Arg.Any<IEnumerable<Guid>>(),
+            Arg.Any<CancellationToken>());
+
+        await _orderPersistenceService.DidNotReceive().CreateOrderAsync(
+            Arg.Any<Order>(),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldRejectWrite_WhenCurrentRegionIsNotOwner()
+    {
+        _writeRegionOwnershipResolver
+            .ResolveForCustomer(Arg.Any<Guid>())
+            .Returns(new WriteRegionOwnershipDecision(
+                IsEnabled: true,
+                IsCurrentRegionOwner: false,
+                CurrentRegion: "eu-west-1",
+                OwnerRegion: "us-east-1"));
+
+        var result = await BuildHandler().Handle(CreateValidCommand(), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Write ownership mismatch", result.Error, StringComparison.OrdinalIgnoreCase);
+
+        await _idempotencyRepository.DidNotReceive().GetByKeyAsync(
+            Arg.Any<string>(),
             Arg.Any<CancellationToken>());
 
         await _orderPersistenceService.DidNotReceive().CreateOrderAsync(

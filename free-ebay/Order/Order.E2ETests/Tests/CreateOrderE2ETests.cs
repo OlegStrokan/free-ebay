@@ -1,6 +1,7 @@
 using Application.Sagas;
 using Application.Sagas.OrderSaga;
 using Application.Sagas.Persistence;
+using Application.Interfaces;
 using Domain.Common;
 using Confluent.Kafka;
 using Domain.ValueObjects;
@@ -258,6 +259,30 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
             "payment changed exactly once");
         
         _output.WriteLine("PASSED: Idempotency works!");
+    }
+
+    [Fact]
+    public async Task CreateOrder_ShouldReject_WhenCurrentRegionIsNotOwner()
+    {
+        _output.WriteLine("Region ownership guard - reject non-owner region");
+
+        _server.SetWriteOwnershipOverride(_ => new WriteRegionOwnershipDecision(
+            IsEnabled: true,
+            IsCurrentRegionOwner: false,
+            CurrentRegion: "eu-west-1",
+            OwnerRegion: "us-east-1"));
+
+        var request = BuildCreateOrderRequest(Guid.NewGuid());
+        var response = await _client.CreateOrderAsync(request);
+
+        response.Success.Should().BeFalse();
+        response.ErrorMessage.Should().Contain("Write ownership mismatch");
+        response.ErrorMessage.Should().Contain("us-east-1");
+
+        _server.PaymentService.ProcessCalls.Should().BeEmpty();
+        _server.InventoryService.ReserveCalls.Should().BeEmpty();
+
+        _output.WriteLine("PASSED: non-owner region rejected before side effects");
     }
 
 
