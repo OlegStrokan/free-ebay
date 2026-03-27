@@ -9,7 +9,7 @@ router = APIRouter()
 
 def get_ollama_client() -> OllamaClient:
     # will be overridden by app state in main.py?
-    # @think: are you stupid or this is how this retarted language works?
+    # @think: am i stupid or this is how this retarted language works?
     raise NotImplementedError
 
 @router.post("/embed", response_model=EmbedResponse)
