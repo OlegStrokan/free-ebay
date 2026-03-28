@@ -1,0 +1,40 @@
+flowchart TD
+    subgraph free-ebay["free-ebay app"]
+        PRODUCT["Product Service\n(C#)"]
+        SEARCH["Search Service\n(C#)"]
+        GATEWAY["Gateway\n(C#)"]
+    end
+
+    subgraph infra["Infrastructure"]
+        KAFKA[("Kafka\n:9092")]
+        QDRANT[("Qdrant\n:6333\nvectors")]
+        ES[("Elasticsearch\n:9200\nkeywords")]
+        OLLAMA["Ollama\n:11434"]
+    end
+
+    subgraph ai["AI Services"]
+        VIW["VectorIndexerWorker"]
+        EMB["EmbeddingService\nPOST /embed"]
+        AIS["AiSearchService\ngRPC :50051"]
+    end
+
+    PRODUCT -- "ProductCreateEvent\nProductUpdatedEvent\nProductDeletedEvent\n(Kafka message)" --> KAFKA
+    KAFKA -- "poll()" --> VIW
+    VIW -- "POST /embed\ntexts: [corpus string]" --> EMB
+    EMB -- "POST /api/embeddings\nmodel: nomic-embed-text" --> OLLAMA
+    OLLAMA -- "768 floats" --> EMB
+    EMB -- "embeddings: [[...768 floats...]]" --> VIW
+    VIW -- "upsert(product_id, vector, payload)" --> QDRANT
+
+    GATEWAY -- "user search query" --> SEARCH
+    SEARCH -- "SearchRequest\ngRPC" --> AIS
+    AIS -- "POST /api/generate\nmodel: phi3:mini\nprompt: query_extraction" --> OLLAMA
+    OLLAMA -- "ParsedQuery JSON" --> AIS
+    AIS -- "POST /embed\ntexts: [semantic_query]" --> EMB
+    EMB -- "768 floats" --> AIS
+    AIS -- "vector search\nwith filters" --> QDRANT
+    AIS -- "keyword search\nBM25" --> ES
+    QDRANT -- "top-K results" --> AIS
+    ES -- "top-K results" --> AIS
+    AIS -- "RRF merge →\nSearchResponse" --> SEARCH
+    SEARCH -- "results" --> GATEWAY
