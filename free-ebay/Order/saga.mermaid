@@ -1,0 +1,46 @@
+flowchart TD
+		A[Frontend request] --> B[Gateway]
+		B --> C[gRPC CreateOrder]
+		C --> D[Validate request + map command + MediatR]
+		D --> E[CreateOrder command handler]
+		E --> F[(Event store + Outbox + Idempotency in one transaction)]
+		F --> G[OutboxProcessor]
+		G --> H[Kafka order.events]
+		H --> I[SagaOrchestrationService]
+		I --> J[OrderCreatedEventHandler]
+		J --> K[OrderSaga.ExecuteAsync]
+
+		K --> S0[Step 0 CancelOrderOnFailure execute no-op]
+		S0 --> S1[Step 1 ReserveInventory]
+		S1 --> S2[Step 2 ProcessPayment]
+
+		S2 -->|Succeeded| S3[Step 3 AwaitPaymentConfirmation]
+		S2 -->|Pending/RequiresAction| W1[[SagaStatus WaitingForEvent]]
+		S2 -->|Failed| C1[Compensation start]
+
+		W1 --> PE[PaymentSucceededEvent / PaymentFailedEvent in Kafka]
+		PE --> CH[Payment continuation handler]
+		CH --> R1[SagaBase.ResumeFromStepAsync from AwaitPaymentConfirmation]
+		R1 --> S3
+
+		S3 -->|Succeeded| S4[Step 4 UpdateOrderStatus to Paid]
+		S3 -->|Pending/RequiresAction| W1
+		S3 -->|Failed| C1
+
+		S4 --> S5[Step 5 CreateShipment + tracking]
+		S5 --> S6[Step 6 Approve + Complete order]
+		S6 --> S7[Step 7 SendConfirmationEmail]
+		S7 --> DONE([Saga Completed])
+
+		C1 --> CR[Reverse executed completed steps]
+		CR --> C5[Step 5 compensate cancel shipment + revert tracking]
+		CR --> C2[Step 2 compensate refund if payment captured]
+		CR --> C1B[Step 1 compensate release inventory]
+		CR --> C0[Step 0 compensate cancel order]
+		C0 --> COMP([Saga Compensated or FailedToCompensate])
+
+		subgraph RELIABILITY
+			O1[Outbox publish retry] -->|max retries or too old| DLQ[(DeadLetterMessages)]
+			WD[SagaWatchdog checks stale Running sagas] -->|stuck too long| WDC[mark Failed + compensate]
+			WDC --> COMP
+		end
