@@ -16,7 +16,13 @@ log = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     embedding = EmbeddingClient(base_url=settings.embedding_service_url)
-    llm = LLMQueryClient(base_url=settings.llm_query_service_url)
+    llm = LLMQueryClient(
+        base_url=settings.ollama_base_url,
+        model=settings.llm_model,
+        temperature=settings.llm_temperature,
+        num_predict=settings.llm_num_predict,
+        timeout=settings.llm_ollama_timeout,
+    )
     qdrant = QdrantSearchClient(url=settings.qdrant_url, collection=settings.qdrant_collection)
     es = ElasticsearchClient(url=settings.es_url, index=settings.es_index)
 

@@ -4,7 +4,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="AI_SEARCH_")
 
     embedding_service_url: str = "http://localhost:8001"
-    llm_query_service_url: str = "http://localhost:8002"
+
+    ollama_base_url: str = "http://localhost:11434"
+    llm_model: str = "phi3:mini"
+    llm_temperature: float = 0.1
+    llm_num_predict: int = 256
+    llm_ollama_timeout: float = 5.0
 
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "products"
