@@ -11,3 +11,16 @@ dependencies = [
     "qdrant-client>=1.17.0",
     "structlog>=25.5.0",
 ]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "testcontainers>=4.9",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -20,3 +20,27 @@ Event type comes from the **Kafka message header** (`EventType`), not the topic 
 ```
 
 That string gets embedded and stored in Qdrant with a payload (price, color, brand, etc) for filtering
+
+essentially it's consume kafka message like this
+
+```
+{
+  "product_id": "prod-42",
+  "name": "Logitech MX Keys",
+  "description": "Wireless keyboard with backlit keys",
+  "category": "Keyboards",
+  "price": 109.99,
+  "currency": "USD",
+  "stock_quality": 50,
+  "attributes": [
+    { "key": "color", "value": "graphite" },
+    { "key": "brand", "value": "logitech" },
+    { "key": "layout", "value": "full-size" }
+  ]
+}
+```
+
+and return this
+```
+Logitech MX Keys | Wireless keyboard with backlit keys | Keyboards | color: graphite | brand: logitech | layout: full-size
+```
