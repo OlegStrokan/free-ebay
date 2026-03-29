@@ -11,8 +11,18 @@ POST /embed
 { "texts": ["..."], "model": "nomic-embed-text" }  // model is optional
 → { "embeddings": [[...]], "model": "...", "dimensions": 768 }
 ```
-
 Model defaults to `nomic-embed-text`. Can be overridden per request.
+
+essentially it takes this:
+
+```
+Logitech MX Keys | Wireless keyboard with backlit keys | Keyboards | color: graphite | brand: logitech | layout: full-size
+```
+and return this:
+
+```
+[0.021, -0.143, 0.887, 0.034, -0.512, ...]  // 768 numbers for our model (different model have different dimension value)
+```
 
 ## Config (env prefix `EMBEDDING_`)
 
