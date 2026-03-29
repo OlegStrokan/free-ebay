@@ -165,7 +165,9 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
 
         sagaState.Status = SagaStatus.Running;
         sagaState.UpdatedAt = DateTime.UtcNow;
-        sagaState.Context = JsonSerializer.Serialize(typedContext);        await _sagaRepository.SaveAsync(sagaState, cancellationToken);
+        sagaState.Context = JsonSerializer.Serialize(typedContext);   
+        
+        await _sagaRepository.SaveAsync(sagaState, cancellationToken);
 
         var resumeStep = Steps.FirstOrDefault(s => s.StepName == fromStepName);
         if (resumeStep == null)
