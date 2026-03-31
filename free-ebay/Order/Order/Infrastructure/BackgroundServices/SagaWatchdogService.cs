@@ -73,16 +73,13 @@ public class SagaWatchdogService : BackgroundService
 
         foreach (var saga in stuckSagas)
         {
-            await HandleStuckSagaAsync(saga, cancellationToken);
+            await HandleStuckSagaAsync(saga, sagaRepository, scope, cancellationToken);
         }
     }
 
 
-    private async Task HandleStuckSagaAsync(SagaState saga, CancellationToken cancellationToken)
+    private async Task HandleStuckSagaAsync(SagaState saga, ISagaRepository sagaRepository, IServiceScope scope, CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var sagaRepository = scope.ServiceProvider.GetRequiredService<ISagaRepository>();
-
         _logger.LogWarning(
             "Processing stuck saga {SagaId} ({SagaType}). " +
             "Correlation: {CorrelationId} Status: {Status}, Current Step: {CurrentStep}, " +
