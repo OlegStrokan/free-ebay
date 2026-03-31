@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Interfaces;
@@ -29,11 +30,11 @@ public class CompleteReturnReceivedStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal(data.CorrelationId, result.Data?["OrderId"]);
-        Assert.Equal("Returned", result.Data?["FinalStatus"]);
-        Assert.Equal("REF-123", result.Data?["RefundId"]);
-        Assert.Equal(data.RefundAmount, result.Data?["RefundAmount"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal(data.CorrelationId, ((Completed)result).Data?["OrderId"]);
+        Assert.Equal("Returned", ((Completed)result).Data?["FinalStatus"]);
+        Assert.Equal("REF-123", ((Completed)result).Data?["RefundId"]);
+        Assert.Equal(data.RefundAmount, ((Completed)result).Data?["RefundAmount"]);
 
         await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
             data.CorrelationId,
@@ -49,8 +50,8 @@ public class CompleteReturnReceivedStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal("N/A", result.Data?["RefundId"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal("N/A", ((Completed)result).Data?["RefundId"]);
     }
 
     [Fact]
@@ -64,8 +65,8 @@ public class CompleteReturnReceivedStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("DB connection lost", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("DB connection lost", ((Fail)result).Reason);
     }
 
     [Fact]

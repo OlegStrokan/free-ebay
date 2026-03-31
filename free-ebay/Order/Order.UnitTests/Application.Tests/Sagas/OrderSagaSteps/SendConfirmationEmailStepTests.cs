@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Sagas.OrderSaga;
@@ -23,8 +24,8 @@ public class SendConfirmationEmailStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal(true, result.Data?["EmailSent"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal(true, ((Completed)result).Data?["EmailSent"]);
 
         await _emailGateway.Received(1).SendOrderConfirmationAsync(
             data.CustomerId,
@@ -48,9 +49,9 @@ public class SendConfirmationEmailStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), new OrderSagaContext(), CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal(false, result.Data?["EmailSent"]);
-        Assert.Equal("Email failed but order is complete", result.Data?["Warning"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal(false, ((Completed)result).Data?["EmailSent"]);
+        Assert.Equal("Email failed but order is complete", ((Completed)result).Data?["Warning"]);
     }
 
     [Fact]

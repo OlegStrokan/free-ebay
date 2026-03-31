@@ -60,12 +60,12 @@ public class SagaBaseTests
         _step1.Order.Returns(1);
         _step1.StepName.Returns("Step1");
         _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult());
+            .Returns(new Completed());
 
         _step2.Order.Returns(2);
         _step2.StepName.Returns("Step2");
         _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult());
+            .Returns(new Completed());
 
         var result = await Build(_step1, _step2)
             .ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
@@ -89,7 +89,7 @@ public class SagaBaseTests
         _step1.Order.Returns(1);
         _step1.StepName.Returns("Step1");
         _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult(metadata: new Dictionary<string, object> { ["SagaState"] = "WaitingForEvent" } ));
+            .Returns(new WaitForEvent());
         
 
         _step2.Order.Returns(2);
@@ -132,12 +132,12 @@ public class SagaBaseTests
         _step1.Order.Returns(1);
         _step1.StepName.Returns("Step1");
         _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult());
+            .Returns(new Completed());
 
         _step2.Order.Returns(2);
         _step2.StepName.Returns("Step2");
         _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.Failure("Step2 failed"));
+            .Returns(new Fail("Step2 failed"));
 
         // compensateAsync loads saga state by the internal sagaId via GetByIdAsync
         // we need Steps to contain Step1 as Completed so compensation runs it
@@ -177,12 +177,12 @@ public class SagaBaseTests
         _step1.Order.Returns(1);
         _step1.StepName.Returns("Step1");
         _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult());
+            .Returns(new Completed());
 
         _step2.Order.Returns(2);
         _step2.StepName.Returns("Step2");
         _step2.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult());
+            .Returns(new Completed());
 
         // Capture the state of each SaveAsync call at the time it's made
         var capturedStates = new List<(string? CurrentStep, SagaStatus Status)>();
@@ -225,7 +225,7 @@ public class SagaBaseTests
             {
                 callCount++;
                 if (callCount < 2) throw new Exception("transient");
-                return Task.FromResult(StepResult.SuccessResult());
+                return Task.FromResult<StepOutcome>(new Completed());
             });
 
         // classifier says the exception is transient
@@ -248,7 +248,7 @@ public class SagaBaseTests
         _step2.Order.Returns(2); _step2.StepName.Returns("Step2");
         _step3.Order.Returns(3); _step3.StepName.Returns("Step3");
         _step3.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
-            .Returns(StepResult.SuccessResult());
+            .Returns(new Completed());
 
         _repository.GetByCorrelationIdAsync(correlationId, "TestSaga", Arg.Any<CancellationToken>())
             .Returns(new SagaState
@@ -462,7 +462,7 @@ public class SagaBaseTests
             {
                 var ct = (CancellationToken)callInfo[2];
                 await Task.Delay(TimeSpan.FromSeconds(30), ct); // waits until the saga timeout kills it
-                return StepResult.SuccessResult();
+                return (StepOutcome)new Completed();
             });
 
         // compensation needs GetByIdAsync; nothing to compensate (no completed steps)
@@ -494,7 +494,7 @@ public class SagaBaseTests
             {
                 var ct = (CancellationToken)callInfo[2];
                 await Task.Delay(TimeSpan.FromSeconds(30), ct);
-                return StepResult.SuccessResult();
+                return (StepOutcome)new Completed();
             });
 
         _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())

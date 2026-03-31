@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Interfaces;
@@ -47,9 +48,9 @@ public class ProcessRefundStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
         Assert.Equal(expectedRefundId, context.RefundId);
-        Assert.Equal(expectedRefundId, result.Data?["RefundId"]);
+        Assert.Equal(expectedRefundId, ((Completed)result).Data?["RefundId"]);
 
         // original payment id PAY-1 must be used (we used it in CreateReturnReceivedOrder)
         await _paymentGateway.Received(1).RefundAsync(
@@ -72,7 +73,7 @@ public class ProcessRefundStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -89,8 +90,8 @@ public class ProcessRefundStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("not found", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("not found", ((Fail)result).Reason);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -113,8 +114,8 @@ public class ProcessRefundStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("no payment ID", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("no payment ID", ((Fail)result).Reason);
 
         await _paymentGateway.DidNotReceive().RefundAsync(
             Arg.Any<string>(), Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -136,8 +137,8 @@ public class ProcessRefundStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Payment Provider Unavailable", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Payment Provider Unavailable", ((Fail)result).Reason);
     }
 
     [Fact]
@@ -160,8 +161,8 @@ public class ProcessRefundStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Deadlock detected", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Deadlock detected", ((Fail)result).Reason);
     }
 
     [Fact]

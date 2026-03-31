@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
@@ -30,9 +31,9 @@ public class ReserveInventoryStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
         Assert.Equal(expectedReservationId, context.ReservationId);
-        Assert.Equal(expectedReservationId, result.Data?["ReservationId"]);
+        Assert.Equal(expectedReservationId, ((Completed)result).Data?["ReservationId"]);
 
         await _inventoryGateway.Received(1).ReserveAsync(
             data.CorrelationId, data.Items, Arg.Any<CancellationToken>());
@@ -45,7 +46,7 @@ public class ReserveInventoryStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
         
         await _inventoryGateway.DidNotReceive().ReserveAsync(
             Arg.Any<Guid>(), Arg.Any<List<OrderItemDto>>(), Arg.Any<CancellationToken>());
@@ -63,8 +64,8 @@ public class ReserveInventoryStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Out of stock", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Out of stock", ((Fail)result).Reason);
         Assert.Null(context.ReservationId);
     }
 
@@ -77,8 +78,8 @@ public class ReserveInventoryStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), new OrderSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Inventory service unreachable", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Inventory service unreachable", ((Fail)result).Reason);
     }
 
     [Fact]

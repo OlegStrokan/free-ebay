@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
@@ -37,10 +38,10 @@ public class CreateShipmentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
         Assert.Equal(expectedShipmentId, context.ShipmentId);
         Assert.Equal(expectedTracking, context.TrackingNumber);
-        Assert.Equal(expectedShipmentId, result.Data?["ShipmentId"]);
+        Assert.Equal(expectedShipmentId, ((Completed)result).Data?["ShipmentId"]);
 
         await _shippingGateway.Received(1).CreateShipmentAsync(
             data.CorrelationId, data.DeliveryAddress, data.Items, Arg.Any<CancellationToken>());
@@ -58,7 +59,7 @@ public class CreateShipmentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
 
         // gateway must NOT be called again
         await _shippingGateway.DidNotReceive().CreateShipmentAsync(
@@ -77,8 +78,8 @@ public class CreateShipmentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Bad address", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Bad address", ((Fail)result).Reason);
         Assert.Null(context.ShipmentId);
 
         await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
@@ -101,8 +102,8 @@ public class CreateShipmentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("not found", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("not found", ((Fail)result).Reason);
     }
 
     [Fact]
@@ -116,8 +117,8 @@ public class CreateShipmentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new OrderSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Shipping API is on fire", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Shipping API is on fire", ((Fail)result).Reason);
     }
 
     [Fact]

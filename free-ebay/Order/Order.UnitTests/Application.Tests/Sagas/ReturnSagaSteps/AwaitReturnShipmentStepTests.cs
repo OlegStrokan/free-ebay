@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
@@ -37,9 +38,9 @@ public class AwaitReturnShipmentStepTests
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
         
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
         Assert.Equal(expectedShipmentId, context.ReturnShipmentId);
-        Assert.Equal(expectedShipmentId, result.Data?["ReturnShipmentId"]);
+        Assert.Equal(expectedShipmentId, ((Completed)result).Data?["ReturnShipmentId"]);
 
         await _shippingGateway.Received(1).CreateReturnShipmentAsync(
             data.CorrelationId,
@@ -63,7 +64,7 @@ public class AwaitReturnShipmentStepTests
         // gateway must still register webhook and register saga wait even if shipment existed
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
         Assert.Equal("EXISTING-SHIP", context.ReturnShipmentId);
 
         await _shippingGateway.DidNotReceive().CreateReturnShipmentAsync(
@@ -92,8 +93,8 @@ public class AwaitReturnShipmentStepTests
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains(errorMessage, result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains(errorMessage, ((Fail)result).Reason);
         Assert.Null(context.ReturnShipmentId);
 
         await _shippingGateway.DidNotReceive().RegisterWebhookAsync(
@@ -121,8 +122,8 @@ public class AwaitReturnShipmentStepTests
 
         var result = await _step.ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Webhook failed", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Webhook failed", ((Fail)result).Reason);
     }
     
     // compensation tests

@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Interfaces;
 using Application.Sagas.ReturnSaga;
@@ -49,8 +50,8 @@ public class ValidateReturnRequestStepTests
         var context = new ReturnSagaContext();
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal(data.CorrelationId, result.Data?["OrderId"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal(data.CorrelationId, ((Completed)result).Data?["OrderId"]);
         Assert.True(context.ReturnRequestValidated);
 
         await _returnRequestPersistenceService.Received(1).CreateReturnRequestAsync(
@@ -67,7 +68,7 @@ public class ValidateReturnRequestStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(Guid.NewGuid()), context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
 
         await _orderPersistenceService.DidNotReceive()
             .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
@@ -93,8 +94,8 @@ public class ValidateReturnRequestStepTests
         var context = new ReturnSagaContext();
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal("ExistingRecord", result.Data?["Source"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal("ExistingRecord", ((Completed)result).Data?["Source"]);
         Assert.True(context.ReturnRequestValidated);
 
         await _returnRequestPersistenceService.DidNotReceive().CreateReturnRequestAsync(
@@ -112,8 +113,8 @@ public class ValidateReturnRequestStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("not found", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("not found", ((Fail)result).Reason);
     }
 
     [Fact]
@@ -128,8 +129,8 @@ public class ValidateReturnRequestStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("must be completed", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("must be completed", ((Fail)result).Reason);
     }
 
     [Fact]
@@ -149,8 +150,8 @@ public class ValidateReturnRequestStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("not eligible", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("not eligible", ((Fail)result).Reason);
     }
 
     [Fact]
@@ -164,8 +165,8 @@ public class ValidateReturnRequestStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("DB connection lost", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("DB connection lost", ((Fail)result).Reason);
     }
 
     [Fact]

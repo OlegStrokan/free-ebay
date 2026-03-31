@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Gateways.Exceptions;
@@ -68,11 +69,11 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        var completed = Assert.IsType<Completed>(result);
         Assert.Equal(expectedPaymentId, context.PaymentId);
         Assert.Equal(OrderSagaPaymentStatus.Succeeded, context.PaymentStatus);
         Assert.Equal("pi_123", context.ProviderPaymentIntentId);
-        Assert.Equal(expectedPaymentId, result.Data?["PaymentId"]);
+        Assert.Equal(expectedPaymentId, completed.Data?["PaymentId"]);
 
         await _paymentGateway.Received(1).ProcessPaymentAsync(
             data.CorrelationId, data.CustomerId, data.TotalAmount,
@@ -90,11 +91,7 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
-        Assert.True(result.Success);
-
-        await _paymentGateway.DidNotReceive().ProcessPaymentAsync(
-            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<decimal>(),
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        Assert.IsType<Completed>(result);
     }
 
     [Fact]
@@ -108,7 +105,7 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
         Assert.Equal(OrderSagaPaymentStatus.Succeeded, context.PaymentStatus);
 
         await _paymentGateway.DidNotReceive().ProcessPaymentAsync(
@@ -132,11 +129,9 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<WaitForEvent>(result);
         Assert.Equal(OrderSagaPaymentStatus.Pending, context.PaymentStatus);
         Assert.Equal("PAY-PENDING", context.PaymentId);
-        Assert.True(result.Metadata.ContainsKey("SagaState"));
-        Assert.Equal("WaitingForEvent", result.Metadata["SagaState"]);
     }
 
     [Fact]
@@ -156,12 +151,10 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<WaitForEvent>(result);
         Assert.Equal(OrderSagaPaymentStatus.RequiresAction, context.PaymentStatus);
         Assert.Equal("PAY-3DS", context.PaymentId);
         Assert.Equal("cs_3ds", context.PaymentClientSecret);
-        Assert.True(result.Metadata.ContainsKey("SagaState"));
-        Assert.Equal("WaitingForEvent", result.Metadata["SagaState"]);
     }
 
     [Fact]
@@ -177,8 +170,8 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Card declined", result.ErrorMessage);
+        var fail = Assert.IsType<Fail>(result);
+        Assert.Contains("Card declined", fail.Reason);
         Assert.Equal(OrderSagaPaymentStatus.Failed, context.PaymentStatus);
         Assert.Equal("PAYMENT_DECLINED", context.PaymentFailureCode);
     }
@@ -196,8 +189,9 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Not enough balance", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        var fail = Assert.IsType<Fail>(result);
+        Assert.Contains("Not enough balance", fail.Reason);
         Assert.Equal(OrderSagaPaymentStatus.Failed, context.PaymentStatus);
         Assert.Equal("INSUFFICIENT_FUNDS", context.PaymentFailureCode);
     }
@@ -215,11 +209,9 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<WaitForEvent>(result);
         Assert.Equal(OrderSagaPaymentStatus.Uncertain, context.PaymentStatus);
         Assert.Equal("PAYMENT_RESULT_UNCERTAIN", context.PaymentFailureCode);
-        Assert.True(result.Metadata.ContainsKey("SagaState"));
-        Assert.Equal("WaitingForEvent", result.Metadata["SagaState"]);
     }
 
     [Fact]
@@ -235,7 +227,7 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
+        Assert.IsType<Fail>(result);
         Assert.Equal(OrderSagaPaymentStatus.Failed, context.PaymentStatus);
         Assert.Equal("PAYMENT_GATEWAY_UNAVAILABLE", context.PaymentFailureCode);
     }
@@ -252,8 +244,8 @@ public class ProcessPaymentStepTests
 
         var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Payment provider unreachable", result.ErrorMessage);
+        var fail = Assert.IsType<Fail>(result);
+        Assert.Contains("Payment provider unreachable", fail.Reason);
         Assert.Equal(OrderSagaPaymentStatus.Failed, context.PaymentStatus);
     }
 

@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Interfaces;
 using Application.Sagas.OrderSaga;
@@ -35,8 +36,8 @@ public class UpdateOrderStatusStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal("Paid", result.Data?["Status"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal("Paid", ((Completed)result).Data?["Status"]);
         Assert.True(context.OrderStatusUpdated);
 
         await _orderPersistenceService.Received(1).UpdateOrderAsync(
@@ -58,7 +59,7 @@ public class UpdateOrderStatusStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.IsType<Completed>(result);
 
         await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
             Arg.Any<Guid>(), Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>());
@@ -76,8 +77,8 @@ public class UpdateOrderStatusStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Payment is not confirmed as succeeded", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Payment is not confirmed as succeeded", ((Fail)result).Reason);
 
         await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
             Arg.Any<Guid>(), Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>());
@@ -95,8 +96,8 @@ public class UpdateOrderStatusStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Payment ID not found", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Payment ID not found", ((Fail)result).Reason);
 
         // persistence must not be touched when context is incomplete
         await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
@@ -119,8 +120,8 @@ public class UpdateOrderStatusStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Critical Error", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Critical Error", ((Fail)result).Reason);
     }
 
     [Fact]
@@ -139,8 +140,8 @@ public class UpdateOrderStatusStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Database timeout", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Database timeout", ((Fail)result).Reason);
     }
     
     [Fact]

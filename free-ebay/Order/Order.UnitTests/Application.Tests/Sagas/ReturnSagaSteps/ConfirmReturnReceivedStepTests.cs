@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Interfaces;
@@ -32,8 +33,8 @@ public class ConfirmReturnReceivedStepTests
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal("ReturnReceived", result.Data?["Status"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal("ReturnReceived", ((Completed)result).Data?["Status"]);
         Assert.NotNull(context.ReturnReceivedAt);
 
         await _returnRequestPersistenceService.Received(1).UpdateReturnRequestAsync(
@@ -53,8 +54,8 @@ public class ConfirmReturnReceivedStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("not found", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("not found", ((Fail)result).Reason);
     }
 
     [Fact]
@@ -68,8 +69,8 @@ public class ConfirmReturnReceivedStepTests
 
         var result = await BuildStep().ExecuteAsync(data, new ReturnSagaContext(), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("Database Error", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Database Error", ((Fail)result).Reason);
     }
 
     [Fact]

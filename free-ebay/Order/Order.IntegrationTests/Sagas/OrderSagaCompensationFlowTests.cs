@@ -222,11 +222,11 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         public string StepName => stepName;
         public int Order => order;
 
-        public Task<StepResult> ExecuteAsync(
+        public Task<StepOutcome> ExecuteAsync(
             OrderSagaData data,
             OrderSagaContext context,
             CancellationToken cancellationToken)
-            => Task.FromResult(StepResult.SuccessResult());
+            => Task.FromResult<StepOutcome>(new Completed());
 
         public Task CompensateAsync(
             OrderSagaData data,
@@ -244,11 +244,11 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         public string StepName => stepName;
         public int Order => order;
 
-        public Task<StepResult> ExecuteAsync(
+        public Task<StepOutcome> ExecuteAsync(
             OrderSagaData data,
             OrderSagaContext context,
             CancellationToken cancellationToken)
-            => Task.FromResult(StepResult.Failure(error));
+            => Task.FromResult<StepOutcome>(new Fail(error));
 
         public Task CompensateAsync(
             OrderSagaData data,

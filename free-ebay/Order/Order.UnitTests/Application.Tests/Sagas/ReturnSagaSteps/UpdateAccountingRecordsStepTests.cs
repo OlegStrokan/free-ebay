@@ -1,3 +1,4 @@
+using Application.Sagas.Steps;
 using Application.DTOs;
 using Application.Gateways;
 using Application.Sagas.ReturnSaga;
@@ -50,10 +51,10 @@ public class UpdateAccountingRecordsStepTests
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal(expectedJournalEntryId, result.Data?["JournalEntryId"]);
-        Assert.Equal(expectedReversalId, result.Data?["RevenueReversalId"]);
-        Assert.Equal(data.RefundAmount, result.Data?["Amount"]);
+        Assert.IsType<Completed>(result);
+        Assert.Equal(expectedJournalEntryId, ((Completed)result).Data?["JournalEntryId"]);
+        Assert.Equal(expectedReversalId, ((Completed)result).Data?["RevenueReversalId"]);
+        Assert.Equal(data.RefundAmount, ((Completed)result).Data?["Amount"]);
         Assert.Equal(expectedReversalId, context.RevenueReversalId);
 
 
@@ -81,8 +82,8 @@ public class UpdateAccountingRecordsStepTests
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("RefundId is required", result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains("RefundId is required", ((Fail)result).Reason);
 
         await _accountingGateway.DidNotReceiveWithAnyArgs().RecordRefundAsync(
             Arg.Any<Guid>(),
@@ -110,8 +111,8 @@ public class UpdateAccountingRecordsStepTests
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains(errorMessage, result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains(errorMessage, ((Fail)result).Reason);
 
         await _accountingGateway.DidNotReceiveWithAnyArgs().ReverseRevenueAsync(
             Arg.Any<Guid>(),
@@ -147,8 +148,8 @@ public class UpdateAccountingRecordsStepTests
         
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains(errorMessage, result.ErrorMessage);
+        Assert.IsType<Fail>(result);
+        Assert.Contains(errorMessage, ((Fail)result).Reason);
 
 
         await _accountingGateway.Received(1).RecordRefundAsync(
