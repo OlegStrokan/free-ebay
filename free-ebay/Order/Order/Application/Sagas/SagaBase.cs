@@ -33,17 +33,20 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
     public async Task<SagaResult> ExecuteAsync(TData data, CancellationToken cancellationToken)
     {
         /* @todo: we will add like 400 lines of divined code to create event
-         driven stuff type shit yes we have basic logs we have logs,
-        but if Berezovsky will lose money because of us?
+           driven stuff type shit yes we have basic logs we have logs,
+           but if Berezovsky will lose money because of us?
          
-         current implementation: it's too complex so we use SagaWatchdogService for pooling data
-         but when berezovsky will come be fucking prepared
-      */
+           current implementation: it's too complex so we use SagaWatchdogService for pooling data
+           but when berezovsky will come - gotta be fucking prepared
+        */
 
-        // serviceCancellationToken is the host lifetime token - stays live until the process stops
-        // sagaCancellationToken is linked to both: it fires on timeout OR service shutdown
-        // Cleanup after timeout must use serviceCancellationToken, not sagaCancellationToken,
-        // because sagaCancellationToken is already cancelled when the timeout fires
+        /* serviceCancellationToken is the host lifetime token - stays live until the process stops
+           sagaCancellationToken is linked to both: it fires on timeout OR service shutdown
+           
+           Cleanup after timeout must use serviceCancellationToken, not sagaCancellationToken,
+           because sagaCancellationToken is already canceled when the timeout fires
+        */
+        
         var serviceCancellationToken = cancellationToken;
         using var timeoutCts = new CancellationTokenSource(SagaTimeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(serviceCancellationToken, timeoutCts.Token);

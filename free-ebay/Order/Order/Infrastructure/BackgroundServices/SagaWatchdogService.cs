@@ -89,8 +89,7 @@ public class SagaWatchdogService : BackgroundService
 
         try
         {
-            // TimedOut sagas skip the tolerance window - SagaBase already set the
-            // timeout; we're here only if the process crashed before compensation finished.
+            // TimedOut sagas skip the tolerance window - SagaBase already set the timeout
             if (saga.Status == SagaStatus.TimedOut)
             {
                 _logger.LogWarning(
