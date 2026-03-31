@@ -30,6 +30,9 @@ public sealed class SagaResult
     
     public static SagaResult Compensated(Guid sagaId)
         => new(sagaId, false, SagaStatus.Compensated);
+
+    public static SagaResult TimedOut(Guid sagaId)
+        => new(sagaId, false, SagaStatus.TimedOut, "Saga timed out");
 }
 
 public enum SagaStatus
@@ -42,6 +45,5 @@ public enum SagaStatus
     FailedToCompensate,
     Compensating,
     Compensated,
-    // could be hit
-    // TimedOut
+    TimedOut
 }

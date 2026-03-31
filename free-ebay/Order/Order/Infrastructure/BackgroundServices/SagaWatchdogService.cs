@@ -89,6 +89,18 @@ public class SagaWatchdogService : BackgroundService
 
         try
         {
+            // TimedOut sagas skip the tolerance window - SagaBase already set the
+            // timeout; we're here only if the process crashed before compensation finished.
+            if (saga.Status == SagaStatus.TimedOut)
+            {
+                _logger.LogWarning(
+                    "Saga {SagaId} ({SagaType}) has TimedOut status. Compensating immediately.",
+                    saga.Id, saga.SagaType);
+
+                await FailAndCompensateSagaAsync(saga, scope, cancellationToken);
+                return;
+            }
+
             if (await IsSagaActuallyCompletedAsync(saga, sagaRepository, cancellationToken))
             {
                 _logger.LogInformation(

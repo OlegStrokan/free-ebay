@@ -40,8 +40,13 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
          but when berezovsky will come be fucking prepared
       */
 
+        // serviceCancellationToken is the host lifetime token - stays live until the process stops
+        // sagaCancellationToken is linked to both: it fires on timeout OR service shutdown
+        // Cleanup after timeout must use serviceCancellationToken, not sagaCancellationToken,
+        // because sagaCancellationToken is already cancelled when the timeout fires
+        var serviceCancellationToken = cancellationToken;
         using var timeoutCts = new CancellationTokenSource(SagaTimeout);
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(serviceCancellationToken, timeoutCts.Token);
         var sagaCancellationToken = linkedCts.Token;
 
         var sagaId = Guid.NewGuid();
@@ -69,57 +74,73 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
             "Started {SagaType} saga {SagaId} for correlation {CorrelationId}",
             SagaType, sagaId, data.CorrelationId);
 
-        foreach (var step in Steps)
+        try
         {
-            _logger.LogInformation(
-                "Executing step {StepName} (order: {Order}) for {CorrelationId}",
-                step.StepName, step.Order, data.CorrelationId);
-
-            var stepResult = await ExecuteStepAsync(
-                sagaId,
-                step,
-                data,
-                context, 
-                sagaCancellationToken);
-
-            sagaState.Context = JsonSerializer.Serialize(context);
-            sagaState.CurrentStep = step.StepName;
-            sagaState.UpdatedAt = DateTime.UtcNow;
-
-            if (stepResult is WaitForEvent)
+            foreach (var step in Steps)
             {
                 _logger.LogInformation(
-                    "Step {StepName} marked saga as waiting for external event.",
-                    step.StepName);
+                    "Executing step {StepName} (order: {Order}) for {CorrelationId}",
+                    step.StepName, step.Order, data.CorrelationId);
 
-                sagaState.Status = SagaStatus.WaitingForEvent;
+                var stepResult = await ExecuteStepAsync(
+                    sagaId,
+                    step,
+                    data,
+                    context,
+                    sagaCancellationToken);
+
+                sagaState.Context = JsonSerializer.Serialize(context);
+                sagaState.CurrentStep = step.StepName;
+                sagaState.UpdatedAt = DateTime.UtcNow;
+
+                if (stepResult is WaitForEvent)
+                {
+                    _logger.LogInformation(
+                        "Step {StepName} marked saga as waiting for external event.",
+                        step.StepName);
+
+                    sagaState.Status = SagaStatus.WaitingForEvent;
+                    await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
+
+                    return SagaResult.Success(sagaId);
+                }
+
+                if (stepResult is Fail stepFailure)
+                {
+                    _logger.LogWarning(
+                        "Step {StepName} failed in saga {SagaId}. Starting compensation...",
+                        step.StepName, sagaId);
+
+                    sagaState.Status = SagaStatus.Failed;
+                    await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
+
+                    await CompensateAsync(sagaId, sagaCancellationToken);
+                    return SagaResult.Failed(sagaId, stepFailure.Reason);
+                }
+
                 await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
-
-                return SagaResult.Success(sagaId);
             }
 
-            if (stepResult is Fail stepFailure)
-            {
-                _logger.LogWarning(
-                    "Step {StepName} failed in saga {SagaId}. Starting compensation...",
-                    step.StepName, sagaId);
-
-                sagaState.Status = SagaStatus.Failed;
-                await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
-                
-                await CompensateAsync(sagaId, sagaCancellationToken);
-                return SagaResult.Failed(sagaId, stepFailure.Reason);
-            }
-            
+            sagaState.Status = SagaStatus.Completed;
+            sagaState.UpdatedAt = DateTime.UtcNow;
             await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
+
+            _logger.LogInformation("Saga {SagaId} completed successfully", sagaId);
+            return SagaResult.Success(sagaId);
         }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !serviceCancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError(
+                "Saga {SagaId} ({SagaType}) timed out after {Timeout}. Starting compensation.",
+                sagaId, SagaType, SagaTimeout);
 
-        sagaState.Status = SagaStatus.Completed;
-        sagaState.UpdatedAt = DateTime.UtcNow;
-        await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
+            sagaState.Status = SagaStatus.TimedOut;
+            sagaState.UpdatedAt = DateTime.UtcNow;
+            await _sagaRepository.SaveAsync(sagaState, serviceCancellationToken);
 
-        _logger.LogInformation("Saga {SagaId} completed successfully", sagaId);
-        return SagaResult.Success(sagaId);
+            await CompensateAsync(sagaId, serviceCancellationToken);
+            return SagaResult.TimedOut(sagaId);
+        }
     }
 
     public async Task<SagaResult> ResumeFromStepAsync(
@@ -251,6 +272,10 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
                 return result;
             }
 
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (_errorClassifier.IsTransient(ex) && retryCount < maxRetries)
             {
                 retryCount++;
@@ -316,6 +341,10 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
                         sagaState, stepLog, cancellationToken);
 
                     break;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception ex) when (_errorClassifier.IsTransient(ex) && retryCount < maxRetries)
                 {

@@ -69,7 +69,7 @@ public class SagaRepository(AppDbContext dbContext) : ISagaRepository
     public async Task<List<SagaState>> GetStuckSagasAsync(DateTime updatedBeforeCutoff, CancellationToken cancellationToken)
     {
         return await dbContext.SagaStates
-            .Where(x => x.Status == SagaStatus.Running
+            .Where(x => (x.Status == SagaStatus.Running || x.Status == SagaStatus.TimedOut)
                         && x.UpdatedAt < updatedBeforeCutoff)
             .Include(x => x.Steps)
             .ToListAsync(cancellationToken);
