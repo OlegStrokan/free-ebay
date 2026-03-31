@@ -15,7 +15,7 @@ public class UpdateOrderStatusStep(
     public string StepName => "UpdateOrderStatus";
     public int Order => 4;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         OrderSagaData data,
         OrderSagaContext context, 
         CancellationToken cancellationToken)
@@ -28,17 +28,17 @@ public class UpdateOrderStatusStep(
                 logger.LogInformation(
                     "Order {OrderId} status already updated, skipping",
                     data.CorrelationId);
-                return StepResult.SuccessResult();
+                return new Completed();
             }
 
             if (context.PaymentStatus != OrderSagaPaymentStatus.Succeeded)
             {
-                return StepResult.Failure(
+                return new Fail(
                     $"Payment is not confirmed as succeeded. Current status: {context.PaymentStatus}");
             }
 
             if (string.IsNullOrEmpty(context.PaymentId))
-                return StepResult.Failure("Payment ID not found in saga context");
+                return new Fail("Payment ID not found in saga context");
             
             logger.LogInformation(
                 "Updating order {OrderId} status to Paid",
@@ -60,7 +60,7 @@ public class UpdateOrderStatusStep(
                 "Successfully updated order {OrderId} to Paid status",
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["OrderId"] = data.CorrelationId,
                 ["Status"] = "Paid"
@@ -71,7 +71,7 @@ public class UpdateOrderStatusStep(
             //return StepResult.Failure($"Order {data.CorrelationId} not found");
             //@think: Specific handling: Maybe this order shouldn't exist? 
             // We return a failure that tells the Saga to stop and compensate.
-            return StepResult.Failure($"Critical Error: {ex.Message}");
+            return new Fail($"Critical Error: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -80,7 +80,7 @@ public class UpdateOrderStatusStep(
                 "Failed to update order {OrderId} status",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Failed to update order status: {ex.Message}");
+            return new Fail($"Failed to update order status: {ex.Message}");
         }
     }
 

@@ -18,7 +18,7 @@ public sealed class ValidateReturnRequestStep(
     public string StepName => "ValidateReturnRequest";
     public int Order => 1;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         ReturnSagaData data,
         ReturnSagaContext context,
         CancellationToken cancellationToken)
@@ -33,7 +33,7 @@ public sealed class ValidateReturnRequestStep(
                     "Return request already validated for order {OrderId}. Skipping.",
                     data.CorrelationId);
 
-                return StepResult.SuccessResult(new Dictionary<string, object>
+                return new Completed(new Dictionary<string, object>
                 {
                     ["OrderId"] = data.CorrelationId,
                 });
@@ -47,10 +47,10 @@ public sealed class ValidateReturnRequestStep(
                 data.CorrelationId, cancellationToken);
 
             if (order == null)
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
+                return new Fail($"Order {data.CorrelationId} not found");
 
             if (order.Status != OrderStatus.Completed)
-                return StepResult.Failure(
+                return new Fail(
                     $"Order {data.CorrelationId} must be completed to request return." +
                     $"Current status: {order.Status}");
 
@@ -63,7 +63,7 @@ public sealed class ValidateReturnRequestStep(
                     data.CorrelationId);
                 context.ReturnRequestValidated = true;
 
-                return StepResult.SuccessResult(new Dictionary<string, object>
+                return new Completed(new Dictionary<string, object>
                 {
                     ["OrderId"] = data.CorrelationId,
                     ["Source"] = "ExistingRecord"
@@ -72,7 +72,7 @@ public sealed class ValidateReturnRequestStep(
 
             if (!order.IsEligibleForReturn())
             {
-                return StepResult.Failure($"Order {data.CorrelationId} id is not eligible for return.");
+                return new Fail($"Order {data.CorrelationId} id is not eligible for return.");
             }
 
             var itemsToReturn = data.ReturnedItems.Select(dto =>
@@ -122,7 +122,7 @@ public sealed class ValidateReturnRequestStep(
                 "Return request validated and saved for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["OrderId"] = data.CorrelationId,
                 ["RefundAmount"] = data.RefundAmount,
@@ -137,7 +137,7 @@ public sealed class ValidateReturnRequestStep(
                 "Failed to validate return request for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Validation failed: {ex.Message}");
+            return new Fail($"Validation failed: {ex.Message}");
         }
     }
 

@@ -11,7 +11,7 @@ public sealed class UpdateAccountingRecordsStep(
     public string StepName => "UpdateAccountingRecords";
     public int Order => 5;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         ReturnSagaData data,
         ReturnSagaContext context,
         CancellationToken cancellationToken)
@@ -20,7 +20,7 @@ public sealed class UpdateAccountingRecordsStep(
         {
             if (string.IsNullOrEmpty(context.RefundId))
             {
-                return StepResult.Failure("RefundId is required but was not found in context");
+                return new Fail("RefundId is required but was not found in context");
             }
 
             logger.LogInformation(
@@ -61,7 +61,7 @@ public sealed class UpdateAccountingRecordsStep(
                 "Revenue reversed in accounting. Reversal ID: {ReversalId}",
                 reversalId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["JournalEntryId"] = journalEntryId,
                 ["RevenueReversalId"] = reversalId,
@@ -75,7 +75,7 @@ public sealed class UpdateAccountingRecordsStep(
                 "Failed to update accounting records for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Accounting update failed: {ex.Message}");
+            return new Fail($"Accounting update failed: {ex.Message}");
         }
     }
 

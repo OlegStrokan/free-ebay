@@ -14,7 +14,7 @@ public sealed class AwaitReturnShipmentStep(
     public string StepName => "AwaitReturnShipment";
     public int Order => 2;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         ReturnSagaData data,
         ReturnSagaContext context,
         CancellationToken cancellationToken)
@@ -62,17 +62,7 @@ public sealed class AwaitReturnShipmentStep(
                 cancellationToken);
             
             
-            return StepResult.SuccessResult(
-                data: new Dictionary<string, object>
-                {
-                    ["ReturnShipmentId"] = returnShipmentId,
-                    ["Status"] = "WaitingForDelivery",
-                    ["Message"] = "Return label created. Waiting for customer to ship package."
-                },
-                metadata: new Dictionary<string, object>
-                {
-                    ["SagaState"] = "WaitingForEvent"
-                });
+            return new WaitForEvent();
         }
         catch (Exception ex)
         {
@@ -81,7 +71,7 @@ public sealed class AwaitReturnShipmentStep(
                 "Failed to process return shipment for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Return shipment failed: {ex.Message}");
+            return new Fail($"Return shipment failed: {ex.Message}");
         }
     }
 

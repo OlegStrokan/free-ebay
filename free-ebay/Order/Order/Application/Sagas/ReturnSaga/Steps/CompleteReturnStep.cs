@@ -15,7 +15,7 @@ public sealed class CompleteReturnStep(
     public string StepName => "CompleteReturn";
     public int Order => 6;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         ReturnSagaData data,
         ReturnSagaContext context,
         CancellationToken cancellationToken)
@@ -40,7 +40,7 @@ public sealed class CompleteReturnStep(
                 data.CorrelationId);
             
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["OrderId"] = data.CorrelationId,
                 ["FinalStatus"] = "Returned",
@@ -56,7 +56,7 @@ public sealed class CompleteReturnStep(
                 "Failed to complete return for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Return completion failed: {ex.Message}");
+            return new Fail($"Return completion failed: {ex.Message}");
         }
     }
 

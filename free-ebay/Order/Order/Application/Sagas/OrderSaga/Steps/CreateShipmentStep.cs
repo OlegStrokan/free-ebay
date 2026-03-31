@@ -21,7 +21,7 @@ public sealed class CreateShipmentStep(
     public string StepName => "CreateShipment";
     public int Order => 5;
     
-    public async Task<StepResult> ExecuteAsync(OrderSagaData data, OrderSagaContext context, CancellationToken cancellationToken)
+    public async Task<StepOutcome> ExecuteAsync(OrderSagaData data, OrderSagaContext context, CancellationToken cancellationToken)
     {
         try
         {
@@ -32,7 +32,7 @@ public sealed class CreateShipmentStep(
                     "Shipment already reserved with {ShipmentId}. Skipping.",
                     context.ShipmentId);
 
-                return StepResult.SuccessResult(new Dictionary<string, object>
+                return new Completed(new Dictionary<string, object>
                 {
                     ["ShipmentId"] = context.ShipmentId,
                 });
@@ -71,7 +71,7 @@ public sealed class CreateShipmentStep(
                 trackingNumber,
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["ShipmentId"] = shipmentId,
                 ["DeliveryAddress"] = $"{data.DeliveryAddress.Street}, {data.DeliveryAddress.City}"
@@ -83,7 +83,7 @@ public sealed class CreateShipmentStep(
                 ex,
                 "Order with ID {OrderId} not found ",
                 data.CorrelationId);
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
+                return new Fail($"Order {data.CorrelationId} not found");
         }
         catch (InvalidAddressException ex)
         {
@@ -92,7 +92,7 @@ public sealed class CreateShipmentStep(
                 "Invalid delivery address for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Invalid delivery address: {ex.Message}");
+            return new Fail($"Invalid delivery address: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -101,7 +101,7 @@ public sealed class CreateShipmentStep(
                 "Invalid delivery address for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Invalid delivery address: {ex.Message}");
+            return new Fail($"Invalid delivery address: {ex.Message}");
         }
     }
 

@@ -12,7 +12,7 @@ public sealed class CompleteOrderStep(
     public string StepName => "CompleteOrder";
     public int Order => 6;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         OrderSagaData data,
         OrderSagaContext context,
         CancellationToken cancellationToken)
@@ -24,7 +24,7 @@ public sealed class CompleteOrderStep(
                 logger.LogInformation(
                     "Order {OrderId} already approved and completed, skipping",
                     data.CorrelationId);
-                return StepResult.SuccessResult();
+                return new Completed();
             }
 
             logger.LogInformation("Approving and completing order {OrderId}", data.CorrelationId);
@@ -45,7 +45,7 @@ public sealed class CompleteOrderStep(
                 "Successfully approved and completed order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["OrderId"] = data.CorrelationId,
                 ["Status"] = "Completed"
@@ -54,7 +54,7 @@ public sealed class CompleteOrderStep(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to complete order {OrderId}", data.CorrelationId);
-            return StepResult.Failure($"Failed to complete order: {ex.Message}");
+            return new Fail($"Failed to complete order: {ex.Message}");
         }
     }
 

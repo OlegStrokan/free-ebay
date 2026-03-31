@@ -18,7 +18,7 @@ public class ProcessRefundStep(
     public string StepName => "ProcessRefund";
     public int Order => 4;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         ReturnSagaData data,
         ReturnSagaContext context,
         CancellationToken cancellationToken)
@@ -32,7 +32,7 @@ public class ProcessRefundStep(
                     "Refund already processed with {RefundId}. Skipping.",
                     context.RefundId);
 
-                return StepResult.SuccessResult(new Dictionary<string, object>
+                return new Completed(new Dictionary<string, object>
                 {
                     ["RefundId"] = context.RefundId,
                 });
@@ -49,11 +49,11 @@ public class ProcessRefundStep(
 
             if (order == null)
             {
-                return StepResult.Failure($"Order {data.CorrelationId} not found");
+                return new Fail($"Order {data.CorrelationId} not found");
             }
             
             if (order.PaymentId == null)
-                return StepResult.Failure("Order has no payment ID - cannot process refund");
+                return new Fail("Order has no payment ID - cannot process refund");
 
             
             logger.LogInformation(
@@ -94,7 +94,7 @@ public class ProcessRefundStep(
                 refundId,
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["RefundId"] = refundId,
                 ["OriginalPaymentId"] = order.PaymentId.ToString(),
@@ -109,7 +109,7 @@ public class ProcessRefundStep(
                 "Failed to process refund for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Refund processing failed: {ex.Message}");
+            return new Fail($"Refund processing failed: {ex.Message}");
         }
     }
 

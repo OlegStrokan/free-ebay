@@ -18,11 +18,11 @@ public sealed class CancelOrderOnFailureStep(
     public string StepName => "CancelOrderOnFailure";
     public int Order => 0;
 
-    public Task<StepResult> ExecuteAsync(
+    public Task<StepOutcome> ExecuteAsync(
         OrderSagaData data,
         OrderSagaContext context,
         CancellationToken cancellationToken)
-        => Task.FromResult(StepResult.SuccessResult());
+        => Task.FromResult<StepOutcome>(new Completed());
 
     public async Task CompensateAsync(
         OrderSagaData data,

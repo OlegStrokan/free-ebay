@@ -14,7 +14,7 @@ public sealed class SendConfirmationEmailStep(
     public int Order => 7;
 
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         OrderSagaData data,
         OrderSagaContext context,
         CancellationToken cancellationToken
@@ -38,7 +38,7 @@ public sealed class SendConfirmationEmailStep(
                 estimatedDelivery: DateTime.UtcNow.AddDays(5),
                 cancellationToken);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["EmailSent"] = true,
                 ["CustomerId"] = data.CustomerId
@@ -54,7 +54,7 @@ public sealed class SendConfirmationEmailStep(
             // email failure shouldn't fail the entire saga
             // log and continue - can retry later or notify customer through other channels
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["EmailSent"] = false,
                 ["Warning"] = "Email failed but order is complete"

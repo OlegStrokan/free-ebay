@@ -15,7 +15,7 @@ public sealed class ReserveInventoryStep(
     public string StepName => "ReserveInventory";
     public int Order => 1;
 
-    public async Task<StepResult> ExecuteAsync(OrderSagaData data,
+    public async Task<StepOutcome> ExecuteAsync(OrderSagaData data,
         OrderSagaContext context, CancellationToken cancellationToken)
     {
         try
@@ -40,7 +40,7 @@ public sealed class ReserveInventoryStep(
                     "Inventory already reserved with {ReservationId}. Skipping.",
                     context.ReservationId);
         
-                return StepResult.SuccessResult(new Dictionary<string, object>
+                return new Completed(new Dictionary<string, object>
                 {
                     ["ReservationId"] = context.ReservationId,
                 });
@@ -62,7 +62,7 @@ public sealed class ReserveInventoryStep(
                 reservationId,
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["ReservationId"] = reservationId,
                 ["ItemsReversed"] = data.Items.Count
@@ -74,7 +74,7 @@ public sealed class ReserveInventoryStep(
                 ex, "Insufficient inventory for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Insufficient inventory: {ex.Message}");
+            return new Fail($"Insufficient inventory: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -83,7 +83,7 @@ public sealed class ReserveInventoryStep(
                 "Failed to reserve inventory for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Inventory reservation failed: {ex.Message}");
+            return new Fail($"Inventory reservation failed: {ex.Message}");
         }
     } 
 

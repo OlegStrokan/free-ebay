@@ -18,7 +18,7 @@ public sealed class ProcessPaymentStep(
     public string StepName => "ProcessPayment";
     public int Order => 2;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         OrderSagaData data,
         OrderSagaContext context,
         CancellationToken cancellationToken)
@@ -39,7 +39,7 @@ public sealed class ProcessPaymentStep(
                     data.CorrelationId,
                     context.PaymentId);
 
-                return StepResult.SuccessResult(new Dictionary<string, object>
+                return new Completed(new Dictionary<string, object>
                 {
                     ["PaymentId"] = context.PaymentId,
                 });
@@ -52,7 +52,7 @@ public sealed class ProcessPaymentStep(
                     "Payment already failed for order {OrderId}. Error: {Error}",
                     data.CorrelationId,
                     error);
-                return StepResult.Failure($"Payment failed: {error}");
+                return new Fail($"Payment failed: {error}");
             }
 
             if (context.PaymentStatus is
@@ -66,16 +66,7 @@ public sealed class ProcessPaymentStep(
                     data.CorrelationId,
                     context.PaymentStatus);
 
-                return StepResult.SuccessResult(
-                    data: new Dictionary<string, object>
-                    {
-                        ["PaymentId"] = context.PaymentId ?? string.Empty,
-                        ["Status"] = context.PaymentStatus.ToString(),
-                    },
-                    metadata: new Dictionary<string, object>
-                    {
-                        ["SagaState"] = "WaitingForEvent"
-                    });
+                return new WaitForEvent();
             }
             
             logger.LogInformation(
@@ -108,7 +99,7 @@ public sealed class ProcessPaymentStep(
                         context.PaymentId,
                         data.CorrelationId);
 
-                    return StepResult.SuccessResult(new Dictionary<string, object>
+                    return new Completed(new Dictionary<string, object>
                     {
                         ["PaymentId"] = context.PaymentId ?? string.Empty,
                         ["Amount"] = data.TotalAmount,
@@ -123,16 +114,7 @@ public sealed class ProcessPaymentStep(
                         context.PaymentId,
                         data.CorrelationId);
 
-                    return StepResult.SuccessResult(
-                        data: new Dictionary<string, object>
-                        {
-                            ["PaymentId"] = context.PaymentId ?? string.Empty,
-                            ["Status"] = context.PaymentStatus.ToString(),
-                        },
-                        metadata: new Dictionary<string, object>
-                        {
-                            ["SagaState"] = "WaitingForEvent"
-                        });
+                    return new WaitForEvent();
 
                 case PaymentProcessingStatus.RequiresAction:
                     context.PaymentStatus = OrderSagaPaymentStatus.RequiresAction;
@@ -141,16 +123,7 @@ public sealed class ProcessPaymentStep(
                         context.PaymentId,
                         data.CorrelationId);
 
-                    return StepResult.SuccessResult(
-                        data: new Dictionary<string, object>
-                        {
-                            ["PaymentId"] = context.PaymentId ?? string.Empty,
-                            ["Status"] = context.PaymentStatus.ToString(),
-                        },
-                        metadata: new Dictionary<string, object>
-                        {
-                            ["SagaState"] = "WaitingForEvent"
-                        });
+                    return new WaitForEvent();
 
                 case PaymentProcessingStatus.Failed:
                     context.PaymentStatus = OrderSagaPaymentStatus.Failed;
@@ -160,11 +133,11 @@ public sealed class ProcessPaymentStep(
                         data.CorrelationId,
                         failedMessage);
 
-                    return StepResult.Failure($"Payment failed: {failedMessage}");
+                    return new Fail($"Payment failed: {failedMessage}");
 
                 default:
                     context.PaymentStatus = OrderSagaPaymentStatus.Failed;
-                    return StepResult.Failure("Payment returned unknown processing status");
+                    return new Fail("Payment returned unknown processing status");
             }
         }
         catch (PaymentDeclinedException ex)
@@ -179,7 +152,7 @@ public sealed class ProcessPaymentStep(
                 data.CorrelationId
             );
 
-            return StepResult.Failure($"Payment declined: {ex.Message}");
+            return new Fail($"Payment declined: {ex.Message}");
         }
         catch (InsufficientFundsException ex)
         {
@@ -192,7 +165,7 @@ public sealed class ProcessPaymentStep(
                 "Insufficient funds for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Insufficient funds: {ex.Message}");
+            return new Fail($"Insufficient funds: {ex.Message}");
         }
         catch (GatewayUnavailableException ex) when (ex.Reason == GatewayUnavailableReason.Timeout)
         {
@@ -205,16 +178,7 @@ public sealed class ProcessPaymentStep(
                 "Payment call timed out for order {OrderId}. Marking as Uncertain and waiting for webhook/reconciliation",
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(
-                data: new Dictionary<string, object>
-                {
-                    ["PaymentId"] = context.PaymentId ?? string.Empty,
-                    ["Status"] = context.PaymentStatus.ToString(),
-                },
-                metadata: new Dictionary<string, object>
-                {
-                    ["SagaState"] = "WaitingForEvent"
-                });
+            return new WaitForEvent();
         }
         catch (GatewayUnavailableException ex)
         {
@@ -227,7 +191,7 @@ public sealed class ProcessPaymentStep(
                 "Payment service unavailable for order {OrderId}. Cannot determine payment result",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Payment gateway unavailable: {ex.Message}");
+            return new Fail($"Payment gateway unavailable: {ex.Message}");
         }
 
         catch (Exception ex)
@@ -242,7 +206,7 @@ public sealed class ProcessPaymentStep(
                 data.CorrelationId
                 );
 
-            return StepResult.Failure($"Payment failed: {ex.Message}");
+            return new Fail($"Payment failed: {ex.Message}");
         }
     }
 

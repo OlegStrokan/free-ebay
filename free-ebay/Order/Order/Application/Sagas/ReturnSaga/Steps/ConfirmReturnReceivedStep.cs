@@ -17,7 +17,7 @@ public sealed class ConfirmReturnReceivedStep(
     public string StepName => "ConfirmReturnReceived";
     public int Order => 3;
 
-    public async Task<StepResult> ExecuteAsync(
+    public async Task<StepOutcome> ExecuteAsync(
         ReturnSagaData data,
         ReturnSagaContext context,
         CancellationToken cancellationToken)
@@ -58,7 +58,7 @@ public sealed class ConfirmReturnReceivedStep(
                 "Return confirmed for order {OrderId}. Package physically received at warehouse.",
                 data.CorrelationId);
 
-            return StepResult.SuccessResult(new Dictionary<string, object>
+            return new Completed(new Dictionary<string, object>
             {
                 ["ReturnShipmentId"] = context.ReturnShipmentId ?? "N/A",
                 ["ReceivedAt"] = receivedAt,
@@ -71,7 +71,7 @@ public sealed class ConfirmReturnReceivedStep(
                 ex,
                 "ReturnRequest for order {OrderId} not found ",
                 data.CorrelationId);
-            return StepResult.Failure($"ReturnRequest for order {data.CorrelationId} not found");
+            return new Fail($"ReturnRequest for order {data.CorrelationId} not found");
         }
         catch (Exception ex)
         {
@@ -80,7 +80,7 @@ public sealed class ConfirmReturnReceivedStep(
                 "Failed to confirm return receipt for order {OrderId}",
                 data.CorrelationId);
 
-            return StepResult.Failure($"Failed to confirm return: {ex.Message}");
+            return new Fail($"Failed to confirm return: {ex.Message}");
         }
     }       
 
