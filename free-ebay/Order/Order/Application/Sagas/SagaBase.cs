@@ -86,8 +86,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
             sagaState.CurrentStep = step.StepName;
             sagaState.UpdatedAt = DateTime.UtcNow;
 
-            if (stepResult.Metadata.TryGetValue("SagaState", out var sagaStateValue) &&
-                sagaStateValue.ToString() == "WaitingForEvent")
+            if (stepResult is WaitForEvent)
             {
                 _logger.LogInformation(
                     "Step {StepName} marked saga as waiting for external event.",
@@ -99,7 +98,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
                 return SagaResult.Success(sagaId);
             }
 
-            if (!stepResult.Success)
+            if (stepResult is Fail stepFailure)
             {
                 _logger.LogWarning(
                     "Step {StepName} failed in saga {SagaId}. Starting compensation...",
@@ -109,7 +108,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
                 await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
                 
                 await CompensateAsync(sagaId, sagaCancellationToken);
-                return SagaResult.Failed(sagaId, stepResult.ErrorMessage ?? "Unknown error");
+                return SagaResult.Failed(sagaId, stepFailure.Reason);
             }
             
             await _sagaRepository.SaveAsync(sagaState, sagaCancellationToken);
@@ -189,18 +188,17 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
             sagaState.CurrentStep = step.StepName;
             sagaState.UpdatedAt = DateTime.UtcNow;
 
-            if (stepResult.Metadata.TryGetValue("SagaState", out var sagaStateValue) &&
-                sagaStateValue?.ToString() == "WaitingForEvent")
+            if (stepResult is WaitForEvent)
             {
                 sagaState.Status = SagaStatus.WaitingForEvent;
                 await _sagaRepository.SaveAsync(sagaState, cancellationToken);
                 return SagaResult.Success(sagaState.Id);
             }
 
-            if (!stepResult.Success)
+            if (stepResult is Fail resumeFailure)
             {
                 await CompensateAsync(sagaState.Id, cancellationToken);
-                return SagaResult.Failed(sagaState.Id, stepResult.ErrorMessage ?? "Unknown error");
+                return SagaResult.Failed(sagaState.Id, resumeFailure.Reason);
             }
 
             await _sagaRepository.SaveAsync(sagaState, cancellationToken);
@@ -213,7 +211,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
         return SagaResult.Success(sagaState.Id);
     }
 
-    private async Task<StepResult> ExecuteStepAsync(
+    private async Task<StepOutcome> ExecuteStepAsync(
         Guid sagaId,
         ISagaStep<TData, TContext> step,
         TData data,
@@ -245,8 +243,8 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
 
                 stepLog.CompletedAt = endTime;
                 stepLog.DurationMs = (int)(endTime - startTime).TotalMilliseconds;
-                stepLog.Status = result.Success ? StepStatus.Completed : StepStatus.Failed;
-                stepLog.ErrorMessage = result.ErrorMessage;
+                stepLog.Status = result is Fail ? StepStatus.Failed : StepStatus.Completed;
+                stepLog.ErrorMessage = result is Fail failResult ? failResult.Reason : null;
 
                 await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
 
@@ -271,7 +269,7 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
 
                 await _sagaRepository.SaveStepAsync(stepLog, cancellationToken);
 
-                return StepResult.Failure(ex.Message);
+                return new Fail(ex.Message);
             }
         }
     }
