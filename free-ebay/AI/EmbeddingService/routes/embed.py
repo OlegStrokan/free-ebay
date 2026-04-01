@@ -1,6 +1,8 @@
 ﻿
 from fastapi import APIRouter, Depends, HTTPException
 
+import asyncio
+
 from clients.ollama_client import OllamaClient
 from config import settings
 from models import EmbedResponse, EmbedRequest
@@ -8,8 +10,7 @@ from models import EmbedResponse, EmbedRequest
 router = APIRouter()
 
 def get_ollama_client() -> OllamaClient:
-    # will be overridden by app state in main.py?
-    # @think: am i stupid or this is how this retarted language works?
+    # this is typical example how this stupid lanuage works
     raise NotImplementedError
 
 @router.post("/embed", response_model=EmbedResponse)
@@ -20,10 +21,7 @@ async def embed(
     if not request.texts:
         raise HTTPException(status_code=400, detail="texts must not be empty")
     model = request.model or settings.default_model
-    embeddings: list[list[float]] = []
-    for text in request.texts:
-        vector = await client.embed(text, model=model)
-        embeddings.append(vector)
+    embeddings = await asyncio.gather(*(client.embed(text, model=model) for text in request.texts))
     return EmbedResponse(
             embeddings=embeddings,
             model=model,

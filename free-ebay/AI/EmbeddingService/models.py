@@ -1,7 +1,7 @@
-﻿from pydantic import BaseModel
+﻿from pydantic import BaseModel, Field
 
 class EmbedRequest(BaseModel):
-    texts: list[str]
+    texts: list[str] = Field(min_length=1)
     model: str | None = None
 
 class EmbedResponse(BaseModel):
