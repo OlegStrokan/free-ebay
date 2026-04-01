@@ -1,8 +1,8 @@
 using Domain.Entities.User;
 
-namespace Application.UseCases.GetUserByEmail;
+namespace Application.UseCases.VerifyCredentials;
 
-public record GetUserByEmailResponse(
+public record VerifyCredentialsResponse(
     string Id,
     string Email,
     string Fullname,

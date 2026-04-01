@@ -1,15 +1,23 @@
+using Domain.Common.Interfaces;
 using Domain.Repositories;
 using System.Net.Mail;
 
-namespace Application.UseCases.GetUserByEmail;
+namespace Application.UseCases.VerifyCredentials;
 
-public class GetUserByEmailUseCase(IUserRepository repository) : IGetUserByEmailUseCase
+public class VerifyCredentialsUseCase(
+    IUserRepository repository,
+    IPasswordHasher passwordHasher) : IVerifyCredentialsUseCase
 {
-    public async Task<GetUserByEmailResponse?> ExecuteAsync(string email)
+    public async Task<VerifyCredentialsResponse?> ExecuteAsync(string email, string password)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
             throw new ArgumentException("Email is required", nameof(email));
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("Password is required", nameof(password));
         }
 
         try
@@ -24,12 +32,12 @@ public class GetUserByEmailUseCase(IUserRepository repository) : IGetUserByEmail
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var user = await repository.GetUserByEmail(normalizedEmail);
 
-        if (user == null)
+        if (user == null || !passwordHasher.VerifyPassword(password, user.Password))
         {
             return null;
         }
 
-        return new GetUserByEmailResponse(
+        return new VerifyCredentialsResponse(
             user.Id,
             user.Email,
             user.Fullname,

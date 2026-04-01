@@ -37,7 +37,6 @@ public class GetUserByEmailUseCaseTests
         Assert.Equal(existingUser.Id, result!.Id);
         Assert.Equal(existingUser.Email, result.Email);
         Assert.Equal(existingUser.Fullname, result.Fullname);
-        Assert.Equal(existingUser.Password, result.PasswordHash);
         Assert.Equal(existingUser.IsEmailVerified, result.IsEmailVerified);
 
         await userRepository.Received(1).GetUserByEmail("test@example.com");

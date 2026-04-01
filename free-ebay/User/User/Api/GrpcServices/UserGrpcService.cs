@@ -7,6 +7,7 @@ using Application.UseCases.GetUserById;
 using Application.UseCases.UpdatePassword;
 using Application.UseCases.UpdateUserPassword;
 using Application.UseCases.UpdateUser;
+using Application.UseCases.VerifyCredentials;
 using Application.UseCases.VerifyUserEmail;
 using Grpc.Core;
 using Protos.User;
@@ -16,6 +17,7 @@ using GetUserByEmailResponseProto = Protos.User.GetUserByEmailResponse;
 using GetUserByIdResponseProto = Protos.User.GetUserByIdResponse;
 using UpdateUserPasswordResponseProto = Protos.User.UpdateUserPasswordResponse;
 using UpdateUserResponseProto = Protos.User.UpdateUserResponse;
+using VerifyCredentialsResponseProto = Protos.User.VerifyCredentialsResponse;
 using VerifyUserEmailResponseProto = Protos.User.VerifyUserEmailResponse;
 
 namespace Api.GrpcServices;
@@ -25,6 +27,7 @@ public class UserGrpcService(
     IUpdateUserUseCase updateUserUseCase,
     IGetUserByIdUseCase getUserByIdUseCase,
     IGetUserByEmailUseCase getUserByEmailUseCase,
+    IVerifyCredentialsUseCase verifyCredentialsUseCase,
     IDeleteUserUseCase deleteUserUseCase,
     IBlockUserUseCase blockUserUseCase,
     IUpdatePasswordUseCase updatePasswordUseCase,
@@ -150,6 +153,21 @@ public class UserGrpcService(
         try
         {
             var user = await getUserByEmailUseCase.ExecuteAsync(request.Email);
+            return user.ToProto();
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+    }
+
+    public override async Task<VerifyCredentialsResponseProto> VerifyCredentials(
+        VerifyCredentialsRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var user = await verifyCredentialsUseCase.ExecuteAsync(request.Email, request.Password);
             return user.ToProto();
         }
         catch (ArgumentException ex)

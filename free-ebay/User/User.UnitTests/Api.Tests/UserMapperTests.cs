@@ -6,6 +6,7 @@ using CreateUserResponse = Application.UseCases.CreateUser.CreateUserResponse;
 using GetUserByEmailResponse = Application.UseCases.GetUserByEmail.GetUserByEmailResponse;
 using GetUserByIdResponse = Application.UseCases.GetUserById.GetUserByIdResponse;
 using UpdateUserResponse = Application.UseCases.UpdateUser.UpdateUserResponse;
+using VerifyCredentialsResponse = Application.UseCases.VerifyCredentials.VerifyCredentialsResponse;
 
 namespace Api.Tests;
 
@@ -188,8 +189,7 @@ public class UserMapperTests
             UserStatus.Active,
             createdAt,
             updatedAt,
-            true,
-            "$2a$12$hash");
+            true);
 
         var result = response.ToProto();
 
@@ -203,7 +203,6 @@ public class UserMapperTests
         Assert.Equal(CustomerTierProto.Subscriber, result.Data.CustomerTier);
         Assert.Equal(UserStatusProto.Active, result.Data.Status);
         Assert.True(result.Data.IsEmailVerified);
-        Assert.Equal("$2a$12$hash", result.PasswordHash);
     }
 
     [Fact]
@@ -215,7 +214,46 @@ public class UserMapperTests
 
         Assert.NotNull(result);
         Assert.Null(result.Data);
-        Assert.Equal(string.Empty, result.PasswordHash);
+    }
+
+    [Fact]
+    public void VerifyCredentialsResponse_ToProto_ShouldMapCorrectly()
+    {
+        var createdAt = DateTime.UtcNow;
+        var updatedAt = createdAt.AddMinutes(1);
+
+        var response = new VerifyCredentialsResponse(
+            "user_123",
+            "email@example.com",
+            "Email User",
+            "+444444",
+            "US",
+            CustomerTier.Subscriber,
+            UserStatus.Active,
+            createdAt,
+            updatedAt,
+            true);
+
+        var result = response.ToProto();
+
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
+        Assert.NotNull(result.Data);
+        Assert.Equal("user_123", result.Data.Id);
+        Assert.Equal("email@example.com", result.Data.Email);
+        Assert.Equal("Email User", result.Data.FullName);
+    }
+
+    [Fact]
+    public void VerifyCredentialsResponse_ToProto_ShouldReturnInvalid_WhenNull()
+    {
+        VerifyCredentialsResponse? response = null;
+
+        var result = response.ToProto();
+
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
+        Assert.Null(result.Data);
     }
 
     [Fact]

@@ -19,7 +19,16 @@ message GetUserByEmailRequest {
 
 message GetUserByEmailResponse {
   optional UserProto data = 1;
-  string password_hash = 2;
+}
+
+message VerifyCredentialsRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message VerifyCredentialsResponse {
+  optional UserProto data = 1;
+  bool is_valid = 2;
 }
 
 message VerifyUserEmailRequest {
@@ -95,6 +104,7 @@ service UserServiceProto {
   rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
   rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
   rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserByEmailResponse);
+  rpc VerifyCredentials(VerifyCredentialsRequest) returns (VerifyCredentialsResponse);
   rpc VerifyUserEmail(VerifyUserEmailRequest) returns (VerifyUserEmailResponse);
   rpc UpdateUserPassword(UpdateUserPasswordRequest) returns (UpdateUserPasswordResponse);
 }

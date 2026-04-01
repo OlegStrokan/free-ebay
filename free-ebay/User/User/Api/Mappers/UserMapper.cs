@@ -6,6 +6,8 @@ using CreateUserResponseProto = Protos.User.CreateUserResponse;
 using GetUserByEmailResponse = Application.UseCases.GetUserByEmail.GetUserByEmailResponse;
 using GetUserByIdResponse = Application.UseCases.GetUserById.GetUserByIdResponse;
 using GetUserByEmailResponseProto = Protos.User.GetUserByEmailResponse;
+using VerifyCredentialsResponse = Application.UseCases.VerifyCredentials.VerifyCredentialsResponse;
+using VerifyCredentialsResponseProto = Protos.User.VerifyCredentialsResponse;
 using UpdateUserResponse = Application.UseCases.UpdateUser.UpdateUserResponse;
 using BlockUserResponseProto = Protos.User.BlockUserResponse;
 using GetUserByIdResponseProto = Protos.User.GetUserByIdResponse;
@@ -136,8 +138,33 @@ public static class UserMapper
                 CountryCode = response.CountryCode,
                 CustomerTier = response.CustomerTier.ToProto(),
                 IsEmailVerified = response.IsEmailVerified,
+            }
+        };
+    }
+
+    public static VerifyCredentialsResponseProto ToProto(this VerifyCredentialsResponse? response)
+    {
+        if (response == null)
+        {
+            return new VerifyCredentialsResponseProto();
+        }
+
+        return new VerifyCredentialsResponseProto
+        {
+            Data = new UserProto
+            {
+                Id = response.Id,
+                FullName = response.Fullname,
+                Email = response.Email,
+                Phone = response.Phone,
+                Status = response.Status.ToProto(),
+                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
+                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
+                CountryCode = response.CountryCode,
+                CustomerTier = response.CustomerTier.ToProto(),
+                IsEmailVerified = response.IsEmailVerified,
             },
-            PasswordHash = response.PasswordHash,
+            IsValid = true,
         };
     }
 

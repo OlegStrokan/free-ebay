@@ -12,7 +12,7 @@ namespace Api.Tests;
 public class GetUserByEmailGrpcTests
 {
     [Fact]
-    public async Task ShouldReturnUserWithPasswordHash_WhenUserExists()
+    public async Task ShouldReturnUser_WhenUserExists()
     {
         var useCase = Substitute.For<IGetUserByEmailUseCase>();
 
@@ -26,8 +26,7 @@ public class GetUserByEmailGrpcTests
             UserStatus.Active,
             DateTime.UtcNow,
             DateTime.UtcNow,
-            true,
-            "$2a$12$hash");
+            true);
 
         useCase.ExecuteAsync("test@example.com").Returns(useCaseResponse);
 
@@ -40,7 +39,6 @@ public class GetUserByEmailGrpcTests
         Assert.NotNull(response.Data);
         Assert.Equal("userId", response.Data.Id);
         Assert.Equal("test@example.com", response.Data.Email);
-        Assert.Equal("$2a$12$hash", response.PasswordHash);
         Assert.True(response.Data.IsEmailVerified);
 
         await useCase.Received(1).ExecuteAsync("test@example.com");
@@ -60,7 +58,6 @@ public class GetUserByEmailGrpcTests
             Substitute.For<ServerCallContext>());
 
         Assert.Null(response.Data);
-        Assert.Equal(string.Empty, response.PasswordHash);
     }
 
     [Fact]

@@ -7,6 +7,7 @@ using Application.UseCases.GetUserById;
 using Application.UseCases.UpdatePassword;
 using Application.UseCases.UpdateUserPassword;
 using Application.UseCases.UpdateUser;
+using Application.UseCases.VerifyCredentials;
 using Application.UseCases.VerifyUserEmail;
 using NSubstitute;
 
@@ -19,6 +20,7 @@ internal static class UserGrpcServiceTestFactory
         IUpdateUserUseCase? updateUserUseCase = null,
         IGetUserByIdUseCase? getUserByIdUseCase = null,
         IGetUserByEmailUseCase? getUserByEmailUseCase = null,
+        IVerifyCredentialsUseCase? verifyCredentialsUseCase = null,
         IDeleteUserUseCase? deleteUserUseCase = null,
         IBlockUserUseCase? blockUserUseCase = null,
         IUpdatePasswordUseCase? updatePasswordUseCase = null,
@@ -30,6 +32,7 @@ internal static class UserGrpcServiceTestFactory
             updateUserUseCase ?? Substitute.For<IUpdateUserUseCase>(),
             getUserByIdUseCase ?? Substitute.For<IGetUserByIdUseCase>(),
             getUserByEmailUseCase ?? Substitute.For<IGetUserByEmailUseCase>(),
+            verifyCredentialsUseCase ?? Substitute.For<IVerifyCredentialsUseCase>(),
             deleteUserUseCase ?? Substitute.For<IDeleteUserUseCase>(),
             blockUserUseCase ?? Substitute.For<IBlockUserUseCase>(),
             updatePasswordUseCase ?? Substitute.For<IUpdatePasswordUseCase>(),

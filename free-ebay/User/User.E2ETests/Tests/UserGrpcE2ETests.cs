@@ -66,7 +66,7 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
     }
 
     [Fact]
-    public async Task GetUserByEmail_ShouldReturnUserAndPasswordHash()
+    public async Task GetUserByEmail_ShouldReturnUserWithoutPasswordHash()
     {
         var email = $"lookup-{Guid.NewGuid():N}@example.com";
         await CreateUserAsync(email: email, password: "Password123");
@@ -78,9 +78,33 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
 
         byEmail.Data.Should().NotBeNull();
         byEmail.Data.Email.Should().Be(email);
-        byEmail.PasswordHash.Should().NotBeNullOrWhiteSpace();
-        byEmail.PasswordHash.Should().NotBe("Password123");
         byEmail.Data.IsEmailVerified.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task VerifyCredentials_ShouldReturnUserOnlyWhenPasswordMatches()
+    {
+        var email = $"auth-{Guid.NewGuid():N}@example.com";
+        await CreateUserAsync(email: email, password: "Password123");
+
+        var valid = await _client.VerifyCredentialsAsync(new VerifyCredentialsRequest
+        {
+            Email = $"  {email.ToUpperInvariant()}  ",
+            Password = "Password123"
+        });
+
+        valid.IsValid.Should().BeTrue();
+        valid.Data.Should().NotBeNull();
+        valid.Data.Email.Should().Be(email);
+
+        var invalid = await _client.VerifyCredentialsAsync(new VerifyCredentialsRequest
+        {
+            Email = email,
+            Password = "wrong-password"
+        });
+
+        invalid.IsValid.Should().BeFalse();
+        invalid.Data.Should().BeNull();
     }
 
     [Fact]
@@ -121,21 +145,37 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
         var email = $"reset-{Guid.NewGuid():N}@example.com";
         await CreateUserAsync(email: email, password: "Password123");
 
-        var before = await _client.GetUserByEmailAsync(new GetUserByEmailRequest { Email = email });
-        before.PasswordHash.Should().NotBeNullOrWhiteSpace();
+        var before = await _client.VerifyCredentialsAsync(new VerifyCredentialsRequest
+        {
+            Email = email,
+            Password = "Password123"
+        });
+        before.IsValid.Should().BeTrue();
 
-        const string newPasswordHash = "$2a$12$new-password-hash-from-auth";
+        const string newPassword = "NewPassword123!";
+        var newPasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         var update = await _client.UpdateUserPasswordAsync(new UpdateUserPasswordRequest
         {
-            UserId = before.Data.Id,
+            UserId = before.Data!.Id,
             NewPasswordHash = newPasswordHash
         });
 
         update.Success.Should().BeTrue();
         update.Message.Should().Be("Password updated successfully");
 
-        var after = await _client.GetUserByEmailAsync(new GetUserByEmailRequest { Email = email });
-        after.PasswordHash.Should().Be(newPasswordHash);
+        var oldPasswordAttempt = await _client.VerifyCredentialsAsync(new VerifyCredentialsRequest
+        {
+            Email = email,
+            Password = "Password123"
+        });
+        oldPasswordAttempt.IsValid.Should().BeFalse();
+
+        var newPasswordAttempt = await _client.VerifyCredentialsAsync(new VerifyCredentialsRequest
+        {
+            Email = email,
+            Password = newPassword
+        });
+        newPasswordAttempt.IsValid.Should().BeTrue();
     }
 
     [Fact]
