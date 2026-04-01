@@ -4,15 +4,23 @@ using Gateway.Api.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
+var jwtAuthority = builder.Configuration["Jwt:Authority"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(jwtAudience))
+{
+    throw new InvalidOperationException("JWT audience must be configured outside development.");
+}
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = builder.Configuration["Jwt:Authority"];
+        options.Authority = jwtAuthority;
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
-            ValidateAudience = false,
+            ValidateAudience = !string.IsNullOrWhiteSpace(jwtAudience),
+            ValidAudience = jwtAudience,
             ValidateIssuer = !builder.Environment.IsDevelopment()
         };
     });

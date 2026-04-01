@@ -14,17 +14,4 @@ public static class DecimalValueMapper
         var nanos = (int)((value - units) * 1_000_000_000m);
         return new Protos.Common.DecimalValue { Units = units, Nanos = nanos };
     }
-
-    public static decimal ProductDecimalToDecimal(Protos.Product.DecimalValue? value)
-    {
-        if (value is null) return 0m;
-        return value.Units + value.Nanos / 1_000_000_000m;
-    }
-
-    public static Protos.Product.DecimalValue ToProductProto(decimal value)
-    {
-        var units = (long)value;
-        var nanos = (int)((value - units) * 1_000_000_000m);
-        return new Protos.Product.DecimalValue { Units = units, Nanos = nanos };
-    }
 }

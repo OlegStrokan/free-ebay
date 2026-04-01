@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "common.proto";
+
 option csharp_namespace = "Protos.Product";
 
 package product;
@@ -38,7 +40,7 @@ message GetProductResponse {
 
 message ProductPrice {
   string product_id = 1;
-  DecimalValue price = 2;
+  common.DecimalValue price = 2;
   string currency   = 3;
 }
 
@@ -48,7 +50,7 @@ message ProductDetail {
   string description  = 3;
   string category_id  = 4;
   string category_name = 5;
-  DecimalValue price  = 6;
+  common.DecimalValue price  = 6;
   string currency     = 7;
   int32  stock        = 8;
   repeated ProductAttributeProto attributes = 9;
@@ -58,9 +60,4 @@ message ProductDetail {
 message ProductAttributeProto {
   string key = 1;
   string value = 2;
-}
-
-message DecimalValue {
-  int64 units = 1;
-  int32 nanos = 2;
 }
