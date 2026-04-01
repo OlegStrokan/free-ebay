@@ -1,5 +1,5 @@
 using Api.Mappers;
-using Protos.Product;
+using Protos.Common;
 
 namespace Api.Tests.Mappers;
 

@@ -1,4 +1,4 @@
-using Protos.Product;
+using Protos.Common;
 
 namespace Api.Mappers;
 
