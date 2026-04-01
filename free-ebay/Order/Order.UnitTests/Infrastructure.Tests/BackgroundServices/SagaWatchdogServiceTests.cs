@@ -167,6 +167,49 @@ public class SagaWatchdogServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShouldCompensateImmediately_WhenSagaIsTimedOut()
+    {
+        // TimedOut sagas must skip the tolerance window entirely and be compensated
+        // on the first watchdog poll, even if UpdatedAt is recent (within the 2x threshold)
+        // covers the crash-recovery case: SagaBase saved TimedOut but the process
+        // died before CompensateAsync could finish.
+        var sagaId = Guid.NewGuid();
+        var saga = new SagaState
+        {
+            Id        = sagaId,
+            SagaType  = "OrderSaga",
+            Status    = SagaStatus.TimedOut,
+            // Only 3 minutes ago - inside the 2× 5-min tolerance window
+            // A Running saga this recent would NOT be compensated yet
+            // A TimedOut saga must be compensated immediately regardless
+            UpdatedAt = DateTime.UtcNow.AddMinutes(-3),
+            Steps     = new List<SagaStepLog>()
+        };
+
+        _sagaRepository
+            .GetStuckSagasAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(new List<SagaState> { saga });
+
+        using var cts = new CancellationTokenSource();
+        var signal = new TaskCompletionSource<bool>();
+
+        _orderSaga
+            .When(s => s.CompensateAsync(sagaId, Arg.Any<CancellationToken>()))
+            .Do(_ =>
+            {
+                signal.TrySetResult(true);
+                cts.Cancel();
+            });
+
+        await Build().StartAsync(cts.Token);
+
+        var completed = await Task.WhenAny(signal.Task, Task.Delay(3000));
+        Assert.True(completed == signal.Task, "OrderSaga.CompensateAsync was never called within 3 seconds.");
+
+        await _orderSaga.Received().CompensateAsync(sagaId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShouldNotCompensate_WhenNoStuckSagasFound()
     {
         _sagaRepository

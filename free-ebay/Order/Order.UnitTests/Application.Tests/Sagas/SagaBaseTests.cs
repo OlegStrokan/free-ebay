@@ -452,7 +452,7 @@ public class SagaBaseTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldFail_WhenSagaTimeoutExpires()
+    public async Task ExecuteAsync_ShouldMarkTimedOut_AndCompensate_WhenSagaTimeoutExpires()
     {
         // step blocks indefinitely until its cancellation token fires
         _step1.Order.Returns(1);
@@ -470,7 +470,7 @@ public class SagaBaseTests
             .Returns(callInfo => new SagaState
             {
                 Id = (Guid)callInfo[0],
-                Status = SagaStatus.Failed,
+                Status = SagaStatus.TimedOut,
                 Payload = JsonSerializer.Serialize(new TestSagaData()),
                 Context = JsonSerializer.Serialize(new TestSagaContext()),
                 Steps = new List<SagaStepLog>()
@@ -480,13 +480,18 @@ public class SagaBaseTests
         var result = await saga.ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(SagaStatus.Failed, result.Status);
+        Assert.Equal(SagaStatus.TimedOut, result.Status);
+
+        await _repository.Received().SaveAsync(
+            Arg.Is<SagaState>(s => s.Status == SagaStatus.TimedOut),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldFail_WhenExternalCancellationRequested()
+    public async Task ExecuteAsync_ShouldThrowOperationCanceledException_WhenExternalCancellationRequested()
     {
-        // same blocking step — but this time the caller cancels, not the internal timeout
+        // External cancellation (service shutdown) must NOT be swallowed
+        // Only the saga's own internal timeout is caught and converted to TimedOut status
         _step1.Order.Returns(1);
         _step1.StepName.Returns("Step1");
         _step1.ExecuteAsync(Arg.Any<TestSagaData>(), Arg.Any<TestSagaContext>(), Arg.Any<CancellationToken>())
@@ -497,20 +502,8 @@ public class SagaBaseTests
                 return (StepOutcome)new Completed();
             });
 
-        _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo => new SagaState
-            {
-                Id = (Guid)callInfo[0],
-                Status = SagaStatus.Failed,
-                Payload = JsonSerializer.Serialize(new TestSagaData()),
-                Context = JsonSerializer.Serialize(new TestSagaContext()),
-                Steps = new List<SagaStepLog>()
-            });
-
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-        var result = await Build(_step1).ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, cts.Token);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(SagaStatus.Failed, result.Status);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Build(_step1).ExecuteAsync(new TestSagaData { CorrelationId = Guid.NewGuid() }, cts.Token));
     }
 }
