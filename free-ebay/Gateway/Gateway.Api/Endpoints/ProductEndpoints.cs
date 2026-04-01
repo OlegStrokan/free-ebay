@@ -38,7 +38,7 @@ public static class ProductEndpoints
             return Results.Ok(new GetProductPricesResponse(
                 response.Prices.Select(p => new ProductPriceResponse(
                     p.ProductId,
-                    DecimalValueMapper.ProductDecimalToDecimal(p.Price),
+                    DecimalValueMapper.ToDecimal(p.Price),
                     p.Currency)).ToList(),
                 response.NotFoundIds.ToList()));
         });
@@ -52,7 +52,7 @@ public static class ProductEndpoints
         p.Description,
         p.CategoryId,
         p.CategoryName,
-        DecimalValueMapper.ProductDecimalToDecimal(p.Price),
+        DecimalValueMapper.ToDecimal(p.Price),
         p.Currency,
         p.Stock,
         p.Attributes.Select(a => new ProductAttributeResponse(a.Key, a.Value)).ToList(),

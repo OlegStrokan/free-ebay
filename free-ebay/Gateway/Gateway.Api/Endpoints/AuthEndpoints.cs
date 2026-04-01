@@ -63,7 +63,7 @@ public static class AuthEndpoints
 
             return Results.Ok(new ValidateTokenResponse(
                 response.IsValid, response.UserId, response.Roles.ToList()));
-        });
+        }).RequireAuthorization();
 
         group.MapPost("/verify-email", async (VerifyEmailRequest request, Protos.Auth.AuthService.AuthServiceClient client) =>
         {

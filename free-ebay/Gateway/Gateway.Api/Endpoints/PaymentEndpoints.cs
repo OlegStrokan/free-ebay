@@ -21,10 +21,17 @@ public static class PaymentEndpoints
                 : Results.NotFound(response.ErrorMessage);
         });
 
-        group.MapGet("/order/{orderId}", async (string orderId, GrpcPayment.PaymentService.PaymentServiceClient client) =>
+        group.MapGet("/order/{orderId}", async (
+            string orderId,
+            string idempotencyKey,
+            GrpcPayment.PaymentService.PaymentServiceClient client) =>
         {
             var response = await client.GetPaymentByOrderAndIdempotencyAsync(
-                new GrpcPayment.GetPaymentByOrderAndIdempotencyRequest { OrderId = orderId });
+                new GrpcPayment.GetPaymentByOrderAndIdempotencyRequest
+                {
+                    OrderId = orderId,
+                    IdempotencyKey = idempotencyKey
+                });
 
             return response.Success
                 ? Results.Ok(MapPaymentDetails(response.Payment))
