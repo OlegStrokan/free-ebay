@@ -21,7 +21,6 @@ public class LoginUseCaseTests
         var refreshTokenRepository = Substitute.For<IRefreshTokenRepository>();
         var idGenerator =  Substitute.For<IIdGenerator>();
         var userGateway = Substitute.For<IUserGateway>();
-        var passwordHasher = Substitute.For<IPasswordHasher>();
         var jwtTokenGenerator = Substitute.For<IJwtTokenGenerator>();
 
         var generatedTokenId = "token_ulid_id";
@@ -33,7 +32,6 @@ public class LoginUseCaseTests
             Id = "user_ulid_id",
             Email = "oleh@gmail.com",
             FullName = "user_fullname",
-            PasswordHash = "hashed_password",
             Status = UserStatus.Active,
             Phone = "+01091939"
         };
@@ -41,8 +39,7 @@ public class LoginUseCaseTests
         // add "real" mocks
         
         idGenerator.GenerateId().Returns(generatedTokenId);
-        userGateway.GetUserByEmailAsync("oleh@gmail.com").Returns(user);
-        passwordHasher.VerifyPassword("password123", user.PasswordHash).Returns(true);
+        userGateway.VerifyCredentialsAsync("oleh@gmail.com", "password123").Returns(user);
         jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email).Returns(accessToken);
         jwtTokenGenerator.GenerateRefreshToken().Returns(refreshToken);
 
@@ -50,7 +47,7 @@ public class LoginUseCaseTests
         var request = new LoginCommand(user.Email, "password123");
 
         var useCase = new LoginUseCase(
-            refreshTokenRepository, idGenerator, userGateway, passwordHasher, jwtTokenGenerator);
+            refreshTokenRepository, idGenerator, userGateway, jwtTokenGenerator);
 
 
         var result = await useCase.ExecuteAsync(request);
@@ -77,11 +74,10 @@ public class LoginUseCaseTests
         var refreshTokenRepository = Substitute.For<IRefreshTokenRepository>();
         var idGenerator = Substitute.For<IIdGenerator>();
         var userGateway = Substitute.For<IUserGateway>();
-        var passwordHasher = Substitute.For<IPasswordHasher>();
         var jwtTokenGenerator = Substitute.For<IJwtTokenGenerator>();
         
         // mock only userGateway to throw correct error
-        userGateway.GetUserByEmailAsync(Arg.Any<string>()).Returns((UserGatewayDto?)null);
+        userGateway.VerifyCredentialsAsync(Arg.Any<string>(), Arg.Any<string>()).Returns((UserGatewayDto?)null);
 
         var command = new LoginCommand("non_existing_email@mail.com", "password1939");
         
@@ -89,7 +85,6 @@ public class LoginUseCaseTests
             refreshTokenRepository,
             idGenerator,
             userGateway,
-            passwordHasher,
             jwtTokenGenerator);
 
         var exception = 
@@ -106,26 +101,13 @@ public class LoginUseCaseTests
         var refreshTokenRepository = Substitute.For<IRefreshTokenRepository>();
         var idGenerator = Substitute.For<IIdGenerator>();
         var userGateway = Substitute.For<IUserGateway>();
-        var passwordHasher = Substitute.For<IPasswordHasher>();
         var jwtTokenGenerator = Substitute.For<IJwtTokenGenerator>();
-        
-        var user = new UserGatewayDto
-        {
-            Id = "user_ulid_id",
-            Email = "oleh@gmail.com",
-            FullName = "user_fullname",
-            PasswordHash = "hashed_password",
-            Status = UserStatus.Active,
-            Phone = "+01091939"
-            
-        };
-        
-        userGateway.GetUserByEmailAsync("oleh@gmail.com").Returns(user);
-        passwordHasher.VerifyPassword("password1939", user.PasswordHash).Returns(false);
+
+        userGateway.VerifyCredentialsAsync("oleh@gmail.com", "password1939").Returns((UserGatewayDto?)null);
 
         var command = new LoginCommand("oleh@gmail.com", "password1939");
         var useCase = new LoginUseCase(
-            refreshTokenRepository, idGenerator, userGateway, passwordHasher, jwtTokenGenerator);
+            refreshTokenRepository, idGenerator, userGateway, jwtTokenGenerator);
 
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => useCase.ExecuteAsync(command));
         
@@ -138,7 +120,6 @@ public class LoginUseCaseTests
         var refreshTokenRepository = Substitute.For<IRefreshTokenRepository>();
         var idGenerator = Substitute.For<IIdGenerator>();
         var userGateway = Substitute.For<IUserGateway>();
-        var passwordHasher = Substitute.For<IPasswordHasher>();
         var jwtTokenGenerator = Substitute.For<IJwtTokenGenerator>();
 
         
@@ -147,18 +128,15 @@ public class LoginUseCaseTests
             Id = "user_ulid_id",
             Email = "oleh@gmail.com",
             FullName = "user_fullname",
-            PasswordHash = "hashed_password",
             Status = UserStatus.Blocked,
             Phone = "+01091939"
         };
 
-        
-        userGateway.GetUserByEmailAsync("oleh@gmail.com").Returns(user);
-        passwordHasher.VerifyPassword("password1939", user.PasswordHash).Returns(true);
+        userGateway.VerifyCredentialsAsync("oleh@gmail.com", "password1939").Returns(user);
 
         var command = new LoginCommand("oleh@gmail.com", "password1939");
         var useCase = new LoginUseCase(
-            refreshTokenRepository, idGenerator, userGateway, passwordHasher, jwtTokenGenerator);
+            refreshTokenRepository, idGenerator, userGateway, jwtTokenGenerator);
 
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => useCase.ExecuteAsync(command));
 

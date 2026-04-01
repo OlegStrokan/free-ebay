@@ -11,6 +11,7 @@ public interface IUserGateway
 {
     Task<string> CreateUserAsync(string email, string hashedPassword, string fullName, string phone);
     Task<UserGatewayDto?> GetUserByEmailAsync(string email);
+    Task<UserGatewayDto?> VerifyCredentialsAsync(string email, string password);
     Task<UserGatewayDto?> GetUserByIdAsync(string userId);
     Task<bool> VerifyUserEmailAsync(string userId);
     Task<bool> UpdateUserPasswordAsync(string userId, string newPasswordHash);

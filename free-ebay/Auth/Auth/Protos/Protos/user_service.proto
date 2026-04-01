@@ -12,6 +12,7 @@ service UserServiceProto {
 
   // for auth service
   rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserByEmailResponse);
+  rpc VerifyCredentials(VerifyCredentialsRequest) returns (VerifyCredentialsResponse);
   rpc VerifyUserEmail(VerifyUserEmailRequest) returns (VerifyUserEmailResponse);
   rpc UpdateUserPassword(UpdateUserPasswordRequest) returns (UpdateUserPasswordResponse);
 }
@@ -30,9 +31,16 @@ message GetUserByEmailRequest {
 
 message GetUserByEmailResponse {
   optional UserProto data = 1;
-  string password_hash = 2;
-  // bool is_email_verified = 3;
-  
+}
+
+message VerifyCredentialsRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message VerifyCredentialsResponse {
+  optional UserProto data = 1;
+  bool is_valid = 2;
 }
 
 message VerifyUserEmailRequest {

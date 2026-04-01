@@ -66,7 +66,7 @@ public class UserGateway
                 return null;
             }
 
-            return MapToGatewayDto(response);
+            return MapToGatewayDto(response.Data);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
         {
@@ -79,6 +79,33 @@ public class UserGateway
             throw new InvalidOperationException($"Failed to get user: {ex.Status.Detail}", ex);
         }
 
+    }
+
+    public async Task<UserGatewayDto?> VerifyCredentialsAsync(string email, string password)
+    {
+        try
+        {
+            logger.LogInformation("Verifying user credentials via User microservice: {Email}", email);
+
+            var response = await userClient.VerifyCredentialsAsync(new VerifyCredentialsRequest
+            {
+                Email = email,
+                Password = password
+            });
+
+            if (!response.IsValid || response.Data == null)
+            {
+                logger.LogInformation("Invalid credentials for user: {Email}", email);
+                return null;
+            }
+
+            return MapToGatewayDto(response.Data);
+        }
+        catch (RpcException ex)
+        {
+            logger.LogError(ex, "gRPC error verifying credentials: {Status}", ex.StatusCode);
+            throw new InvalidOperationException($"Failed to verify credentials: {ex.Status.Detail}", ex);
+        }
     }
 
     public async Task<UserGatewayDto?> GetUserByIdAsync(string userId)
@@ -162,17 +189,16 @@ public class UserGateway
         }
     }
 
-    private UserGatewayDto MapToGatewayDto(GetUserByEmailResponse user)
+    private UserGatewayDto MapToGatewayDto(UserProto user)
     {
         // @todo: go get some automapper
         return new UserGatewayDto
         {
-            Id = user.Data.Id,
-            Email = user.Data.Email,
-            FullName = user.Data.FullName,
-            Phone = user.Data.Phone,
-            PasswordHash = user.PasswordHash,
-            Status = MapUserStatus(user.Data.Status)
+            Id = user.Id,
+            Email = user.Email,
+            FullName = user.FullName,
+            Phone = user.Phone,
+            Status = MapUserStatus(user.Status)
         };
     }
 

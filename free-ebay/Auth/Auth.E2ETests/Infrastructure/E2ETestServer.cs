@@ -171,6 +171,17 @@ internal sealed class FakeUserStore
         }
     }
 
+    public FakeUserRecord? VerifyCredentials(string email, string password)
+    {
+        var user = GetByEmail(email);
+        if (user == null)
+        {
+            return null;
+        }
+
+        return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash) ? user : null;
+    }
+
     public FakeUserRecord Create(string email, string password, string fullName, string phone)
     {
         var normalizedEmail = NormalizeEmail(email);
@@ -277,7 +288,21 @@ internal sealed class FakeUserGrpcService(FakeUserStore store) : UserServiceProt
         return Task.FromResult(new GetUserByEmailResponse
         {
             Data = ToUserProto(user),
-            PasswordHash = user.PasswordHash,
+        });
+    }
+
+    public override Task<VerifyCredentialsResponse> VerifyCredentials(VerifyCredentialsRequest request, ServerCallContext context)
+    {
+        var user = store.VerifyCredentials(request.Email, request.Password);
+        if (user == null)
+        {
+            return Task.FromResult(new VerifyCredentialsResponse());
+        }
+
+        return Task.FromResult(new VerifyCredentialsResponse
+        {
+            Data = ToUserProto(user),
+            IsValid = true,
         });
     }
 

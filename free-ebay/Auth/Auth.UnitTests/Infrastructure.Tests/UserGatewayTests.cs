@@ -64,6 +64,36 @@ public class UserGatewayTests
     }
 
     [Fact]
+    public async Task ShouldReturnUserWhenCredentialsAreValid()
+    {
+        var logger = Substitute.For<ILogger<UserGateway>>();
+        var client = Substitute.For<UserServiceProto.UserServiceProtoClient>();
+        var sut = new UserGateway(client, logger);
+
+        var response = new VerifyCredentialsResponse
+        {
+            IsValid = true,
+            Data = new UserProto
+            {
+                Id = "userId",
+                Email = "found@test.com",
+                FullName = "Found User",
+                Phone = "+123",
+                Status = UserStatusProto.Active,
+            }
+        };
+
+        client.VerifyCredentialsAsync(Arg.Any<VerifyCredentialsRequest>())
+            .Returns(GrpcTestHelper.CreateAsyncUnaryCall(response));
+
+        var result = await sut.VerifyCredentialsAsync("found@test.com", "Password123");
+
+        Assert.NotNull(result);
+        Assert.Equal("userId", result!.Id);
+        Assert.Equal("Found User", result.FullName);
+    }
+
+    [Fact]
     public async Task ShouldMapAndReturnUserDtoWhenUserExistsById()
     {
         var logger = Substitute.For<ILogger<UserGateway>>();

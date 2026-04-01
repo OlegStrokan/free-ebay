@@ -11,16 +11,15 @@ public class LoginUseCase
         IRefreshTokenRepository refreshTokenRepository,
         IIdGenerator idGenerator,
         IUserGateway userGateway,
-        IPasswordHasher passwordHasher,
         IJwtTokenGenerator jtwTokenGenerator
 ) : ILoginUseCase
 {
     
     public async Task<LoginResponse> ExecuteAsync(LoginCommand command)
     {
-        var user = await userGateway.GetUserByEmailAsync(command.Email);
+        var user = await userGateway.VerifyCredentialsAsync(command.Email, command.Password);
 
-        if (user == null || !passwordHasher.VerifyPassword(command.Password, user.PasswordHash))
+        if (user == null)
         {
             throw new UnauthorizedAccessException("Invalid email or password");
         }
