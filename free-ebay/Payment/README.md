@@ -23,7 +23,9 @@ for pending and requireAction it's also return to order service, but magic happe
 - OrderCallbackDeliveryWorker: reads pending callback records from outbox, publishes to kafka
 - PendingPaymentsReconciliationWorker: periodicly runs reconciliation for stale pending payment/refunds
 
-also we support stripe-webhoock and handle it in HandleStripeWebhookCommandHandler, BUT if webhoock
+dual-path finalization:
+
+supporting stripe-webhoock and handle it in HandleStripeWebhookCommandHandler, BUT if webhook
 delayed/missed, worker pools stale pending record and finalized from Stripe status api
 
 BUT: as fallback if webhook is delayed/missing we have ReconcilePendingPaymentsCommandHandler
