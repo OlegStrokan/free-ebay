@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: free-ebay
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - kafka.yaml
+  - jaeger.yaml
+  - postgres-write.yaml
+  - postgres-read.yaml
+  - auth-postgres.yaml
+  - user-postgres.yaml
+  - inventory-postgres.yaml
+  - product-postgres.yaml
+  - payment-postgres.yaml
+  - email-postgres.yaml
+  - redis.yaml
+  - elasticsearch.yaml
+  - qdrant.yaml
+  - ollama.yaml
+  - mailhog.yaml
+  - auth-service.yaml
+  - user-service.yaml
+  - inventory-service.yaml
+  - order-service.yaml
+  - product-service.yaml
+  - payment-service.yaml
+  - search-service.yaml
+  - gateway-service.yaml
+  - catalog-service.yaml
+  - email-service.yaml
+  - embedding-service.yaml
+  - ai-search-service.yaml
+  - vector-indexer-worker.yaml
