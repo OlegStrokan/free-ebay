@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     kafka_bootstrap_server: str = "localhost:9092"
     kafka_group_id: str = "vector-indexer-worker"
-    kafka_topics: list[str] = ["product.created", "product.updated", "product.deleted"]
+    kafka_topics: list[str] = ["product.events"]
 
     embedding_service_url: str = "http://localhost:8001"
     embedding_model: str = "nomic-embed-text"

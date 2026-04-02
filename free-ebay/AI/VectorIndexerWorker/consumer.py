@@ -17,7 +17,11 @@ def make_consumer() -> Consumer:
 
 async def process_event(msg: Message, indexer: Indexer) -> None:
     headers = dict(msg.headers() or [])
-    event_type = headers.get("EventType", b"").decode()
+    raw_event_type = headers.get("event-type") or headers.get("EventType") or b""
+    if isinstance(raw_event_type, bytes):
+        event_type = raw_event_type.decode()
+    else:
+        event_type = str(raw_event_type)
     payload = json.loads(msg.value())
 
     match event_type:
