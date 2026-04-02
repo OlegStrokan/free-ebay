@@ -1,20 +1,60 @@
-# Secrets, never commit real values type shit
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: common-config
   namespace: free-ebay
 data:
-  Kafka__BootstrapServers: "kafka:9092"
-  Kafka__OrderEventsTopic:  "order.events"
-  Kafka__ReturnEventsTopic: "return.events"
-  Kafka__SagaTopic:         "order.events"
-  Kafka__ConsumerGroupId:   "read-model-updater"
-
   Otel__Endpoint: "http://jaeger:4317"
 
-  Outbox__BatchSize:      "20"
-  Outbox__MaxRetries:     "5"
-  Outbox__MaxAgeDays:     "7"
+  Kafka__BootstrapServers: "kafka:9092"
+  Kafka__OrderEventsTopic: "order.events"
+  Kafka__ReturnEventsTopic: "return.events"
+  Kafka__SagaTopic: "order.events"
+  Kafka__EmailEventsTopic: "email.events"
+  Kafka__EmailDlqTopic: "email.events.dlq"
+  Kafka__ProductEventsTopic: "product.events"
+  Kafka__InventoryEventsTopic: "inventory.events"
+
+  GrpcServices__AuthUrl: "http://auth-service:8080"
+  GrpcServices__UserUrl: "http://user-service:8080"
+  GrpcServices__ProductUrl: "http://product-service:8080"
+  GrpcServices__OrderUrl: "http://order-service:8080"
+  GrpcServices__PaymentUrl: "http://payment-service:8080"
+  GrpcServices__InventoryUrl: "http://inventory-service:8080"
+  GrpcServices__SearchUrl: "http://search-service:8080"
+  GrpcServices__AccountingUrl: "http://accounting-service:8080"
+
+  Jwt__Authority: "http://auth-service:8080"
+
+  Elasticsearch__Uri: "http://elasticsearch:9200"
+  Elasticsearch__Url: "http://elasticsearch:9200"
+  Elasticsearch__IndexName: "products"
+
+  AiSearch__Enabled: "true"
+  AiSearch__GrpcUrl: "http://ai-search-service:50051"
+
+  Outbox__BatchSize: "20"
+  Outbox__MaxRetries: "5"
+  Outbox__MaxAgeDays: "7"
   Outbox__PollIntervalMs: "2000"
   Outbox__MaxParallelism: "5"
+
+  WriteRouting__Enabled: "false"
+  WriteRouting__CurrentRegion: "local"
+
+  Stripe__UseFakeProvider: "true"
+  Stripe__WebhookToleranceSeconds: "300"
+  Stripe__DefaultCurrency: "USD"
+
+  ReconciliationWorker__Enabled: "true"
+  ReconciliationWorker__IntervalSeconds: "60"
+  ReconciliationWorker__OlderThanMinutes: "15"
+  ReconciliationWorker__BatchSize: "100"
+
+  Email__SmtpHost: "mailhog"
+  Email__SmtpPort: "1025"
+  Email__EnableSsl: "false"
+  Email__DefaultFromAddress: "no-reply@free-ebay.com"
+  Email__FromAddress: "no-reply@free-ebay.com"
+
+  Shipping__BaseUrl: "http://shipping-service:8080"

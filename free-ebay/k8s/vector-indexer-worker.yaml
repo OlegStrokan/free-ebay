@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vector-indexer-worker
+  namespace: free-ebay
+  labels:
+    app: vector-indexer-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vector-indexer-worker
+  template:
+    metadata:
+      labels:
+        app: vector-indexer-worker
+    spec:
+      containers:
+        - name: vector-indexer-worker
+          image: free-ebay/vector-indexer-worker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: INDEXER_KAFKA_BOOTSTRAP_SERVER
+              value: kafka:9092
+            - name: INDEXER_KAFKA_GROUP_ID
+              value: vector-indexer-worker
+            - name: INDEXER_KAFKA_TOPICS
+              value: '["product.events"]'
+            - name: INDEXER_EMBEDDING_SERVICE_URL
+              value: http://embedding-service:8001
+            - name: INDEXER_QDRANT_URL
+              value: http://qdrant:6333
+            - name: INDEXER_QDRANT_COLLECTION
+              value: products
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
