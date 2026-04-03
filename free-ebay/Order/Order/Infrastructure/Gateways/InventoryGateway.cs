@@ -59,6 +59,43 @@ public sealed class InventoryGateway(
         }
     }
 
+    public async Task ConfirmReservationAsync(
+        string reservationId,
+        CancellationToken cancellationToken)
+    {
+        var request = new ConfirmReservationRequest
+        {
+            ReservationId = reservationId
+        };
+
+        try
+        {
+            var response = await client.ConfirmReservationAsync(request, cancellationToken: cancellationToken);
+
+            if (!response.Success)
+            {
+                throw new InvalidOperationException(
+                    $"Inventory confirmation failed for ReservationId={reservationId}. Message={response.ErrorMessage}");
+            }
+
+            logger.LogInformation(
+                "Inventory confirmed successfully. ReservationId={ReservationId}",
+                reservationId);
+        }
+        catch (RpcException ex) when (ex.StatusCode is StatusCode.NotFound or StatusCode.FailedPrecondition)
+        {
+            throw new InvalidOperationException(
+                $"Inventory reservation cannot be confirmed for ReservationId={reservationId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
+        {
+            throw new GatewayUnavailableException(
+                $"Inventory service unavailable during confirmation for ReservationId={reservationId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+    }
+
     public async Task ReleaseReservationAsync(
         string reservationId,
         CancellationToken cancellationToken)

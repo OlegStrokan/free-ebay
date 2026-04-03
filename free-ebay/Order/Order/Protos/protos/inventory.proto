@@ -6,6 +6,7 @@ package inventory;
 
 service InventoryService {
   rpc ReserveInventory (ReserveInventoryRequest) returns (ReserveInventoryResponse);
+  rpc ConfirmReservation (ConfirmReservationRequest) returns (ConfirmReservationResponse);
   rpc ReleaseInventory (ReleaseInventoryRequest) returns (ReleaseInventoryResponse);
 }
 
@@ -23,6 +24,15 @@ message ReserveInventoryResponse {
   bool success = 1;
   string reservation_id = 2;
   string error_message = 3;
+}
+
+message ConfirmReservationRequest {
+  string reservation_id = 1;
+}
+
+message ConfirmReservationResponse {
+  bool success = 1;
+  string error_message = 2;
 }
 
 message ReleaseInventoryRequest {

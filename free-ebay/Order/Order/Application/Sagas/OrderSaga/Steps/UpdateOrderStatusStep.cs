@@ -1,3 +1,4 @@
+using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas.Steps;
 using Domain.Exceptions;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sagas.OrderSaga.Steps;
 
 public class UpdateOrderStatusStep(
+    IInventoryGateway inventoryGateway,
     IOrderPersistenceService orderPersistenceService,
     ILogger<UpdateOrderStatusStep> logger
     )
@@ -39,6 +41,18 @@ public class UpdateOrderStatusStep(
 
             if (string.IsNullOrEmpty(context.PaymentId))
                 return new Fail("Payment ID not found in saga context");
+
+            if (string.IsNullOrEmpty(context.ReservationId))
+                return new Fail("Inventory reservation ID not found in saga context");
+
+            logger.LogInformation(
+                "Confirming inventory reservation {ReservationId} for order {OrderId}",
+                context.ReservationId,
+                data.CorrelationId);
+
+            await inventoryGateway.ConfirmReservationAsync(
+                context.ReservationId,
+                cancellationToken);
             
             logger.LogInformation(
                 "Updating order {OrderId} status to Paid",

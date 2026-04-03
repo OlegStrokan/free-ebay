@@ -291,6 +291,16 @@ public class FakeGrpcInventoryGateway : IInventoryGateway
         if (!response.Success)
             throw new Exception($"Release failed: {response.ErrorMessage}");
     }
+
+    public async Task ConfirmReservationAsync(string reservationId, CancellationToken cancellationToken)
+    {
+        var response = await _client.ConfirmReservationAsync(
+            new ConfirmReservationRequest { ReservationId = reservationId },
+            cancellationToken: cancellationToken);
+
+        if (!response.Success)
+            throw new Exception($"Confirm failed: {response.ErrorMessage}");
+    }
 }
 
 //---------Accounting Gateway---------//

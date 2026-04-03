@@ -1,5 +1,6 @@
 using Application.Sagas.Steps;
 using Application.DTOs;
+using Application.Gateways;
 using Application.Interfaces;
 using Application.Sagas.OrderSaga;
 using Application.Sagas.OrderSaga.Steps;
@@ -15,6 +16,9 @@ namespace Application.Tests.Sagas.OrderSagaSteps;
 
 public class UpdateOrderStatusStepTests
 {
+    private readonly IInventoryGateway _inventoryGateway =
+        Substitute.For<IInventoryGateway>();
+
     private readonly IOrderPersistenceService _orderPersistenceService =
         Substitute.For<IOrderPersistenceService>();
 
@@ -22,13 +26,14 @@ public class UpdateOrderStatusStepTests
         Substitute.For<ILogger<UpdateOrderStatusStep>>();
 
     private UpdateOrderStatusStep BuildStep() =>
-        new(_orderPersistenceService, _logger);
+        new(_inventoryGateway, _orderPersistenceService, _logger);
     
     [Fact]
     public async Task ExecuteAsync_ShouldReturnSuccess_WhenOrderIsUpdated()
     {
         var context = new OrderSagaContext
         {
+            ReservationId = "RES-123",
             PaymentId = "PAY-123",
             PaymentStatus = OrderSagaPaymentStatus.Succeeded,
         };
@@ -39,6 +44,10 @@ public class UpdateOrderStatusStepTests
         Assert.IsType<Completed>(result);
         Assert.Equal("Paid", ((Completed)result).Data?["Status"]);
         Assert.True(context.OrderStatusUpdated);
+
+        await _inventoryGateway.Received(1).ConfirmReservationAsync(
+            "RES-123",
+            Arg.Any<CancellationToken>());
 
         await _orderPersistenceService.Received(1).UpdateOrderAsync(
             data.CorrelationId,
@@ -51,6 +60,7 @@ public class UpdateOrderStatusStepTests
     {
         var context = new OrderSagaContext
         {
+            ReservationId = "RES-123",
             PaymentId = "PAY-123",
             PaymentStatus = OrderSagaPaymentStatus.Succeeded,
             OrderStatusUpdated = true,
@@ -61,6 +71,10 @@ public class UpdateOrderStatusStepTests
 
         Assert.IsType<Completed>(result);
 
+        await _inventoryGateway.DidNotReceive().ConfirmReservationAsync(
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+
         await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
             Arg.Any<Guid>(), Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>());
     }
@@ -70,6 +84,7 @@ public class UpdateOrderStatusStepTests
     {
         var context = new OrderSagaContext
         {
+            ReservationId = "RES-123",
             PaymentId = "PAY-123",
             PaymentStatus = OrderSagaPaymentStatus.Pending,
         };
@@ -89,6 +104,7 @@ public class UpdateOrderStatusStepTests
     {
         var context = new OrderSagaContext
         {
+            ReservationId = "RES-123",
             PaymentId = null,
             PaymentStatus = OrderSagaPaymentStatus.Succeeded,
         };
@@ -105,10 +121,32 @@ public class UpdateOrderStatusStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenReservationIdMissingInContext()
+    {
+        var context = new OrderSagaContext
+        {
+            ReservationId = null,
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
+        var data = CreateSampleData();
+
+        var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
+
+        Assert.IsType<Fail>(result);
+        Assert.Contains("Inventory reservation ID not found", ((Fail)result).Reason);
+
+        await _inventoryGateway.DidNotReceive().ConfirmReservationAsync(
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShouldReturnFailure_WhenOrderNotFound()
     {
         var context = new OrderSagaContext
         {
+            ReservationId = "RES-123",
             PaymentId = "PAY-123",
             PaymentStatus = OrderSagaPaymentStatus.Succeeded,
         };
@@ -129,6 +167,7 @@ public class UpdateOrderStatusStepTests
     {
         var context = new OrderSagaContext
         {
+            ReservationId = "RES-123",
             PaymentId = "PAY-123",
             PaymentStatus = OrderSagaPaymentStatus.Succeeded,
         };
@@ -142,6 +181,29 @@ public class UpdateOrderStatusStepTests
 
         Assert.IsType<Fail>(result);
         Assert.Contains("Database timeout", ((Fail)result).Reason);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldReturnFailure_WhenInventoryConfirmationFails()
+    {
+        var context = new OrderSagaContext
+        {
+            ReservationId = "RES-123",
+            PaymentId = "PAY-123",
+            PaymentStatus = OrderSagaPaymentStatus.Succeeded,
+        };
+
+        _inventoryGateway
+            .ConfirmReservationAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("expired"));
+
+        var result = await BuildStep().ExecuteAsync(CreateSampleData(), context, CancellationToken.None);
+
+        Assert.IsType<Fail>(result);
+        Assert.Contains("expired", ((Fail)result).Reason);
+
+        await _orderPersistenceService.DidNotReceive().UpdateOrderAsync(
+            Arg.Any<Guid>(), Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>());
     }
     
     [Fact]

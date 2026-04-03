@@ -137,4 +137,39 @@ public class InventoryGatewayTests
 
         Assert.Null(exception);
     }
+
+    [Fact]
+    public async Task ConfirmReservationAsync_ShouldComplete_WhenSucceeds()
+    {
+        _client
+            .ConfirmReservationAsync(Arg.Any<ConfirmReservationRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new ConfirmReservationResponse { Success = true }));
+
+        await Build().ConfirmReservationAsync("res-123", CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task ConfirmReservationAsync_ShouldThrowInvalidOperation_WhenNotSuccess()
+    {
+        _client
+            .ConfirmReservationAsync(Arg.Any<ConfirmReservationRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new ConfirmReservationResponse { Success = false, ErrorMessage = "expired" }));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().ConfirmReservationAsync("res-123", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ConfirmReservationAsync_ShouldThrowInvalidOperation_WhenRpcFailedPrecondition()
+    {
+        _client
+            .ConfirmReservationAsync(Arg.Any<ConfirmReservationRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<ConfirmReservationResponse>(StatusCode.FailedPrecondition, "expired"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().ConfirmReservationAsync("res-123", CancellationToken.None));
+    }
 }
