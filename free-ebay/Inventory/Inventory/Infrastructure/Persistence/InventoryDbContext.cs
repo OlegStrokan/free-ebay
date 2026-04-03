@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence;
 
+// mixed to one class to not overcomplicate simple things
 public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> options) : DbContext(options)
 {
     public DbSet<ProductStockEntity> ProductStocks => Set<ProductStockEntity>();
