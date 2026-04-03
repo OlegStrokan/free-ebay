@@ -220,6 +220,151 @@ public sealed class InventoryReservationStoreTests : IClassFixture<IntegrationFi
     }
 
     [Fact]
+    public async Task ConfirmAsync_ShouldMarkReservationConfirmed_AndReduceReservedQuantity()
+    {
+        var productId = Guid.NewGuid();
+        var orderId = Guid.NewGuid();
+
+        await SeedStockAsync(productId, availableQuantity: 10);
+
+        Guid reservationId;
+
+        await using (var scope = fixture.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IInventoryReservationStore>();
+            var reserveResult = await store.ReserveAsync(
+                orderId,
+                [new ReserveStockItem(productId, 4)],
+                CancellationToken.None);
+
+            reservationId = Guid.Parse(reserveResult.ReservationId);
+
+            var confirmResult = await store.ConfirmAsync(reservationId, CancellationToken.None);
+            Assert.True(confirmResult.Success);
+            Assert.False(confirmResult.IsIdempotentReplay);
+        }
+
+        await using var assertScope = fixture.CreateScope();
+        var db = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        var stock = await db.ProductStocks.SingleAsync(x => x.ProductId == productId);
+        Assert.Equal(6, stock.AvailableQuantity);
+        Assert.Equal(0, stock.ReservedQuantity);
+
+        var reservation = await db.InventoryReservations.SingleAsync(x => x.ReservationId == reservationId);
+        Assert.Equal("Confirmed", reservation.Status);
+
+        var confirmMovementCount = await db.InventoryMovements.CountAsync(x =>
+            x.CorrelationId == reservationId.ToString() &&
+            x.ProductId == productId &&
+            x.MovementType == "Confirm");
+
+        Assert.Equal(1, confirmMovementCount);
+
+        var outboxMessage = await db.OutboxMessages.SingleAsync(x =>
+            x.EventType == "InventoryConfirmed" &&
+            x.Payload.Contains(reservationId.ToString()));
+
+        Assert.Equal("inventory.events", outboxMessage.Topic);
+    }
+
+    [Fact]
+    public async Task ReleaseAsync_ShouldRestoreStock_WhenReservationWasAlreadyConfirmed()
+    {
+        var productId = Guid.NewGuid();
+        var orderId = Guid.NewGuid();
+
+        await SeedStockAsync(productId, availableQuantity: 8);
+
+        Guid reservationId;
+
+        await using (var scope = fixture.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IInventoryReservationStore>();
+            var reserveResult = await store.ReserveAsync(
+                orderId,
+                [new ReserveStockItem(productId, 3)],
+                CancellationToken.None);
+
+            reservationId = Guid.Parse(reserveResult.ReservationId);
+
+            var confirmResult = await store.ConfirmAsync(reservationId, CancellationToken.None);
+            Assert.True(confirmResult.Success);
+
+            var releaseResult = await store.ReleaseAsync(reservationId, CancellationToken.None);
+            Assert.True(releaseResult.Success);
+        }
+
+        await using var assertScope = fixture.CreateScope();
+        var db = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        var stock = await db.ProductStocks.SingleAsync(x => x.ProductId == productId);
+        Assert.Equal(8, stock.AvailableQuantity);
+        Assert.Equal(0, stock.ReservedQuantity);
+
+        var reservation = await db.InventoryReservations.SingleAsync(x => x.ReservationId == reservationId);
+        Assert.Equal("Released", reservation.Status);
+    }
+
+    [Fact]
+    public async Task ExpireStaleReservationsAsync_ShouldRestoreStock_AndMarkReservationExpired()
+    {
+        var productId = Guid.NewGuid();
+        var orderId = Guid.NewGuid();
+
+        await SeedStockAsync(productId, availableQuantity: 12);
+
+        Guid reservationId;
+
+        await using (var scope = fixture.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IInventoryReservationStore>();
+            var reserveResult = await store.ReserveAsync(
+                orderId,
+                [new ReserveStockItem(productId, 5)],
+                CancellationToken.None);
+
+            reservationId = Guid.Parse(reserveResult.ReservationId);
+        }
+
+        await using (var backdateScope = fixture.CreateScope())
+        {
+            var db = backdateScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+            var reservation = await db.InventoryReservations.SingleAsync(x => x.ReservationId == reservationId);
+            reservation.CreatedAtUtc = DateTime.UtcNow.AddHours(-2);
+            reservation.UpdatedAtUtc = reservation.CreatedAtUtc;
+            await db.SaveChangesAsync();
+        }
+
+        await using (var expireScope = fixture.CreateScope())
+        {
+            var store = expireScope.ServiceProvider.GetRequiredService<IInventoryReservationStore>();
+            var expiredCount = await store.ExpireStaleReservationsAsync(
+                DateTime.UtcNow.AddMinutes(-30),
+                batchSize: 10,
+                CancellationToken.None);
+
+            Assert.Equal(1, expiredCount);
+        }
+
+        await using var assertScope = fixture.CreateScope();
+        var assertDb = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+        var stock = await assertDb.ProductStocks.SingleAsync(x => x.ProductId == productId);
+        Assert.Equal(12, stock.AvailableQuantity);
+        Assert.Equal(0, stock.ReservedQuantity);
+
+        var reservationAfterExpiry = await assertDb.InventoryReservations.SingleAsync(x => x.ReservationId == reservationId);
+        Assert.Equal("Expired", reservationAfterExpiry.Status);
+
+        var outboxMessage = await assertDb.OutboxMessages.SingleAsync(x =>
+            x.EventType == "InventoryExpired" &&
+            x.Payload.Contains(reservationId.ToString()));
+
+        Assert.Equal("inventory.events", outboxMessage.Topic);
+    }
+
+    [Fact]
     public async Task ReleaseAsync_ShouldReturnIdempotentSuccess_WhenReservationNotFound()
     {
         ReleaseInventoryResult result;

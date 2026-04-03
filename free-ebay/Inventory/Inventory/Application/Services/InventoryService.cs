@@ -41,6 +41,16 @@ public sealed class InventoryService(
         return await store.ReserveAsync(command.OrderId, normalizedItems, cancellationToken);
     }
 
+    public async Task<ReleaseInventoryResult> ConfirmAsync(
+        Guid reservationId,
+        CancellationToken cancellationToken)
+    {
+        if (reservationId == Guid.Empty)
+            return ReleaseInventoryResult.Failed("ReservationId must be a valid GUID");
+
+        return await store.ConfirmAsync(reservationId, cancellationToken);
+    }
+
     public async Task<ReleaseInventoryResult> ReleaseAsync(
         Guid reservationId,
         CancellationToken cancellationToken)

@@ -213,4 +213,65 @@ public sealed class InventoryGrpcServiceTests
 
         Assert.Equal(StatusCode.Unavailable, ex.StatusCode);
     }
+
+    [Fact]
+    public async Task ConfirmReservation_ShouldThrowInvalidArgument_WhenReservationIdIsInvalid()
+    {
+        var ex = await Assert.ThrowsAsync<RpcException>(() =>
+            BuildService().ConfirmReservation(
+                new ConfirmReservationRequest { ReservationId = "bad-guid" },
+                callContext));
+
+        Assert.Equal(StatusCode.InvalidArgument, ex.StatusCode);
+        await inventoryService.DidNotReceive().ConfirmAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfirmReservation_ShouldReturnResponse_WhenApplicationReturnsResult()
+    {
+        var reservationId = Guid.NewGuid();
+
+        inventoryService
+            .ConfirmAsync(reservationId, Arg.Any<CancellationToken>())
+            .Returns(ReleaseInventoryResult.Successful());
+
+        var response = await BuildService().ConfirmReservation(
+            new ConfirmReservationRequest { ReservationId = reservationId.ToString() },
+            callContext);
+
+        Assert.True(response.Success);
+        Assert.Equal(string.Empty, response.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ConfirmReservation_ShouldThrowFailedPrecondition_WhenApplicationReturnsFailure()
+    {
+        inventoryService
+            .ConfirmAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ReleaseInventoryResult.Failed("expired"));
+
+        var ex = await Assert.ThrowsAsync<RpcException>(() =>
+            BuildService().ConfirmReservation(
+                new ConfirmReservationRequest { ReservationId = Guid.NewGuid().ToString() },
+                callContext));
+
+        Assert.Equal(StatusCode.FailedPrecondition, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task ConfirmReservation_ShouldThrowUnavailable_WhenApplicationThrowsUnexpectedException()
+    {
+        inventoryService
+            .ConfirmAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<ReleaseInventoryResult>(new InvalidOperationException("boom")));
+
+        var ex = await Assert.ThrowsAsync<RpcException>(() =>
+            BuildService().ConfirmReservation(
+                new ConfirmReservationRequest { ReservationId = Guid.NewGuid().ToString() },
+                callContext));
+
+        Assert.Equal(StatusCode.Unavailable, ex.StatusCode);
+    }
 }

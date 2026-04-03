@@ -38,6 +38,8 @@ public sealed class IntegrationFixture : IAsyncLifetime
 
         services.AddDbContext<InventoryDbContext>(options =>
             options.UseNpgsql(postgres.GetConnectionString()));
+        services.AddDbContextFactory<InventoryDbContext>(options =>
+            options.UseNpgsql(postgres.GetConnectionString()));
 
         services.AddSingleton<IOptions<KafkaOptions>>(Options.Create(new KafkaOptions
         {

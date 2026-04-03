@@ -8,6 +8,10 @@ public interface IInventoryService
         ReserveInventoryCommand command,
         CancellationToken cancellationToken);
 
+    Task<ReleaseInventoryResult> ConfirmAsync(
+        Guid reservationId,
+        CancellationToken cancellationToken);
+
     Task<ReleaseInventoryResult> ReleaseAsync(
         Guid reservationId,
         CancellationToken cancellationToken);

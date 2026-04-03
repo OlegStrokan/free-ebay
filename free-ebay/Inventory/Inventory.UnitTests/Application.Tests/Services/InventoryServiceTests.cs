@@ -131,6 +131,32 @@ public sealed class InventoryServiceTests
     }
 
     [Fact]
+    public async Task ConfirmAsync_ShouldFail_WhenReservationIdIsEmpty()
+    {
+        var result = await BuildService().ConfirmAsync(Guid.Empty, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("ReservationId", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+
+        await store.DidNotReceive().ConfirmAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfirmAsync_ShouldDelegateToStore_ForValidReservationId()
+    {
+        var reservationId = Guid.NewGuid();
+        var expected = ReleaseInventoryResult.Successful();
+
+        store.ConfirmAsync(reservationId, Arg.Any<CancellationToken>())
+            .Returns(expected);
+
+        var result = await BuildService().ConfirmAsync(reservationId, CancellationToken.None);
+
+        Assert.True(result.Success);
+        await store.Received(1).ConfirmAsync(reservationId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ReleaseAsync_ShouldDelegateToStore_ForValidReservationId()
     {
         var reservationId = Guid.NewGuid();

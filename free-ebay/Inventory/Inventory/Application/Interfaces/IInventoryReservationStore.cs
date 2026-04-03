@@ -9,7 +9,16 @@ public interface IInventoryReservationStore
         IReadOnlyCollection<ReserveStockItem> items,
         CancellationToken cancellationToken);
 
+    Task<ReleaseInventoryResult> ConfirmAsync(
+        Guid reservationId,
+        CancellationToken cancellationToken);
+
     Task<ReleaseInventoryResult> ReleaseAsync(
         Guid reservationId,
+        CancellationToken cancellationToken);
+
+    Task<int> ExpireStaleReservationsAsync(
+        DateTime olderThanUtc,
+        int batchSize,
         CancellationToken cancellationToken);
 }
