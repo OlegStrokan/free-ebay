@@ -18,8 +18,11 @@ public static class InfrastructureModule
     {
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
         services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
+        services.Configure<ReservationExpiryOptions>(configuration.GetSection(ReservationExpiryOptions.SectionName));
 
         services.AddDbContext<InventoryDbContext>(options =>
+            options.UseNpgsql(configuration.GetConnectionString("Postgres")));
+        services.AddDbContextFactory<InventoryDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Postgres")));
 
         services.AddScoped<IInventoryReservationStore, InventoryReservationStore>();
@@ -39,6 +42,7 @@ public static class InfrastructureModule
 
         services.AddSingleton<IOutboxPublisher, KafkaOutboxPublisher>();
         services.AddHostedService<OutboxProcessor>();
+        services.AddHostedService<ReservationExpiryProcessor>();
 
         return services;
     }

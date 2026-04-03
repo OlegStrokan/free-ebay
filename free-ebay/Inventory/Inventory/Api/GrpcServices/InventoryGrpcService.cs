@@ -72,6 +72,41 @@ public sealed class InventoryGrpcService(
         };
     }
 
+    public override async Task<ConfirmReservationResponse> ConfirmReservation(
+        ConfirmReservationRequest request,
+        ServerCallContext context)
+    {
+        if (!Guid.TryParse(request.ReservationId, out var reservationId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "reservation_id must be a valid GUID"));
+
+        ReleaseInventoryResult result;
+
+        try
+        {
+            result = await inventoryService.ConfirmAsync(reservationId, context.CancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Unexpected error while confirming inventory reservation. ReservationId={ReservationId}",
+                request.ReservationId);
+
+            throw new RpcException(new Status(StatusCode.Unavailable, "Inventory service unavailable"));
+        }
+
+        if (!result.Success)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.ErrorMessage));
+        }
+
+        return new ConfirmReservationResponse
+        {
+            Success = true,
+            ErrorMessage = result.ErrorMessage
+        };
+    }
+
     public override async Task<ReleaseInventoryResponse> ReleaseInventory(
         ReleaseInventoryRequest request,
         ServerCallContext context)
