@@ -18,10 +18,11 @@ public sealed class ElasticsearchIndexer(
             .Index(IndexName)
             .Id(document.Id), ct);
 
-        if (!response.IsValidResponse)
-            logger.LogError(
-                "Failed to upsert product {ProductId} into index '{Index}': {Error}",
-                document.Id, IndexName, response.ElasticsearchServerError?.ToString());
+        EnsureSucceeded(
+            response.IsValidResponse,
+            "upsert",
+            document.Id,
+            response.ElasticsearchServerError?.ToString());
     }
 
     public async Task UpdateFieldsAsync(
@@ -35,10 +36,11 @@ public sealed class ElasticsearchIndexer(
                 u => u.Index(IndexName).Doc(update),
                 ct);
 
-        if (!response.IsValidResponse)
-            logger.LogError(
-                "Failed to update product {ProductId} in index '{Index}': {Error}",
-                productId, IndexName, response.ElasticsearchServerError?.ToString());
+        EnsureSucceeded(
+            response.IsValidResponse,
+            "update fields for",
+            productId,
+            response.ElasticsearchServerError?.ToString());
     }
 
     public async Task UpdateStockAsync(
@@ -52,10 +54,11 @@ public sealed class ElasticsearchIndexer(
                 u => u.Index(IndexName).Doc(update),
                 ct);
 
-        if (!response.IsValidResponse)
-            logger.LogError(
-                "Failed to update stock for product {ProductId} in index '{Index}': {Error}",
-                productId, IndexName, response.ElasticsearchServerError?.ToString());
+        EnsureSucceeded(
+            response.IsValidResponse,
+            "update stock for",
+            productId,
+            response.ElasticsearchServerError?.ToString());
     }
 
     public async Task UpdateStatusAsync(
@@ -69,10 +72,11 @@ public sealed class ElasticsearchIndexer(
                 u => u.Index(IndexName).Doc(update),
                 ct);
 
-        if (!response.IsValidResponse)
-            logger.LogError(
-                "Failed to update status for product {ProductId} in index '{Index}': {Error}",
-                productId, IndexName, response.ElasticsearchServerError?.ToString());
+        EnsureSucceeded(
+            response.IsValidResponse,
+            "update status for",
+            productId,
+            response.ElasticsearchServerError?.ToString());
     }
 
     public async Task DeleteAsync(string productId, CancellationToken ct = default)
@@ -81,9 +85,21 @@ public sealed class ElasticsearchIndexer(
             new DeleteRequest(IndexName, productId), ct);
 
         // NotFound is acceptable - delete is idempotent
-        if (!response.IsValidResponse && response.Result != Elastic.Clients.Elasticsearch.Result.NotFound)
-            logger.LogError(
-                "Failed to delete product {ProductId} from index '{Index}': {Error}",
-                productId, IndexName, response.ElasticsearchServerError?.ToString());
+        EnsureSucceeded(
+            response.IsValidResponse || response.Result == Elastic.Clients.Elasticsearch.Result.NotFound,
+            "delete",
+            productId,
+            response.ElasticsearchServerError?.ToString());
+    }
+
+    private void EnsureSucceeded(bool succeeded, string operation, string productId, string? error)
+    {
+        if (succeeded)
+            return;
+
+        var message = $"Failed to {operation} product {productId} in index '{IndexName}': {error ?? "unknown Elasticsearch error"}";
+
+        logger.LogError("{Message}", message);
+        throw new ElasticsearchIndexingException(message);
     }
 }

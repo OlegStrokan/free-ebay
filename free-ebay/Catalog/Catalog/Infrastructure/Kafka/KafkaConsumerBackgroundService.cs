@@ -39,9 +39,11 @@ public sealed class KafkaConsumerBackgroundService(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            ConsumeResult<string, string>? result = null;
+
             try
             {
-                var result = consumer.Consume(TimeSpan.FromMilliseconds(1000));
+                result = consumer.Consume(TimeSpan.FromMilliseconds(1000));
                 if (result is null) continue;
 
                 var eventType = GetHeader(result, "event-type");
@@ -91,6 +93,17 @@ public sealed class KafkaConsumerBackgroundService(
             catch (OperationCanceledException)
             {
                 break;
+            }
+            catch (Exception ex) when (result is not null)
+            {
+                logger.LogError(
+                    ex,
+                    "Failed processing Kafka message at Partition {P} Offset {O}; rewinding for retry",
+                    result.Partition.Value,
+                    result.Offset.Value);
+
+                consumer.Seek(new TopicPartitionOffset(result.TopicPartition, result.Offset));
+                await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
             }
             catch (Exception ex)
             {

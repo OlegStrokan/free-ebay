@@ -129,6 +129,20 @@ public class KafkaConsumerDispatchTests
         await consumer.Received(1).ConsumeAsync(Arg.Any<JsonElement>(), Arg.Any<CancellationToken>());
     }
 
+    [Test]
+    public void DispatchAsync_WhenConsumerThrows_ShouldPropagateException()
+    {
+        var consumer = Substitute.For<IProductEventConsumer>();
+        consumer.EventType.Returns("ProductCreatedEvent");
+        consumer
+            .ConsumeAsync(Arg.Any<JsonElement>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("indexing failed")));
+        SetupConsumers(consumer);
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sut.DispatchAsync("ProductCreatedEvent", EmptyPayload(), CancellationToken.None));
+    }
+
     private void SetupConsumers(params IProductEventConsumer[] consumers)
     {
         _serviceScope.ServiceProvider
