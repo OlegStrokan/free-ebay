@@ -125,7 +125,7 @@ public sealed class KafkaConsumerBackgroundService(
         logger.LogInformation("Kafka consumer stopped");
     }
     
-    private async Task<bool> TryProjectWithRetries(
+    internal async Task<bool> TryProjectWithRetries(
         string eventType, EventWrapper wrapper, CancellationToken ct)
     {
         _lastProjectionException = null;
@@ -161,10 +161,10 @@ public sealed class KafkaConsumerBackgroundService(
         return false;
     }
 
-    private Exception? _lastProjectionException;
+    internal Exception? _lastProjectionException;
 
     // After all immediate retries are exhausted, classify the failure and either keep the message in kafka or move it to retry storage
-    private async Task HandleExhaustedRetries(
+    internal async Task HandleExhaustedRetries(
         IConsumer<string, string> consumer,
         ConsumeResult<string, string> result,
         string eventType,
