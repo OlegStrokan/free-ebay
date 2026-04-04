@@ -12,5 +12,17 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  catalog-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: catalog_retry
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - catalog_pg_data:/var/lib/postgresql/data
+
 volumes:
   elasticsearch_data:
+  catalog_pg_data:
