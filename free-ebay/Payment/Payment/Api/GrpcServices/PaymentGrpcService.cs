@@ -1,4 +1,5 @@
 using Api.Mappers;
+using Application.Commands.CapturePayment;
 using Application.Commands.ProcessPayment;
 using Application.Commands.RefundPayment;
 using Application.DTOs;
@@ -196,6 +197,107 @@ public sealed class PaymentGrpcService(
             Payment = MapPaymentDetails(result.Value),
         };
     }
+
+    public override async Task<CapturePaymentResponse> CapturePayment(
+        CapturePaymentRequest request,
+        ServerCallContext context)
+    {
+        var amount = request.Amount?.ToDecimal() ?? 0m;
+        var currency = NormalizeCurrency(request.Currency);
+        var idempotencyKey = ResolveIdempotencyKey(
+            request.IdempotencyKey,
+            "grpc-capture",
+            $"{request.OrderId}|{request.ProviderPaymentIntentId}|{amount:F4}|{currency}");
+
+        var command = new CapturePaymentCommand(
+            OrderId: request.OrderId,
+            CustomerId: request.CustomerId,
+            ProviderPaymentIntentId: request.ProviderPaymentIntentId,
+            Amount: amount,
+            Currency: currency,
+            IdempotencyKey: idempotencyKey);
+
+        var result = await mediator.Send(command, context.CancellationToken);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            logger.LogWarning(
+                "CapturePayment gRPC request failed for OrderId={OrderId}. Errors={Errors}",
+                request.OrderId,
+                JoinErrors(result.Errors));
+
+            return new CapturePaymentResponse
+            {
+                Success = false,
+                Status = GrpcProcessPaymentStatus.Failed,
+                ErrorCode = "CAPTURE_PAYMENT_FAILED",
+                ErrorMessage = JoinErrors(result.Errors),
+            };
+        }
+
+        logger.LogInformation(
+            "CapturePayment gRPC request completed. OrderId={OrderId}, PaymentId={PaymentId}, Status={Status}",
+            request.OrderId,
+            result.Value.PaymentId,
+            result.Value.Status);
+
+        return new CapturePaymentResponse
+        {
+            Success = result.Value.Status != ApplicationProcessPaymentStatus.Failed,
+            PaymentId = result.Value.PaymentId,
+            ErrorCode = result.Value.ErrorCode ?? string.Empty,
+            ErrorMessage = result.Value.ErrorMessage ?? string.Empty,
+            Status = MapProcessPaymentStatus(result.Value.Status),
+            ProviderPaymentIntentId = result.Value.ProviderPaymentIntentId ?? string.Empty,
+        };
+    }
+
+    public override async Task<CancelAuthorizationResponse> CancelAuthorization(
+        CancelAuthorizationRequest request,
+        ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.ProviderPaymentIntentId))
+        {
+            return new CancelAuthorizationResponse
+            {
+                Success = false,
+                // @todo: create enum for all error code messages
+                ErrorCode = "MISSING_PROVIDER_PAYMENT_INTENT_ID",
+                ErrorMessage = "ProviderPaymentIntentId is required.",
+            };
+        }
+
+        try
+        {
+            // i dont give a shit about idempotency here
+            var stripeProvider = context.GetHttpContext().RequestServices
+                .GetRequiredService<Application.Gateways.IStripePaymentProvider>();
+
+            await stripeProvider.CancelAuthorizationAsync(
+                request.ProviderPaymentIntentId,
+                context.CancellationToken);
+
+            logger.LogInformation(
+                "CancelAuthorization gRPC completed. ProviderPaymentIntentId={Id}",
+                request.ProviderPaymentIntentId);
+
+            return new CancelAuthorizationResponse { Success = true };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "CancelAuthorization gRPC failed. ProviderPaymentIntentId={Id}",
+                request.ProviderPaymentIntentId);
+
+            return new CancelAuthorizationResponse
+            {
+                Success = false,
+                ErrorCode = "CANCEL_AUTHORIZATION_FAILED",
+                ErrorMessage = ex.Message,
+            };
+        }
+    }
+
 
     //@todo: move helpers to new file
     private static ProcessPaymentResponse BuildProcessPaymentFailure(IReadOnlyCollection<string> errors)

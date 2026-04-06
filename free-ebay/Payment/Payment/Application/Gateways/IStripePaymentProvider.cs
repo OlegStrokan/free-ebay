@@ -8,6 +8,14 @@ public interface IStripePaymentProvider
         ProcessPaymentProviderRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<CapturePaymentProviderResult> CapturePaymentAsync(
+        CapturePaymentProviderRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task CancelAuthorizationAsync(
+        string providerPaymentIntentId,
+        CancellationToken cancellationToken = default);
+
     Task<RefundPaymentProviderResult> RefundPaymentAsync(
         RefundPaymentProviderRequest request,
         CancellationToken cancellationToken = default);
