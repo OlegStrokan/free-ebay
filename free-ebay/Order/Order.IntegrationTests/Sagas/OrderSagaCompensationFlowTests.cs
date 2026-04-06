@@ -45,6 +45,7 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         {
             new CancelOrderOnFailureStep(
                 orderPersistence,
+                new NoopPaymentGateway(),
                 new NoopIncidentReporter(),
                 NullLogger<CancelOrderOnFailureStep>.Instance),
             new RecordingSuccessfulStep("ReserveInventory", 1, compensationSequence),
@@ -99,11 +100,11 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
 
         var steps = new ISagaStep<OrderSagaData, OrderSagaContext>[]
         {
-            new ProcessPaymentStep(
+            new CapturePaymentStep(
                 new TimeoutPaymentGateway(),
                 new NoopCompensationRefundRetryRepository(),
                 new NoopIncidentReporter(),
-                NullLogger<ProcessPaymentStep>.Instance)
+                NullLogger<CapturePaymentStep>.Instance)
         };
 
         var saga = new Application.Sagas.OrderSaga.OrderSaga(
@@ -146,11 +147,11 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
         var steps = new ISagaStep<OrderSagaData, OrderSagaContext>[]
         {
             new RecordingSuccessfulStep("ReserveInventory", 1, compensationSequence),
-            new ProcessPaymentStep(
+            new CapturePaymentStep(
                 new UnavailablePaymentGateway(),
                 new NoopCompensationRefundRetryRepository(),
                 new NoopIncidentReporter(),
-                NullLogger<ProcessPaymentStep>.Instance)
+                NullLogger<CapturePaymentStep>.Instance)
         };
 
         var saga = new Application.Sagas.OrderSaga.OrderSaga(
@@ -308,6 +309,16 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
                 GatewayUnavailableReason.Timeout,
                 "simulated deadline exceeded");
 
+        public Task<PaymentProcessingResult> CaptureAsync(
+            Guid orderId, Guid customerId, string providerPaymentIntentId,
+            decimal amount, string currency, CancellationToken cancellationToken)
+            => throw new GatewayUnavailableException(
+                GatewayUnavailableReason.Timeout,
+                "simulated deadline exceeded");
+
+        public Task CancelAuthorizationAsync(string providerPaymentIntentId, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+
         public Task<string> RefundAsync(
             string paymentId,
             decimal amount,
@@ -337,6 +348,16 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
             => throw new GatewayUnavailableException(
                 GatewayUnavailableReason.ServiceUnavailable,
                 "simulated service unavailable");
+
+        public Task<PaymentProcessingResult> CaptureAsync(
+            Guid orderId, Guid customerId, string providerPaymentIntentId,
+            decimal amount, string currency, CancellationToken cancellationToken)
+            => throw new GatewayUnavailableException(
+                GatewayUnavailableReason.ServiceUnavailable,
+                "simulated service unavailable");
+
+        public Task CancelAuthorizationAsync(string providerPaymentIntentId, CancellationToken cancellationToken)
+            => Task.CompletedTask;
 
         public Task<string> RefundAsync(
             string paymentId,
@@ -374,5 +395,29 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
 
         public Task SaveAsync(CompensationRefundRetry retry, CancellationToken cancellationToken)
             => Task.CompletedTask;
+    }
+
+    private sealed class NoopPaymentGateway : IPaymentGateway
+    {
+        public Task<PaymentProcessingResult> ProcessPaymentAsync(
+            Guid orderId, Guid customerId, decimal amount, string currency,
+            string paymentMethod, CancellationToken cancellationToken)
+            => Task.FromResult(new PaymentProcessingResult("PAY-NOOP", PaymentProcessingStatus.Succeeded));
+
+        public Task<PaymentProcessingResult> CaptureAsync(
+            Guid orderId, Guid customerId, string providerPaymentIntentId,
+            decimal amount, string currency, CancellationToken cancellationToken)
+            => Task.FromResult(new PaymentProcessingResult("PAY-NOOP", PaymentProcessingStatus.Succeeded));
+
+        public Task CancelAuthorizationAsync(string providerPaymentIntentId, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+
+        public Task<string> RefundAsync(string paymentId, decimal amount, string currency,
+            string reason, CancellationToken cancellationToken)
+            => Task.FromResult("REF-NOOP");
+
+        public Task<RefundProcessingResult> RefundWithStatusAsync(string paymentId, decimal amount,
+            string currency, string reason, CancellationToken cancellationToken)
+            => Task.FromResult(new RefundProcessingResult("REF-NOOP", RefundProcessingStatus.Succeeded));
     }
 }
