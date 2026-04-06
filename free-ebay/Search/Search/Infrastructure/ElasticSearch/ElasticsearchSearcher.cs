@@ -39,10 +39,8 @@ public sealed class ElasticsearchSearcher : IElasticsearchSearcher
                         {
                             new("name", 3.0),
                             new("description"),
-                            new("category", 2.0),
-                            new("brand", 2.0),
-                            new("color"),
-                            new("layout")
+                            new("categoryId", 2.0),
+                            new("attributes")
                         })
                         .Type(TextQueryType.BestFields)
                     )
@@ -70,7 +68,7 @@ public sealed class ElasticsearchSearcher : IElasticsearchSearcher
             .Select(h => new ProductSearchItem(
                 ProductId: Guid.Parse(h.Source!.Id),
                 Name: h.Source.Name,
-                Category: h.Source.Category,
+                Category: h.Source.CategoryId,
                 Price: (decimal)h.Source.Price,
                 Currency: h.Source.Currency,
                 RelevanceScore: h.Score ?? 0d,

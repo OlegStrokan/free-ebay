@@ -1,4 +1,5 @@
 using Application.Queries.SearchProducts;
+using Elastic.Clients.Elasticsearch.Mapping;
 using FluentAssertions;
 using Infrastructure.ElasticSearch;
 using Infrastructure.ElasticSearch.Documents;
@@ -29,15 +30,17 @@ public sealed class ElasticsearchSearcherTests
             Id = productId.ToString(),
             Name = "Ultra",
             Description = "Ultra performance computer",
-            Category = "Computers",
+            CategoryId = "Computers",
             Price = 1999.99,
             Currency = "USD",
             Stock = 3,
-            Color = "black",
-            Layout = "qwerty",
-            Brand = "Contoso",
-            ImageUrls = ["https://img.test/laptop-1.png"],
-            IndexedAt = DateTime.UtcNow
+            Attributes = new Dictionary<string, string>
+            {
+                ["color"] = "black",
+                ["layout"] = "qwerty",
+                ["brand"] = "Contoso"
+            },
+            ImageUrls = ["https://img.test/laptop-1.png"]
         };
 
         var indexResponse = await _fixture.Client.IndexAsync(
@@ -93,11 +96,22 @@ public sealed class ElasticsearchSearcherTests
     {
         await DeleteProductsIndexIfExistsAsync();
 
-        var initializer = new ElasticsearchIndexInitializer(
-            _fixture.Client,
-            NullLogger<ElasticsearchIndexInitializer>.Instance);
-
-        await initializer.EnsureIndexAsync();
+        // Catalog owns the index schema; replicate it here for testing.
+        await _fixture.Client.Indices.CreateAsync(
+            ElasticsearchIndexInitializer.IndexName,
+            c => c.Mappings(m => m.Properties(new Properties
+            {
+                { "name",        new TextProperty { Boost = 3.0 } },
+                { "description", new TextProperty { Boost = 1.5 } },
+                { "categoryId",  new KeywordProperty() },
+                { "price",       new FloatNumberProperty() },
+                { "currency",    new KeywordProperty() },
+                { "stock",       new IntegerNumberProperty() },
+                { "attributes",  new FlattenedProperty() },
+                { "imageUrls",   new KeywordProperty { Index = false } },
+                { "createdAt",   new DateProperty() },
+                { "updatedAt",   new DateProperty() }
+            })));
     }
 
     private async Task DeleteProductsIndexIfExistsAsync()

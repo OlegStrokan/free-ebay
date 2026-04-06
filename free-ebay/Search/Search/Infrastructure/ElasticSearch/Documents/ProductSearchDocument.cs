@@ -13,30 +13,24 @@ public sealed class ProductSearchDocument
     [JsonPropertyName("description")]
     public string Description { get; set; } = default!;
 
-    [JsonPropertyName("category")]
-    public string Category { get; set; } = default!;
-    
+    [JsonPropertyName("categoryId")]
+    public string CategoryId { get; set; } = default!;
+
     [JsonPropertyName("price")]
     public double Price { get; set; }
 
     [JsonPropertyName("currency")]
     public string Currency { get; set; } = default!;
-    
+
     [JsonPropertyName("stock")]
     public int Stock { get; set; }
-    
-    [JsonPropertyName("color")]
-    public string? Color { get; set; }
-    
-    [JsonPropertyName("layout")]
-    public string? Layout { get; set; }
 
-    [JsonPropertyName("brand")]
-    public string? Brand { get; set; }
+    [JsonPropertyName("attributes")]
+    public Dictionary<string, string>? Attributes { get; set; }
 
-    [JsonPropertyName("image_urls")] 
+    [JsonPropertyName("imageUrls")]
     public List<string> ImageUrls { get; set; } = [];
-    
-    [JsonPropertyName("indexed_at")]
-    public DateTime IndexedAt { get; set; }
+
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
 }

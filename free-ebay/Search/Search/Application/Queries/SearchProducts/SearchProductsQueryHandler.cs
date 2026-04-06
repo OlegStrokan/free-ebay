@@ -11,7 +11,7 @@ public sealed class SearchProductsQueryHandler(
 : IQueryHandler<SearchProductsQuery, SearchProductsResult>
 {
     
-    private static readonly TimeSpan AiTimeout = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan AiTimeout = TimeSpan.FromMilliseconds(2000);
     
     public async Task<SearchProductsResult> HandleAsync(SearchProductsQuery query, CancellationToken ct)
     {
