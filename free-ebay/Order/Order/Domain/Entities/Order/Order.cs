@@ -85,7 +85,8 @@ public sealed class Order : AggregateRoot<OrderId>
     public static Order Create(
         CustomerId customerId,
         Address deliveryAddress,
-        List<OrderItem> items)
+        List<OrderItem> items,
+        string? providerPaymentIntentId = null)
     {
         if (items == null || items.Count == 0)
             throw new DomainException("Order must have at least one item");
@@ -99,7 +100,8 @@ public sealed class Order : AggregateRoot<OrderId>
             totalPrice,
             deliveryAddress,
             items,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            providerPaymentIntentId);
 
         order.RaiseEvent(evt);
         return order;

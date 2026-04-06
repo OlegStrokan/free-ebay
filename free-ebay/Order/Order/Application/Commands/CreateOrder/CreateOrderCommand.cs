@@ -8,4 +8,5 @@ public record CreateOrderCommand(
     List<OrderItemDto> Items,
     AddressDto DeliveryAddress,
     string PaymentMethod,
-    string IdempotencyKey) : ICommand<Result<Guid>>;
+    string IdempotencyKey,
+    string? PaymentIntentId = null) : ICommand<Result<Guid>>;

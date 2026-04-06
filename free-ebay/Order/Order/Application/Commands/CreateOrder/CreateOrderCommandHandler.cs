@@ -92,7 +92,7 @@ public class CreateOrderCommandHandler
                     Money.Create(canonical.Price, canonical.Currency));
             }).ToList();
 
-            var order = Order.Create(customerId, address, orderItems);
+            var order = Order.Create(customerId, address, orderItems, request.PaymentIntentId);
 
             logger.LogInformation(
                 "Created order aggregate {OrderId} for customer {CustomerId}",

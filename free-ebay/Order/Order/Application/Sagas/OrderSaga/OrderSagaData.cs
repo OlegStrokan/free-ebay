@@ -10,4 +10,5 @@ public sealed class OrderSagaData : SagaData
     public string Currency { get; set; } = "USD";
     public string PaymentMethod { get; set; } = string.Empty;
     public AddressDto DeliveryAddress { get; set; } = null!;
+    public string? PaymentIntentId { get; set; }
 }
