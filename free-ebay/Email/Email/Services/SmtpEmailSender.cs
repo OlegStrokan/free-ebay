@@ -8,18 +8,17 @@ namespace Email.Services;
 
 public sealed class SmtpEmailSender(
     IOptions<EmailDeliveryOptions> emailOptions,
-    ILogger<SmtpEmailSender> logger) : IEmailSender
+    ILogger<SmtpEmailSender> logger) : IEmailSender, IDisposable
 {
     private readonly EmailDeliveryOptions _options = emailOptions.Value;
+    private readonly SmtpClient _client = new SmtpClient(emailOptions.Value.SmtpHost, emailOptions.Value.SmtpPort)
+    {
+        EnableSsl = emailOptions.Value.EnableSsl,
+        Credentials = new NetworkCredential(emailOptions.Value.Username, emailOptions.Value.Password)
+    };
 
     public async Task SendAsync(OrderConfirmationEmailRequested request, CancellationToken cancellationToken)
     {
-        using var client = new SmtpClient(_options.SmtpHost, _options.SmtpPort)
-        {
-            EnableSsl = _options.EnableSsl,
-            Credentials = new NetworkCredential(_options.Username, _options.Password)
-        };
-
         var from = string.IsNullOrWhiteSpace(request.From)
             ? _options.DefaultFromAddress
             : request.From;
@@ -29,11 +28,13 @@ public sealed class SmtpEmailSender(
             IsBodyHtml = true
         };
 
-        await client.SendMailAsync(message, cancellationToken);
+        await _client.SendMailAsync(message, cancellationToken);
 
         logger.LogInformation(
             "Email sent for Order {OrderId} to {Recipient}",
             request.OrderId,
             request.To);
     }
+
+    public void Dispose() => _client.Dispose();
 }

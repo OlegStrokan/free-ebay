@@ -115,7 +115,7 @@ public sealed class KafkaEmailConsumer(
         OrderConfirmationEmailRequested? request;
         try
         {
-            request = JsonSerializer.Deserialize<OrderConfirmationEmailRequested>(wrapper.Payload);
+            request = wrapper.Payload.Deserialize<OrderConfirmationEmailRequested>();
         }
         catch (Exception ex)
         {
@@ -143,8 +143,9 @@ public sealed class KafkaEmailConsumer(
         {
             try
             {
+                // at least once delivery, raw smpt dont support exact once
+                // @todo: use external email provider in the future
                 await emailSender.SendAsync(request, cancellationToken);
-                await processedMessageStore.MarkProcessedAsync(wrapper.EventId, cancellationToken);
                 logger.LogInformation("Processed email message {MessageId}", wrapper.EventId);
                 return true;
             }
@@ -176,11 +177,10 @@ public sealed class KafkaEmailConsumer(
                             ex,
                             "Non-important email {MessageId} failed and will not be sent to DLQ",
                             wrapper.EventId);
+                        // Mark non-important as processed to avoid a hot-loop on permanent failures.
+                        await processedMessageStore.MarkProcessedAsync(wrapper.EventId, cancellationToken);
                     }
 
-                    // Mark as handled to avoid repeated retries for non-important messages
-                    // and to prevent hot-loop duplicates for important terminal failures.
-                    await processedMessageStore.MarkProcessedAsync(wrapper.EventId, cancellationToken);
                     return true;
                 }
 
