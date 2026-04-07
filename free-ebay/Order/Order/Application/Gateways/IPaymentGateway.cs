@@ -11,6 +11,18 @@ public interface IPaymentGateway
         string paymentMethod,
         CancellationToken cancellationToken
         );
+
+    Task<PaymentProcessingResult> CaptureAsync(
+        Guid orderId,
+        Guid customerId,
+        string providerPaymentIntentId,
+        decimal amount,
+        string currency,
+        CancellationToken cancellationToken);
+
+    Task CancelAuthorizationAsync(
+        string providerPaymentIntentId,
+        CancellationToken cancellationToken);
     
     Task<string> RefundAsync(
         string paymentId, 

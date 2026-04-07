@@ -295,4 +295,170 @@ public class PaymentGatewayTests
 
         Assert.Equal(GatewayUnavailableReason.ServiceUnavailable, ex.Reason);
     }
+
+    // ---- CaptureAsync -----------------------------------------------------------
+
+    [Fact]
+    public async Task CaptureAsync_ShouldReturnSucceededResult_WhenGrpcSucceeds()
+    {
+        const string paymentId = "cap-pay-1";
+        CapturePaymentRequest? capturedRequest = null;
+        _client
+            .CapturePaymentAsync(Arg.Do<CapturePaymentRequest>(x => capturedRequest = x),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new CapturePaymentResponse
+            {
+                Success = true,
+                PaymentId = paymentId,
+                Status = (ProcessPaymentStatus)1, // Succeeded
+                ProviderPaymentIntentId = "pi_captured_1",
+            }));
+
+        var result = await Build().CaptureAsync(
+            Guid.NewGuid(), Guid.NewGuid(), "pi_captured_1", 200m, "USD", CancellationToken.None);
+
+        Assert.Equal(paymentId, result.PaymentId);
+        Assert.Equal(Application.Gateways.PaymentProcessingStatus.Succeeded, result.Status);
+        Assert.Equal("pi_captured_1", result.ProviderPaymentIntentId);
+        Assert.Equal("USD", capturedRequest?.Currency);
+        Assert.False(string.IsNullOrWhiteSpace(capturedRequest?.IdempotencyKey));
+    }
+
+    [Fact]
+    public async Task CaptureAsync_ShouldThrowPaymentDeclinedException_WhenErrorCodeIsPaymentDeclined()
+    {
+        _client
+            .CapturePaymentAsync(Arg.Any<CapturePaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new CapturePaymentResponse
+            {
+                Success = false,
+                Status = (ProcessPaymentStatus)2,
+                ErrorCode = "PAYMENT_DECLINED",
+                ErrorMessage = "Card declined",
+            }));
+
+        await Assert.ThrowsAsync<PaymentDeclinedException>(() =>
+            Build().CaptureAsync(Guid.NewGuid(), Guid.NewGuid(), "pi_1", 100m, "USD", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CaptureAsync_ShouldThrowInvalidOperation_WhenUnknownErrorCode()
+    {
+        _client
+            .CapturePaymentAsync(Arg.Any<CapturePaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new CapturePaymentResponse
+            {
+                Success = false,
+                Status = (ProcessPaymentStatus)2,
+                ErrorCode = "UNKNOWN_CAPTURE_ERROR",
+                ErrorMessage = "Something went wrong",
+            }));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().CaptureAsync(Guid.NewGuid(), Guid.NewGuid(), "pi_1", 100m, "USD", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CaptureAsync_ShouldThrowPaymentDeclined_WhenRpcInvalidArgument()
+    {
+        _client
+            .CapturePaymentAsync(Arg.Any<CapturePaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<CapturePaymentResponse>(StatusCode.InvalidArgument, "invalid capture request"));
+
+        await Assert.ThrowsAsync<PaymentDeclinedException>(() =>
+            Build().CaptureAsync(Guid.NewGuid(), Guid.NewGuid(), "pi_1", 100m, "USD", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CaptureAsync_ShouldThrowGatewayUnavailable_WithTimeoutReason_WhenRpcDeadlineExceeded()
+    {
+        _client
+            .CapturePaymentAsync(Arg.Any<CapturePaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<CapturePaymentResponse>(StatusCode.DeadlineExceeded, "timeout"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().CaptureAsync(Guid.NewGuid(), Guid.NewGuid(), "pi_1", 100m, "USD", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.Timeout, ex.Reason);
+    }
+
+    [Fact]
+    public async Task CaptureAsync_ShouldThrowGatewayUnavailable_WithServiceUnavailableReason_WhenRpcUnavailable()
+    {
+        _client
+            .CapturePaymentAsync(Arg.Any<CapturePaymentRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<CapturePaymentResponse>(StatusCode.Unavailable, "stripe down"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().CaptureAsync(Guid.NewGuid(), Guid.NewGuid(), "pi_1", 100m, "USD", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.ServiceUnavailable, ex.Reason);
+    }
+
+    // ---- CancelAuthorizationAsync -----------------------------------------------
+
+    [Fact]
+    public async Task CancelAuthorizationAsync_ShouldCompleteSuccessfully_WhenGrpcSucceeds()
+    {
+        CancelAuthorizationRequest? capturedRequest = null;
+        _client
+            .CancelAuthorizationAsync(Arg.Do<CancelAuthorizationRequest>(x => capturedRequest = x),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new CancelAuthorizationResponse { Success = true }));
+
+        var exception = await Record.ExceptionAsync(() =>
+            Build().CancelAuthorizationAsync("pi_auth_1", CancellationToken.None));
+
+        Assert.Null(exception);
+        Assert.Equal("pi_auth_1", capturedRequest?.ProviderPaymentIntentId);
+    }
+
+    [Fact]
+    public async Task CancelAuthorizationAsync_ShouldThrowInvalidOperation_WhenServiceReturnsNotSuccess()
+    {
+        _client
+            .CancelAuthorizationAsync(Arg.Any<CancelAuthorizationRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcCall(new CancelAuthorizationResponse
+            {
+                Success = false,
+                ErrorMessage = "authorization already captured",
+            }));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Build().CancelAuthorizationAsync("pi_auth_2", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CancelAuthorizationAsync_ShouldThrowGatewayUnavailable_WithTimeoutReason_WhenRpcDeadlineExceeded()
+    {
+        _client
+            .CancelAuthorizationAsync(Arg.Any<CancelAuthorizationRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<CancelAuthorizationResponse>(StatusCode.DeadlineExceeded, "timeout"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().CancelAuthorizationAsync("pi_auth_3", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.Timeout, ex.Reason);
+    }
+
+    [Fact]
+    public async Task CancelAuthorizationAsync_ShouldThrowGatewayUnavailable_WithServiceUnavailableReason_WhenRpcUnavailable()
+    {
+        _client
+            .CancelAuthorizationAsync(Arg.Any<CancelAuthorizationRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(GrpcFail<CancelAuthorizationResponse>(StatusCode.Unavailable, "service down"));
+
+        var ex = await Assert.ThrowsAsync<GatewayUnavailableException>(() =>
+            Build().CancelAuthorizationAsync("pi_auth_4", CancellationToken.None));
+
+        Assert.Equal(GatewayUnavailableReason.ServiceUnavailable, ex.Reason);
+    }
 }

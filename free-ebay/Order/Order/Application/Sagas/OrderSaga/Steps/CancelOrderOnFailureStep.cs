@@ -11,6 +11,7 @@ namespace Application.Sagas.OrderSaga.Steps;
 // Compensate cancels the order, ensuring cancellation happens regardless of which downstream step fails
 public sealed class CancelOrderOnFailureStep(
     IOrderPersistenceService orderPersistenceService,
+    IPaymentGateway paymentGateway,
     IIncidentReporter incidentReporter,
     ILogger<CancelOrderOnFailureStep> logger)
     : ISagaStep<OrderSagaData, OrderSagaContext>
@@ -88,6 +89,12 @@ public sealed class CancelOrderOnFailureStep(
                 cancellationToken);
 
             logger.LogInformation("Order {OrderId} cancelled successfully", data.CorrelationId);
+
+            // If the frontend pre-authorized but capture never happened, release the hold
+            if (!string.IsNullOrEmpty(data.PaymentIntentId) && string.IsNullOrEmpty(context.PaymentId))
+            {
+                await TryCancelAuthorizationAsync(data.CorrelationId, data.PaymentIntentId, cancellationToken);
+            }
         }
         catch (OrderNotFoundException)
         {
@@ -103,6 +110,40 @@ public sealed class CancelOrderOnFailureStep(
                 data.CorrelationId,
                 $"Order cancellation during saga compensation failed: {ex.Message}",
                 "Manually cancel the order and reconcile payment/inventory/shipment side effects.",
+                cancellationToken);
+        }
+    }
+
+    private async Task TryCancelAuthorizationAsync(
+        Guid orderId,
+        string providerPaymentIntentId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            logger.LogInformation(
+                "Cancelling pre-authorized payment intent {PaymentIntentId} for order {OrderId}",
+                providerPaymentIntentId,
+                orderId);
+
+            await paymentGateway.CancelAuthorizationAsync(providerPaymentIntentId, cancellationToken);
+
+            logger.LogInformation(
+                "Successfully cancelled authorization for order {OrderId}",
+                orderId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to cancel authorization {PaymentIntentId} for order {OrderId}. Manual intervention required.",
+                providerPaymentIntentId,
+                orderId);
+
+            await ReportCriticalInterventionAsync(
+                orderId,
+                $"Failed to cancel Stripe authorization {providerPaymentIntentId} during saga compensation: {ex.Message}",
+                "Manually cancel the PaymentIntent in Stripe dashboard to release the customer's authorization hold.",
                 cancellationToken);
         }
     }

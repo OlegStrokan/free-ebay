@@ -3,6 +3,7 @@ using Application.Commands.HandleStripeWebhook;
 using Application.Commands.ProcessPayment;
 using Application.Commands.ReconcilePendingPayments;
 using Application.Commands.RefundPayment;
+using Application.Commands.CapturePayment;
 using Application.Queries.GetPaymentById;
 using Application.Queries.GetPaymentByOrderId;
 using Domain.Enums;
@@ -93,5 +94,46 @@ public class CommandAndQueryValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("must not exceed 128", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CapturePaymentValidator_ShouldFail_WhenRequiredFieldsMissing()
+    {
+        var validator = new CapturePaymentCommandValidator();
+        var command = new CapturePaymentCommand("", "", "", 0m, "US", "");
+
+        var result = validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.True(result.Errors.Count >= 5);
+    }
+
+    [Fact]
+    public void CapturePaymentValidator_ShouldFail_WhenAmountIsZero()
+    {
+        var validator = new CapturePaymentCommandValidator();
+        var command = new CapturePaymentCommand("order-1", "customer-1", "pi_test_1", 0m, "USD", "idem-1");
+
+        var result = validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("greater than zero", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CapturePaymentValidator_ShouldPass_WhenAllFieldsValid()
+    {
+        var validator = new CapturePaymentCommandValidator();
+        var command = new CapturePaymentCommand(
+            OrderId: "order-1",
+            CustomerId: "customer-1",
+            ProviderPaymentIntentId: "pi_test_1",
+            Amount: 99.99m,
+            Currency: "USD",
+            IdempotencyKey: "idem-1");
+
+        var result = validator.Validate(command);
+
+        Assert.True(result.IsValid);
     }
 }

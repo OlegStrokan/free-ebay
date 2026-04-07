@@ -29,7 +29,8 @@ public class OrderCreatedEventHandler
             TotalAmount = eventDto.TotalAmount,
             Currency = eventDto.Currency,
             PaymentMethod = eventDto.PaymentMethod ?? "stripe",
-            DeliveryAddress = eventDto.DeliveryAddress
+            DeliveryAddress = eventDto.DeliveryAddress,
+            PaymentIntentId = eventDto.PaymentIntentId,
         };
     }
 }

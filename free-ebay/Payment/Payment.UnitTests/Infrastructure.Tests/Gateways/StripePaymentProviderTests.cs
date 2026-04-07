@@ -163,4 +163,103 @@ public class StripePaymentProviderTests
         Assert.Equal(ProviderRefundLifecycleStatus.Failed, failed.Status);
         Assert.Equal(ProviderRefundLifecycleStatus.Succeeded, succeeded.Status);
     }
+
+    [Fact]
+    public async Task CapturePaymentAsync_Fake_ShouldReturnSucceeded_WhenIntentIdIsNormal()
+    {
+        var result = await BuildFakeProvider().CapturePaymentAsync(new Application.Gateways.Models.CapturePaymentProviderRequest(
+            PaymentId: "pay-cap-1",
+            OrderId: "order-cap-1",
+            CustomerId: "cust-cap-1",
+            ProviderPaymentIntentId: "pi_test_normal",
+            Amount: 50m,
+            Currency: "USD",
+            IdempotencyKey: "idem-cap-1"), CancellationToken.None);
+
+        Assert.Equal(ProviderProcessPaymentStatus.Succeeded, result.Status);
+        Assert.StartsWith("pi_captured_", result.ProviderPaymentIntentId, StringComparison.Ordinal);
+        Assert.Null(result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CapturePaymentAsync_Fake_ShouldReturnFailed_WhenIntentIdContainsFail()
+    {
+        var result = await BuildFakeProvider().CapturePaymentAsync(new Application.Gateways.Models.CapturePaymentProviderRequest(
+            PaymentId: "pay-cap-2",
+            OrderId: "order-cap-2",
+            CustomerId: "cust-cap-2",
+            ProviderPaymentIntentId: "pi_fail_card_declined",
+            Amount: 50m,
+            Currency: "USD",
+            IdempotencyKey: "idem-cap-2"), CancellationToken.None);
+
+        Assert.Equal(ProviderProcessPaymentStatus.Failed, result.Status);
+        Assert.Equal("provider_capture_failed", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CapturePaymentAsync_Fake_ShouldReturnFailed_WhenAmountIsZero()
+    {
+        var result = await BuildFakeProvider().CapturePaymentAsync(new Application.Gateways.Models.CapturePaymentProviderRequest(
+            PaymentId: "pay-cap-3",
+            OrderId: "order-cap-3",
+            CustomerId: "cust-cap-3",
+            ProviderPaymentIntentId: "pi_test_normal",
+            Amount: 0m,
+            Currency: "USD",
+            IdempotencyKey: "idem-cap-3"), CancellationToken.None);
+
+        Assert.Equal(ProviderProcessPaymentStatus.Failed, result.Status);
+        Assert.Equal("invalid_amount", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CapturePaymentAsync_Fake_ShouldReturnFailed_WhenProviderIntentIdMissing()
+    {
+        var result = await BuildFakeProvider().CapturePaymentAsync(new Application.Gateways.Models.CapturePaymentProviderRequest(
+            PaymentId: "pay-cap-4",
+            OrderId: "order-cap-4",
+            CustomerId: "cust-cap-4",
+            ProviderPaymentIntentId: "",
+            Amount: 10m,
+            Currency: "USD",
+            IdempotencyKey: "idem-cap-4"), CancellationToken.None);
+
+        Assert.Equal(ProviderProcessPaymentStatus.Failed, result.Status);
+        Assert.Equal("missing_provider_payment_intent_id", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CapturePaymentAsync_Real_ShouldReturnFailed_WhenSecretNotConfigured()
+    {
+        var result = await BuildRealWithoutSecret().CapturePaymentAsync(new Application.Gateways.Models.CapturePaymentProviderRequest(
+            PaymentId: "pay-cap-real-1",
+            OrderId: "order-real-1",
+            CustomerId: "cust-real-1",
+            ProviderPaymentIntentId: "pi_test_real",
+            Amount: 100m,
+            Currency: "USD",
+            IdempotencyKey: "idem-cap-real-1"), CancellationToken.None);
+
+        Assert.Equal(ProviderProcessPaymentStatus.Failed, result.Status);
+        Assert.Equal("stripe_secret_not_configured", result.ErrorCode);
+    }
+
+    // ---- CancelAuthorizationAsync -----------------------------------------------
+
+    [Fact]
+    public async Task CancelAuthorizationAsync_Fake_ShouldCompleteWithoutThrowing()
+    {
+        var exception = await Record.ExceptionAsync(() =>
+            BuildFakeProvider().CancelAuthorizationAsync("pi_auth_test_1", CancellationToken.None));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task CancelAuthorizationAsync_Real_ShouldThrow_WhenSecretNotConfigured()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            BuildRealWithoutSecret().CancelAuthorizationAsync("pi_auth_real_1", CancellationToken.None));
+    }
 }

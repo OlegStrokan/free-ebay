@@ -11,6 +11,8 @@ service PaymentService {
   rpc RefundPayment (RefundPaymentRequest) returns (RefundPaymentResponse);
   rpc GetPayment (GetPaymentRequest) returns (GetPaymentResponse);
   rpc GetPaymentByOrderAndIdempotency (GetPaymentByOrderAndIdempotencyRequest) returns (GetPaymentByOrderAndIdempotencyResponse);
+  rpc CapturePayment (CapturePaymentRequest) returns (CapturePaymentResponse);
+  rpc CancelAuthorization (CancelAuthorizationRequest) returns (CancelAuthorizationResponse);
 }
 
 enum ProcessPaymentStatus {
@@ -117,4 +119,32 @@ message GetPaymentByOrderAndIdempotencyResponse {
   bool success = 1;
   string error_message = 2;
   PaymentDetails payment = 3;
+}
+
+message CapturePaymentRequest {
+  string order_id = 1;
+  string customer_id = 2;
+  string provider_payment_intent_id = 3;
+  common.DecimalValue amount = 4;
+  string currency = 5;
+  string idempotency_key = 6;
+}
+
+message CapturePaymentResponse {
+  bool success = 1;
+  string payment_id = 2;
+  string error_code = 3;
+  string error_message = 4;
+  ProcessPaymentStatus status = 5;
+  string provider_payment_intent_id = 6;
+}
+
+message CancelAuthorizationRequest {
+  string provider_payment_intent_id = 1;
+}
+
+message CancelAuthorizationResponse {
+  bool success = 1;
+  string error_code = 2;
+  string error_message = 3;
 }

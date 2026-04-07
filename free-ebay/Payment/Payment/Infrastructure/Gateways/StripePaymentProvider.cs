@@ -245,6 +245,131 @@ internal sealed class StripePaymentProvider(
         }
     }
 
+    public async Task<CapturePaymentProviderResult> CapturePaymentAsync(
+        CapturePaymentProviderRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (_stripeOptions.UseFakeProvider)
+        {
+            return SimulateCapturePayment(request);
+        }
+
+        if (!HasSecretKey())
+        {
+            return new CapturePaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: null,
+                ErrorCode: "stripe_secret_not_configured",
+                ErrorMessage: "Stripe secret key is not configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ProviderPaymentIntentId))
+        {
+            return new CapturePaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: null,
+                ErrorCode: "missing_provider_payment_intent_id",
+                ErrorMessage: "ProviderPaymentIntentId is required for capture.");
+        }
+
+        try
+        {
+            var requestOptions = new RequestOptions
+            {
+                IdempotencyKey = request.IdempotencyKey,
+            };
+
+            var paymentIntentService = new PaymentIntentService(CreateStripeClient());
+            var paymentIntent = await paymentIntentService.CaptureAsync(
+                request.ProviderPaymentIntentId,
+                options: null,
+                requestOptions,
+                cancellationToken);
+
+            var status = paymentIntent.Status?.Trim().ToLowerInvariant() == "succeeded"
+                ? ProviderProcessPaymentStatus.Succeeded
+                : ProviderProcessPaymentStatus.Failed;
+
+            var errorCode = status == ProviderProcessPaymentStatus.Failed
+                ? (paymentIntent.LastPaymentError?.Code ?? "capture_failed")
+                : null;
+            var errorMessage = status == ProviderProcessPaymentStatus.Failed
+                ? (paymentIntent.LastPaymentError?.Message ?? "Stripe capture returned non-succeeded status.")
+                : null;
+
+            return new CapturePaymentProviderResult(
+                Status: status,
+                ProviderPaymentIntentId: paymentIntent.Id,
+                ErrorCode: errorCode,
+                ErrorMessage: errorMessage);
+        }
+        catch (StripeException ex)
+        {
+            logger.LogWarning(ex, "Stripe capture call failed. ProviderPaymentIntentId={Id}", request.ProviderPaymentIntentId);
+            return new CapturePaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: ex.StripeError?.PaymentIntent?.Id,
+                ErrorCode: ex.StripeError?.Code ?? "stripe_error",
+                ErrorMessage: ex.StripeError?.Message ?? ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected Stripe capture error. ProviderPaymentIntentId={Id}", request.ProviderPaymentIntentId);
+            return new CapturePaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: null,
+                ErrorCode: "unexpected_provider_error",
+                ErrorMessage: "Unexpected error while capturing Stripe payment intent.");
+        }
+    }
+
+    public async Task CancelAuthorizationAsync(
+        string providerPaymentIntentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (_stripeOptions.UseFakeProvider)
+        {
+            logger.LogInformation(
+                "Fake provider: skipping authorization cancel for {ProviderPaymentIntentId}",
+                providerPaymentIntentId);
+            return;
+        }
+
+        if (!HasSecretKey())
+        {
+            throw new InvalidOperationException("Stripe secret key is not configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(providerPaymentIntentId))
+        {
+            throw new ArgumentException("ProviderPaymentIntentId is required for cancel.", nameof(providerPaymentIntentId));
+        }
+
+        try
+        {
+            var paymentIntentService = new PaymentIntentService(CreateStripeClient());
+            await paymentIntentService.CancelAsync(
+                providerPaymentIntentId,
+                options: null,
+                requestOptions: null,
+                cancellationToken);
+
+            logger.LogInformation(
+                "Successfully cancelled Stripe authorization for {ProviderPaymentIntentId}",
+                providerPaymentIntentId);
+        }
+        catch (StripeException ex)
+        {
+            logger.LogWarning(ex, "Stripe cancel authorization failed. ProviderPaymentIntentId={Id}", providerPaymentIntentId);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected error cancelling Stripe authorization. ProviderPaymentIntentId={Id}", providerPaymentIntentId);
+            throw;
+        }
+    }
+
     // @todo: simulation helpers should be moved to another file
     private static ProcessPaymentProviderResult SimulateProcessPayment(ProcessPaymentProviderRequest request)
     {
@@ -306,6 +431,45 @@ internal sealed class StripePaymentProvider(
             Status: ProviderProcessPaymentStatus.Succeeded,
             ProviderPaymentIntentId: $"pi_success_{token}",
             ClientSecret: null,
+            ErrorCode: null,
+            ErrorMessage: null);
+    }
+
+    private static CapturePaymentProviderResult SimulateCapturePayment(CapturePaymentProviderRequest request)
+    {
+        if (request.Amount <= 0)
+        {
+            return new CapturePaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: null,
+                ErrorCode: "invalid_amount",
+                ErrorMessage: "Capture amount must be greater than zero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ProviderPaymentIntentId))
+        {
+            return new CapturePaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: null,
+                ErrorCode: "missing_provider_payment_intent_id",
+                ErrorMessage: "ProviderPaymentIntentId is required for capture.");
+        }
+
+        var token = BuildStableToken(request.PaymentId, request.IdempotencyKey);
+        var loweredIntentId = request.ProviderPaymentIntentId.Trim().ToLowerInvariant();
+
+        if (loweredIntentId.Contains("fail", StringComparison.Ordinal))
+        {
+            return new CapturePaymentProviderResult(
+                Status: ProviderProcessPaymentStatus.Failed,
+                ProviderPaymentIntentId: request.ProviderPaymentIntentId,
+                ErrorCode: "provider_capture_failed",
+                ErrorMessage: "Simulated capture failure.");
+        }
+
+        return new CapturePaymentProviderResult(
+            Status: ProviderProcessPaymentStatus.Succeeded,
+            ProviderPaymentIntentId: $"pi_captured_{token}",
             ErrorCode: null,
             ErrorMessage: null);
     }

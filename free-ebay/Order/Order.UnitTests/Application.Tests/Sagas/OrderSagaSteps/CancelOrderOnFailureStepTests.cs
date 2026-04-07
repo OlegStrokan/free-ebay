@@ -18,6 +18,9 @@ public class CancelOrderOnFailureStepTests
     private readonly IOrderPersistenceService _orderPersistenceService =
         Substitute.For<IOrderPersistenceService>();
 
+    private readonly IPaymentGateway _paymentGateway =
+        Substitute.For<IPaymentGateway>();
+
     private readonly IIncidentReporter _incidentReporter =
         Substitute.For<IIncidentReporter>();
 
@@ -25,7 +28,7 @@ public class CancelOrderOnFailureStepTests
         Substitute.For<ILogger<CancelOrderOnFailureStep>>();
 
     private CancelOrderOnFailureStep BuildStep() =>
-        new(_orderPersistenceService, _incidentReporter, _logger);
+        new(_orderPersistenceService, _paymentGateway, _incidentReporter, _logger);
 
     [Fact]
     public async Task CompensateAsync_ShouldCancelOrder_WhenOrderCanTransitionToCancelled()
@@ -254,4 +257,119 @@ public class CancelOrderOnFailureStepTests
                 new(Guid.NewGuid(), 1, 100m, "USD")
             }
         };
+
+    // ---- Authorization cancellation (B2C pre-capture failure) -------------------
+
+    [Fact]
+    public async Task CompensateAsync_ShouldCancelAuthorization_WhenPaymentIntentIdSet_AndPaymentIdEmpty()
+    {
+        var (order, data) = BuildOrderAndData(OrderStatus.Pending);
+        data.PaymentIntentId = "pi_auth_123";
+
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        _orderPersistenceService
+            .UpdateOrderAsync(data.CorrelationId, Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.ArgAt<Func<Order, Task>>(1)(order));
+
+        await BuildStep().CompensateAsync(data, new OrderSagaContext(), CancellationToken.None);
+
+        await _paymentGateway.Received(1).CancelAuthorizationAsync(
+            "pi_auth_123", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompensateAsync_ShouldNotCancelAuthorization_WhenPaymentIntentIdEmpty()
+    {
+        var (order, data) = BuildOrderAndData(OrderStatus.Pending);
+        data.PaymentIntentId = null; // BNPL / COD path
+
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        _orderPersistenceService
+            .UpdateOrderAsync(data.CorrelationId, Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.ArgAt<Func<Order, Task>>(1)(order));
+
+        await BuildStep().CompensateAsync(data, new OrderSagaContext(), CancellationToken.None);
+
+        await _paymentGateway.DidNotReceive().CancelAuthorizationAsync(
+            Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompensateAsync_ShouldNotCancelAuthorization_WhenCaptureAlreadyHappened()
+    {
+        // capture already happened → PaymentId is set in context
+        var (order, data) = BuildOrderAndData(OrderStatus.Pending);
+        data.PaymentIntentId = "pi_auth_456";
+        var context = new OrderSagaContext { PaymentId = "PAY-CAPTURED-1" };
+
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        _orderPersistenceService
+            .UpdateOrderAsync(data.CorrelationId, Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.ArgAt<Func<Order, Task>>(1)(order));
+
+        await BuildStep().CompensateAsync(data, context, CancellationToken.None);
+
+        await _paymentGateway.DidNotReceive().CancelAuthorizationAsync(
+            Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompensateAsync_ShouldRaiseIncident_AndNotThrow_WhenCancelAuthorizationFails()
+    {
+        var (order, data) = BuildOrderAndData(OrderStatus.Pending);
+        data.PaymentIntentId = "pi_auth_fail";
+
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        _orderPersistenceService
+            .UpdateOrderAsync(data.CorrelationId, Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.ArgAt<Func<Order, Task>>(1)(order));
+
+        _paymentGateway
+            .CancelAuthorizationAsync("pi_auth_fail", Arg.Any<CancellationToken>())
+            .Throws(new Application.Gateways.Exceptions.GatewayUnavailableException(
+                Application.Gateways.Exceptions.GatewayUnavailableReason.ServiceUnavailable, "stripe down"));
+
+        var exception = await Record.ExceptionAsync(() =>
+            BuildStep().CompensateAsync(data, new OrderSagaContext(), CancellationToken.None));
+
+        Assert.Null(exception);
+
+        await _incidentReporter.Received(1).CreateInterventionTicketAsync(
+            Arg.Is<InterventionTicket>(t => t.OrderId == data.CorrelationId),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CompensateAsync_ShouldCancelOrder_AndCancelAuthorization_WhenBothNeeded()
+    {
+        var (order, data) = BuildOrderAndData(OrderStatus.Pending);
+        data.PaymentIntentId = "pi_auth_combo";
+
+        _orderPersistenceService
+            .LoadOrderAsync(data.CorrelationId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        _orderPersistenceService
+            .UpdateOrderAsync(data.CorrelationId, Arg.Any<Func<Order, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.ArgAt<Func<Order, Task>>(1)(order));
+
+        await BuildStep().CompensateAsync(data, new OrderSagaContext(), CancellationToken.None);
+
+        Assert.Equal(OrderStatus.Cancelled, order.Status);
+
+        await _paymentGateway.Received(1).CancelAuthorizationAsync(
+            "pi_auth_combo", Arg.Any<CancellationToken>());
+    }
 }

@@ -1,12 +1,16 @@
 # Payment Service
 
 use-cases:
-- process payment request with strong idempotency
+- process/capture payment request with strong idempotency
 - handle async provider updates from webhook events
 - reconcile stale pending payments/refunds when webhook is delayed or missed
 - process refunds (also with idempotency)
 - expose read/query use-cases for payment status lookup
 - queue manual callbacks if needed for operation recovery
+
+- process payment used for b2b orders, subscriptions and internal stuff
+- capture payment used for actully "pay" already initialzated payment by frontend in case of b2c orders
+- cancel reservation - for b2c if order creation fails after frontend reserve money for order
 
 essentially it's used by order service:
 - order saga calls payment

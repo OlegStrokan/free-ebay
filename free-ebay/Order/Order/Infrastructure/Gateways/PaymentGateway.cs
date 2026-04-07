@@ -258,6 +258,134 @@ public sealed class PaymentGateway(
         };
     }
 
+    public async Task<PaymentProcessingResult> CaptureAsync(
+        Guid orderId,
+        Guid customerId,
+        string providerPaymentIntentId,
+        decimal amount,
+        string currency,
+        CancellationToken cancellationToken)
+    {
+        var normalizedCurrency = NormalizeCurrency(currency);
+        var idempotencyKey = BuildIdempotencyKey(
+            "grpc-capture",
+            $"{orderId}|{providerPaymentIntentId}|{amount:F4}|{normalizedCurrency}");
+
+        var request = new CapturePaymentRequest
+        {
+            OrderId = orderId.ToString(),
+            CustomerId = customerId.ToString(),
+            ProviderPaymentIntentId = providerPaymentIntentId,
+            Amount = amount.ToDecimalValue(),
+            Currency = normalizedCurrency,
+            IdempotencyKey = idempotencyKey,
+        };
+
+        try
+        {
+            var response = await client.CapturePaymentAsync(request, cancellationToken: cancellationToken);
+
+            var errorCode = string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode;
+            var errorMessage = string.IsNullOrWhiteSpace(response.ErrorMessage) ? null : response.ErrorMessage;
+            var providerIntentId = string.IsNullOrWhiteSpace(response.ProviderPaymentIntentId)
+                ? null
+                : response.ProviderPaymentIntentId;
+
+            var status = (int)response.Status == 1
+                ? PaymentProcessingStatus.Succeeded
+                : PaymentProcessingStatus.Failed;
+
+            if (status == PaymentProcessingStatus.Failed)
+            {
+                throw errorCode switch
+                {
+                    "PAYMENT_DECLINED" => new PaymentDeclinedException(
+                        $"Capture declined. OrderId={orderId}, Reason={errorMessage}"),
+                    _ => new InvalidOperationException(
+                        $"Capture failed. OrderId={orderId}, Error={errorMessage}")
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(response.PaymentId))
+            {
+                throw new InvalidOperationException(
+                    $"Payment service returned empty PaymentId after capture. OrderId={orderId}");
+            }
+
+            logger.LogInformation(
+                "Capture completed. OrderId={OrderId}, PaymentId={PaymentId}, Amount={Amount} {Currency}",
+                orderId,
+                response.PaymentId,
+                amount,
+                normalizedCurrency);
+
+            return new PaymentProcessingResult(
+                PaymentId: response.PaymentId,
+                Status: status,
+                ProviderPaymentIntentId: providerIntentId,
+                ErrorCode: errorCode,
+                ErrorMessage: errorMessage);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.InvalidArgument)
+        {
+            throw new PaymentDeclinedException(
+                $"Invalid capture data for OrderId={orderId}. Detail={ex.Status.Detail}");
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.DeadlineExceeded)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.Timeout,
+                $"Capture deadline exceeded for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.ServiceUnavailable,
+                $"Payment service unavailable during capture for OrderId={orderId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+    }
+
+    public async Task CancelAuthorizationAsync(
+        string providerPaymentIntentId,
+        CancellationToken cancellationToken)
+    {
+        var request = new CancelAuthorizationRequest
+        {
+            ProviderPaymentIntentId = providerPaymentIntentId,
+        };
+
+        try
+        {
+            var response = await client.CancelAuthorizationAsync(request, cancellationToken: cancellationToken);
+
+            if (!response.Success)
+            {
+                throw new InvalidOperationException(
+                    $"CancelAuthorization failed. ProviderPaymentIntentId={providerPaymentIntentId}, Error={response.ErrorMessage}");
+            }
+
+            logger.LogInformation(
+                "Authorization cancelled. ProviderPaymentIntentId={ProviderPaymentIntentId}",
+                providerPaymentIntentId);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.DeadlineExceeded)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.Timeout,
+                $"Cancel authorization deadline exceeded. ProviderPaymentIntentId={providerPaymentIntentId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            throw new GatewayUnavailableException(
+                GatewayUnavailableReason.ServiceUnavailable,
+                $"Payment service unavailable during cancel authorization. ProviderPaymentIntentId={providerPaymentIntentId}. gRPC={ex.StatusCode}: {ex.Status.Detail}",
+                ex);
+        }
+    }
+
     private static string BuildIdempotencyKey(string prefix, string seed)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));

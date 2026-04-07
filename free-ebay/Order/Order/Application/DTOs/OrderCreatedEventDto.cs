@@ -10,5 +10,6 @@ public sealed record OrderCreatedEventDto
     public List<OrderItemDto> Items { get; set; } = new();
     // todo: add enum
     public string? PaymentMethod { get; set; }
+    public string? PaymentIntentId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

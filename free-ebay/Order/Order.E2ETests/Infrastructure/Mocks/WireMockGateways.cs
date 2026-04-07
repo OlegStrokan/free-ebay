@@ -114,6 +114,53 @@ public class FakeGrpcPaymentGateway : IPaymentGateway
         }
     }
 
+    public async Task<PaymentProcessingResult> CaptureAsync(
+        Guid orderId,
+        Guid customerId,
+        string providerPaymentIntentId,
+        decimal amount,
+        string currency,
+        CancellationToken cancellationToken)
+    {
+        var normalizedCurrency = NormalizeCurrency(currency);
+        var idempotencyKey = BuildIdempotencyKey(
+            "grpc-capture",
+            $"{orderId}|{providerPaymentIntentId}|{amount:F4}|{normalizedCurrency}");
+
+        var response = await _client.CapturePaymentAsync(
+            new CapturePaymentRequest
+            {
+                OrderId = orderId.ToString(),
+                CustomerId = customerId.ToString(),
+                ProviderPaymentIntentId = providerPaymentIntentId,
+                Amount = amount.ToDecimalValue(),
+                Currency = normalizedCurrency,
+                IdempotencyKey = idempotencyKey,
+            },
+            cancellationToken: cancellationToken);
+
+        var status = (int)response.Status == 1
+            ? PaymentProcessingStatus.Succeeded
+            : PaymentProcessingStatus.Failed;
+
+        return new PaymentProcessingResult(
+            PaymentId: response.PaymentId,
+            Status: status,
+            ProviderPaymentIntentId: string.IsNullOrWhiteSpace(response.ProviderPaymentIntentId)
+                ? null : response.ProviderPaymentIntentId,
+            ErrorCode: string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode,
+            ErrorMessage: string.IsNullOrWhiteSpace(response.ErrorMessage) ? null : response.ErrorMessage);
+    }
+
+    public async Task CancelAuthorizationAsync(
+        string providerPaymentIntentId,
+        CancellationToken cancellationToken)
+    {
+        await _client.CancelAuthorizationAsync(
+            new CancelAuthorizationRequest { ProviderPaymentIntentId = providerPaymentIntentId },
+            cancellationToken: cancellationToken);
+    }
+
     private static PaymentProcessingStatus MapPaymentStatus(ProcessPaymentResponse response)
     {
         var rawStatus = (int)response.Status;
