@@ -31,7 +31,7 @@ _PRODUCT_PAYLOAD = {
     "category": "keyboards",
     "price": 80.0,
     "currency": "USD",
-    "stock_quality": 5,
+    "stock_quantity": 5,
     "image_urls": [],
     "attributes": [],
 }

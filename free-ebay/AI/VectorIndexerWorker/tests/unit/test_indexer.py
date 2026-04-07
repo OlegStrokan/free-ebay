@@ -14,7 +14,7 @@ def _event(**kwargs) -> ProductEvent:
         category="keyboards",
         price=80.0,
         currency="USD",
-        stock_quality=5,
+        stock_quantity=5,
         image_urls=["http://img.com/kb.jpg"],
         attributes=[],
     )
@@ -88,14 +88,14 @@ async def test_upsert_takes_first_vector_from_batch(indexer: Indexer) -> None:
 
 
 async def test_upsert_sets_status_active_when_stock_positive(indexer: Indexer) -> None:
-    await indexer.upsert(_event(stock_quality=3).model_dump())
+    await indexer.upsert(_event(stock_quantity=3).model_dump())
 
     _product_id, _vector, payload = indexer.qdrant.upsert.call_args.args
     assert payload["status"] == "active"
 
 
 async def test_upsert_sets_status_out_of_stock_when_stock_zero(indexer: Indexer) -> None:
-    await indexer.upsert(_event(stock_quality=0).model_dump())
+    await indexer.upsert(_event(stock_quantity=0).model_dump())
 
     _product_id, _vector, payload = indexer.qdrant.upsert.call_args.args
     assert payload["status"] == "out_of_stock"

@@ -12,6 +12,6 @@ class ProductEvent(BaseModel):
     category: str | None = None
     price: float = 0.0
     currency: str = "USD"
-    stock_quality: int = 0
+    stock_quantity: int = 0
     image_urls: list[str] = []
     attributes: list[ProductAttribute] = []

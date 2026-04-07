@@ -35,8 +35,8 @@ class Indexer:
             "color": next((a.value for a in event.attributes if a.key == "color"), None),
             "layout": next((a.value for a in event.attributes if a.key == "layout"), None),
             "brand": next((a.value for a in event.attributes if a .key == "brand"), None),
-            "stocks": event.stock_quality,
-            "status": "active" if event.stock_quality > 0 else "out_of_stock",
+            "stock_quantity": event.stock_quantity,
+            "status": "active" if event.stock_quantity > 0 else "out_of_stock",
             "image_urls": event.image_urls,
         }
 
