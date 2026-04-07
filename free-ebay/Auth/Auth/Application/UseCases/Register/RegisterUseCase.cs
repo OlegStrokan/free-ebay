@@ -1,3 +1,4 @@
+using Application.Common.Interfaces;
 using Domain.Common.Interfaces;
 using Domain.Entities;
 using Domain.Gateways;
@@ -8,13 +9,14 @@ namespace Application.UseCases.Register;
 public class RegisterUseCase(
     IEmailVerificationTokenRepository verificationTokenRepository, 
     IIdGenerator idGenerator,
-    IUserGateway userGateway
+    IUserGateway userGateway,
+    IPasswordHasher passwordHasher
     ) : IRegisterUseCase
 {
 
     public async Task<RegisterResponse> ExecuteAsync(RegisterCommand command)
     {
-        var hashedPassword = command.Password;
+        var hashedPassword = passwordHasher.HashPassword(command.Password);
 
  
         var userId = await userGateway.CreateUserAsync(

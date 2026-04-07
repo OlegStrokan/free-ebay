@@ -55,7 +55,7 @@ public class RefreshTokenUseCase
             Id = idGenerator.GenerateId(),
             UserId = user.Id,
             Token = newRefreshTokenValue,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
             IsRevoked = false
         };

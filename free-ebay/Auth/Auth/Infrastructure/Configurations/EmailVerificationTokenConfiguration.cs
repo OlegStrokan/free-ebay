@@ -22,8 +22,8 @@ public class EmailVerificationTokenConfiguration : IEntityTypeConfiguration<Emai
         
         // indexes
         builder.HasIndex(x => x.Token).IsUnique();
-        builder.HasIndex(x => x.ExpiresAt).IsUnique();
-        builder.HasIndex(x => x.UserId).IsUnique();
+        builder.HasIndex(x => x.ExpiresAt);
+        builder.HasIndex(x => x.UserId);
 
     }
 }

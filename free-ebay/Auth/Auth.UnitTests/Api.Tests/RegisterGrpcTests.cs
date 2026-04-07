@@ -2,6 +2,7 @@
 using Api.GrpcServices;
 using Api.Tests.TestHelpers;
 using Application.UseCases.Register;
+using Domain.Common;
 using Grpc.Core;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -49,11 +50,11 @@ public class RegisterGrpcTests
     }
 
     [Fact]
-    public async Task ShouldThrowWhenInvalidOperationExceptionOccurs()
+    public async Task ShouldThrowWhenDomainExceptionOccurs()
     {
         var useCase = Substitute.For<IRegisterUseCase>();
 
-        useCase.ExecuteAsync(Arg.Any<RegisterCommand>()).Throws(new InvalidOperationException("Email already exists"));
+        useCase.ExecuteAsync(Arg.Any<RegisterCommand>()).Throws(new DomainException("Email already exists"));
         
         var service = AuthGrpcServiceTestFactory.Create(registerUseCase: useCase);
 

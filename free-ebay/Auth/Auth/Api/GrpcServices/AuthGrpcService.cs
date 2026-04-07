@@ -6,6 +6,7 @@ using Application.UseCases.ResetPassword;
 using Application.UseCases.RevokeToken;
 using Application.UseCases.ValidateToken;
 using Application.UseCases.VerifyEmail;
+using Domain.Common;
 using Grpc.Core;
 using Protos.Auth;
 using LoginResponseProto = Protos.Auth.LoginResponse;
@@ -47,7 +48,7 @@ public class AuthGrpcService(
                 Message = response.Message,
             };
         }
-        catch (InvalidOperationException ex)
+        catch (DomainException ex)
         {
             logger.LogWarning(ex, "Registration failed: {Message}", ex.Message);
             throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));

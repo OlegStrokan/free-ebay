@@ -91,7 +91,7 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = false,
+                ValidateIssuer = true,
                 ValidIssuer = _issuer,
                 ValidateAudience = true,
                 ValidAudience = _audience,

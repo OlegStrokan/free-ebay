@@ -11,7 +11,7 @@ public class LoginUseCase
         IRefreshTokenRepository refreshTokenRepository,
         IIdGenerator idGenerator,
         IUserGateway userGateway,
-        IJwtTokenGenerator jtwTokenGenerator
+        IJwtTokenGenerator jwtTokenGenerator
 ) : ILoginUseCase
 {
     
@@ -36,9 +36,9 @@ public class LoginUseCase
         }
 
 
-        var accessToken = jtwTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var accessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
 
-        var refreshTokenValue = jtwTokenGenerator.GenerateRefreshToken();
+        var refreshTokenValue = jwtTokenGenerator.GenerateRefreshToken();
 
         var refreshToken = new RefreshTokenEntity
         {
