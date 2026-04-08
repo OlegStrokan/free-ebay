@@ -72,6 +72,9 @@ async def run_search_pipeline(
             name="",
             category="",
             price=0.0,
+            # TODO: enrich name/category/price/image_urls by calling the Product service
+            # with the ranked product_id list. Currently AI search returns IDs for ranking
+            # only; the Search service (gRPC caller) is responsible for enrichment.
             currency="USD",
             relevance_score=r.score,
             image_urls=[],

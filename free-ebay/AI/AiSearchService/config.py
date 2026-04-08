@@ -17,19 +17,11 @@ class Settings(BaseSettings):
     es_url: str = "http://localhost:9200"
     es_index: str = "products"
 
-    gprc_port: int = 50051
+    grpc_port: int = 50051
     http_port: int = 8003
 
     llm_timeout_seconds: float = 1.5
     top_k: int = 50
-    rrf_K: int = 60
-
-    @property
-    def grpc_port(self) -> int:
-        return self.gprc_port
-
-    @property
-    def rrf_k(self) -> int:
-        return self.rrf_K
+    rrf_k: int = 60
 
 settings = Settings()

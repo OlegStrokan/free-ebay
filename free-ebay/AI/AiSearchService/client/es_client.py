@@ -12,7 +12,7 @@ class ElasticsearchClient:
                 "must": [
                     {
                         "multi_match": {
-                            "query": "".join(parsed.keywords),
+                            "query": " ".join(parsed.keywords),
                             "fields": ["name^3", "description", "category^2"],
                             "type": "best_fields",
                         }
@@ -30,7 +30,7 @@ class ElasticsearchClient:
 
         result = await self._es.search(index=self._index, query=query, size=top_k)
         return [
-            ScoredResult(product_id=h["_source"]["id"], score=h["_score"])
+            ScoredResult(product_id=h["_source"]["productId"], score=h["_score"])
             for h in result["hits"]["hits"]
         ]
 

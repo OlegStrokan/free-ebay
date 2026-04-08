@@ -8,6 +8,12 @@ from qdrant_client.models import (
 )
 from models import Filters, ScoredResult
 
+# Domain rule: maps excluded attribute names to (field_key, excluded_values).
+# Extend this map when new product attributes need to be filterable.
+_ATTRIBUTE_EXCLUSION_MAP: dict[str, tuple[str, list[str]]] = {
+    "numpad": ("layout", ["fullsize"]),  # "no numpad" → exclude fullsize layout keyboards
+}
+
 class QdrantSearchClient:
     def __init__(self, url: str, collection: str) -> None:
         self._client = AsyncQdrantClient(url=url)
@@ -39,9 +45,10 @@ class QdrantSearchClient:
             )
 
         for excluded in filters.attributes_excluded:
-            if excluded == "numpad":
+            if excluded in _ATTRIBUTE_EXCLUSION_MAP:
+                field_key, excluded_values = _ATTRIBUTE_EXCLUSION_MAP[excluded]
                 must_conditions.append(
-                    FieldCondition(key="layout", match=MatchExcept(except_=["fullsize"]))
+                    FieldCondition(key=field_key, match=MatchExcept(except_=excluded_values))
                 )
 
         results = await self._client.search(
