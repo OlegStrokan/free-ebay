@@ -1,4 +1,10 @@
 using Api.Mappers;
+using Application.Commands.ActivateProduct;
+using Application.Commands.CreateProduct;
+using Application.Commands.DeactivateProduct;
+using Application.Commands.DeleteProduct;
+using Application.Commands.UpdateProduct;
+using Application.Commands.UpdateProductStock;
 using Application.DTOs;
 using Application.Queries.GetProduct;
 using Application.Queries.GetProductPrices;
@@ -17,7 +23,13 @@ public class ProductGrpcService(
     ILogger<ProductGrpcService> logger,
     IValidator<GetProductPricesRequest> getPricesValidator,
     IValidator<GetProductsRequest> getProductsValidator,
-    IValidator<GetProductRequest> getProductValidator)
+    IValidator<GetProductRequest> getProductValidator,
+    IValidator<CreateProductRequest> createValidator,
+    IValidator<UpdateProductRequest> updateValidator,
+    IValidator<DeleteProductRequest> deleteValidator,
+    IValidator<ActivateProductRequest> activateValidator,
+    IValidator<DeactivateProductRequest> deactivateValidator,
+    IValidator<UpdateProductStockRequest> updateStockValidator)
     : ProductService.ProductServiceBase
 {
     public override async Task<GetProductPricesResponse> GetProductPrices(
@@ -109,6 +121,185 @@ public class ProductGrpcService(
         catch (Exception ex) when (ex is not RpcException)
         {
             HandleException(ex, nameof(GetProduct));
+            throw;
+        }
+    }
+
+    public override async Task<CreateProductResponse> CreateProduct(
+        CreateProductRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var validation = await createValidator.ValidateAsync(request, context.CancellationToken);
+            if (!validation.IsValid)
+                throw new RpcException(new Status(StatusCode.InvalidArgument,
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+
+            var command = new CreateProductCommand(
+                SellerId: Guid.Parse(request.SellerId),
+                Name: request.Name,
+                Description: request.Description,
+                CategoryId: Guid.Parse(request.CategoryId),
+                Price: request.Price.ToDecimal(),
+                Currency: request.Currency,
+                InitialStock: request.InitialStock,
+                Attributes: request.Attributes.Select(a => new ProductAttributeDto(a.Key, a.Value)).ToList(),
+                ImageUrls: request.ImageUrls.ToList());
+
+            var result = await mediator.Send(command, context.CancellationToken);
+
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
+
+            return new CreateProductResponse { ProductId = result.Value!.ToString() };
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            HandleException(ex, nameof(CreateProduct));
+            throw;
+        }
+    }
+
+    public override async Task<UpdateProductResponse> UpdateProduct(
+        UpdateProductRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var validation = await updateValidator.ValidateAsync(request, context.CancellationToken);
+            if (!validation.IsValid)
+                throw new RpcException(new Status(StatusCode.InvalidArgument,
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+
+            var command = new UpdateProductCommand(
+                ProductId: Guid.Parse(request.ProductId),
+                Name: request.Name,
+                Description: request.Description,
+                CategoryId: Guid.Parse(request.CategoryId),
+                Price: request.Price.ToDecimal(),
+                Currency: request.Currency,
+                Attributes: request.Attributes.Select(a => new ProductAttributeDto(a.Key, a.Value)).ToList(),
+                ImageUrls: request.ImageUrls.ToList());
+
+            var result = await mediator.Send(command, context.CancellationToken);
+
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
+
+            return new UpdateProductResponse();
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            HandleException(ex, nameof(UpdateProduct));
+            throw;
+        }
+    }
+
+    public override async Task<DeleteProductResponse> DeleteProduct(
+        DeleteProductRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var validation = await deleteValidator.ValidateAsync(request, context.CancellationToken);
+            if (!validation.IsValid)
+                throw new RpcException(new Status(StatusCode.InvalidArgument,
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+
+            var result = await mediator.Send(
+                new DeleteProductCommand(Guid.Parse(request.ProductId)),
+                context.CancellationToken);
+
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
+
+            return new DeleteProductResponse();
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            HandleException(ex, nameof(DeleteProduct));
+            throw;
+        }
+    }
+
+    public override async Task<ActivateProductResponse> ActivateProduct(
+        ActivateProductRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var validation = await activateValidator.ValidateAsync(request, context.CancellationToken);
+            if (!validation.IsValid)
+                throw new RpcException(new Status(StatusCode.InvalidArgument,
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+
+            var result = await mediator.Send(
+                new ActivateProductCommand(Guid.Parse(request.ProductId)),
+                context.CancellationToken);
+
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
+
+            return new ActivateProductResponse();
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            HandleException(ex, nameof(ActivateProduct));
+            throw;
+        }
+    }
+
+    public override async Task<DeactivateProductResponse> DeactivateProduct(
+        DeactivateProductRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var validation = await deactivateValidator.ValidateAsync(request, context.CancellationToken);
+            if (!validation.IsValid)
+                throw new RpcException(new Status(StatusCode.InvalidArgument,
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+
+            var result = await mediator.Send(
+                new DeactivateProductCommand(Guid.Parse(request.ProductId)),
+                context.CancellationToken);
+
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
+
+            return new DeactivateProductResponse();
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            HandleException(ex, nameof(DeactivateProduct));
+            throw;
+        }
+    }
+
+    public override async Task<UpdateProductStockResponse> UpdateProductStock(
+        UpdateProductStockRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var validation = await updateStockValidator.ValidateAsync(request, context.CancellationToken);
+            if (!validation.IsValid)
+                throw new RpcException(new Status(StatusCode.InvalidArgument,
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+
+            var result = await mediator.Send(
+                new UpdateProductStockCommand(Guid.Parse(request.ProductId), request.NewQuantity),
+                context.CancellationToken);
+
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
+
+            return new UpdateProductStockResponse();
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            HandleException(ex, nameof(UpdateProductStock));
             throw;
         }
     }
