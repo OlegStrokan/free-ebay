@@ -61,12 +61,40 @@ public sealed class OutboxRepositoryTests : IClassFixture<IntegrationFixture>
         db.OutboxMessages.AddRange(unprocessed, processed);
         await db.SaveChangesAsync();
 
-        var results = await repo.GetUnprocessedMessagesAsync(100);
+        var results = await repo.GetUnprocessedMessagesAsync(100, maxRetries: 5);
 
         results.Should().Contain(m => m.Id == unprocessedId,
             "unprocessed messages must be returned");
         results.Should().NotContain(m => m.Id == processedId,
             "already-processed messages must be excluded");
+    }
+
+    [Fact]
+    public async Task GetUnprocessedMessagesAsync_ShouldExcludeMessagesAtOrAboveMaxRetries()
+    {
+        await using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
+        var db   = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
+
+        var okId       = Guid.NewGuid();
+        var exhaustedId = Guid.NewGuid();
+
+        var okMsg = new OutboxMessage(okId, "EventOk", "{}", DateTime.UtcNow, okId.ToString());
+        var exhaustedMsg = new OutboxMessage(exhaustedId, "EventExhausted", "{}", DateTime.UtcNow, exhaustedId.ToString());
+
+        db.OutboxMessages.AddRange(okMsg, exhaustedMsg);
+        await db.SaveChangesAsync();
+
+        // Simulate 5 retries on the exhausted message
+        await db.OutboxMessages
+            .Where(m => m.Id == exhaustedId)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.RetryCount, 5));
+
+        // maxRetries = 5, so messages with RetryCount >= 5 are excluded
+        var results = await repo.GetUnprocessedMessagesAsync(100, maxRetries: 5);
+
+        results.Should().Contain(m => m.Id == okId, "non-exhausted messages must be returned");
+        results.Should().NotContain(m => m.Id == exhaustedId, "exhausted messages must be excluded from processing");
     }
 
     [Fact]

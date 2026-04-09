@@ -121,39 +121,39 @@ public class MoneyTests
     }
 
     [Test]
-    public void IsGreaterThen_WhenAmountIsLarger_ShouldReturnTrue()
+    public void IsGreaterThan_WhenAmountIsLarger_ShouldReturnTrue()
     {
         var bigger = Money.Create(200, "USD");
         var smaller = Money.Create(100, "USD");
 
-        Assert.That(bigger.IsGreaterThen(smaller), Is.True);
+        Assert.That(bigger.IsGreaterThan(smaller), Is.True);
     }
 
     [Test]
-    public void IsGreaterThen_WhenAmountIsSmaller_ShouldReturnFalse()
+    public void IsGreaterThan_WhenAmountIsSmaller_ShouldReturnFalse()
     {
         var smaller = Money.Create(50, "USD");
         var bigger = Money.Create(100, "USD");
 
-        Assert.That(smaller.IsGreaterThen(bigger), Is.False);
+        Assert.That(smaller.IsGreaterThan(bigger), Is.False);
     }
 
     [Test]
-    public void IsLessThen_WhenAmountIsSmaller_ShouldReturnTrue()
+    public void IsLessThan_WhenAmountIsSmaller_ShouldReturnTrue()
     {
         var smaller = Money.Create(50, "USD");
         var bigger = Money.Create(100, "USD");
 
-        Assert.That(smaller.IsLessThen(bigger), Is.True);
+        Assert.That(smaller.IsLessThan(bigger), Is.True);
     }
 
     [Test]
-    public void IsLessThen_WhenAmountIsLarger_ShouldReturnFalse()
+    public void IsLessThan_WhenAmountIsLarger_ShouldReturnFalse()
     {
         var bigger = Money.Create(200, "USD");
         var smaller = Money.Create(100, "USD");
 
-        Assert.That(bigger.IsLessThen(smaller), Is.False);
+        Assert.That(bigger.IsLessThan(smaller), Is.False);
     }
 
     #endregion

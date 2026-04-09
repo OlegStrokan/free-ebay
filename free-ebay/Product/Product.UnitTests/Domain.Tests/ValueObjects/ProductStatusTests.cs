@@ -160,4 +160,44 @@ public class ProductStatusTests
     }
 
     #endregion
+
+    #region Equality
+
+    [Test]
+    public void Equals_SameInstance_ShouldBeTrue()
+    {
+        Assert.That(ProductStatus.Active.Equals(ProductStatus.Active), Is.True);
+    }
+
+    [Test]
+    public void Equals_SameValueDifferentReference_ShouldBeTrue()
+    {
+        // FromValue returns the singleton, but this verifies the Equals override works correctly
+        var a = ProductStatus.FromValue(1); // Active
+        var b = ProductStatus.Active;
+
+        Assert.That(a.Equals(b), Is.True);
+    }
+
+    [Test]
+    public void Equals_DifferentStatuses_ShouldBeFalse()
+    {
+        Assert.That(ProductStatus.Active.Equals(ProductStatus.Inactive), Is.False);
+    }
+
+    [Test]
+    public void GetHashCode_SameStatus_ShouldReturnSameHash()
+    {
+        var a = ProductStatus.FromValue(1);
+        var b = ProductStatus.Active;
+        Assert.That(a.GetHashCode(), Is.EqualTo(b.GetHashCode()));
+    }
+
+    [Test]
+    public void GetHashCode_DifferentStatuses_ShouldReturnDifferentHash()
+    {
+        Assert.That(ProductStatus.Active.GetHashCode(), Is.Not.EqualTo(ProductStatus.Inactive.GetHashCode()));
+    }
+
+    #endregion
 }

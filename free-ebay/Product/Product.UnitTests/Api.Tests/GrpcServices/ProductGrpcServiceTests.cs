@@ -25,6 +25,12 @@ public class ProductGrpcServiceTests
     private IValidator<GetProductPricesRequest> _getPricesValidator = null!;
     private IValidator<GetProductsRequest> _getProductsValidator = null!;
     private IValidator<GetProductRequest> _getProductValidator = null!;
+    private IValidator<CreateProductRequest> _createValidator = null!;
+    private IValidator<UpdateProductRequest> _updateValidator = null!;
+    private IValidator<DeleteProductRequest> _deleteValidator = null!;
+    private IValidator<ActivateProductRequest> _activateValidator = null!;
+    private IValidator<DeactivateProductRequest> _deactivateValidator = null!;
+    private IValidator<UpdateProductStockRequest> _updateStockValidator = null!;
     private ServerCallContext _callContext = null!;
 
     [SetUp]
@@ -35,11 +41,19 @@ public class ProductGrpcServiceTests
         _getPricesValidator = Substitute.For<IValidator<GetProductPricesRequest>>();
         _getProductsValidator = Substitute.For<IValidator<GetProductsRequest>>();
         _getProductValidator = Substitute.For<IValidator<GetProductRequest>>();
+        _createValidator = Substitute.For<IValidator<CreateProductRequest>>();
+        _updateValidator = Substitute.For<IValidator<UpdateProductRequest>>();
+        _deleteValidator = Substitute.For<IValidator<DeleteProductRequest>>();
+        _activateValidator = Substitute.For<IValidator<ActivateProductRequest>>();
+        _deactivateValidator = Substitute.For<IValidator<DeactivateProductRequest>>();
+        _updateStockValidator = Substitute.For<IValidator<UpdateProductStockRequest>>();
         _callContext = Substitute.For<ServerCallContext>();
     }
 
     private ProductGrpcService BuildService() =>
-        new(_mediator, _logger, _getPricesValidator, _getProductsValidator, _getProductValidator);
+        new(_mediator, _logger, _getPricesValidator, _getProductsValidator, _getProductValidator,
+            _createValidator, _updateValidator, _deleteValidator, _activateValidator,
+            _deactivateValidator, _updateStockValidator);
     
     [Test]
     public async Task GetProductPrices_ShouldReturnPrices_WhenQuerySucceeds()

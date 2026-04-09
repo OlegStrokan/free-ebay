@@ -58,7 +58,7 @@ public class OutboxProcessorTests
     public async Task ExecuteAsync_WhenBatchIsEmpty_ShouldNotPublishAnything()
     {
         _outboxRepository
-            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage>());
 
         using var cts = new CancellationTokenSource();
@@ -78,7 +78,7 @@ public class OutboxProcessorTests
         var message = MakeMessage("ProductCreatedEvent");
 
         _outboxRepository
-            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         var signal = new TaskCompletionSource<bool>();
@@ -107,7 +107,7 @@ public class OutboxProcessorTests
         var message = MakeMessage("ProductCreatedEvent");
 
         _outboxRepository
-            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         _eventPublisher
@@ -139,7 +139,7 @@ public class OutboxProcessorTests
         var message = MakeMessage("ProductCreatedEvent");
 
         _outboxRepository
-            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         _eventPublisher
@@ -164,57 +164,26 @@ public class OutboxProcessorTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WhenMaxRetriesExceeded_ShouldMarkAsProcessedWithoutPublishing()
+    public async Task ExecuteAsync_WhenRepositoryReturnsNoMessages_DueToMaxRetries_ShouldNotPublishOrMarkProcessed()
     {
-        // RetryCount == _maxRetries (5) → skip publish, mark as processed
-        var message = MakeMessage("ProductCreatedEvent", retryCount: 5);
-
+        // Exhausted messages are filtered out by the repository (RetryCount < maxRetries).
+        // This test verifies the processor handles an empty batch gracefully when
+        // all pending messages are exhausted.
         _outboxRepository
-            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new List<OutboxMessage> { message });
-
-        var signal = new TaskCompletionSource<bool>();
-        _outboxRepository
-            .When(x => x.MarkAsProcessedAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()))
-            .Do(_ => signal.TrySetResult(true));
+            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<OutboxMessage>());
 
         using var cts = new CancellationTokenSource();
         var worker = CreateProcessor();
 
         await worker.StartAsync(cts.Token);
-        var completed = await Task.WhenAny(signal.Task, Task.Delay(3000));
+        await Task.Delay(200);
         await cts.CancelAsync();
-
-        Assert.That(completed, Is.EqualTo(signal.Task), "MarkAsProcessedAsync was not called for exhausted message");
 
         await _eventPublisher.DidNotReceiveWithAnyArgs()
             .PublishRawAsync(default, default!, default!, default, default!, default);
-        await _outboxRepository.Received().MarkAsProcessedAsync(message.Id, Arg.Any<CancellationToken>());
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WhenMaxRetriesExceeded_ShouldNotCallIncrementRetry()
-    {
-        var message = MakeMessage("ProductCreatedEvent", retryCount: 5);
-
-        _outboxRepository
-            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new List<OutboxMessage> { message });
-
-        var signal = new TaskCompletionSource<bool>();
-        _outboxRepository
-            .When(x => x.MarkAsProcessedAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()))
-            .Do(_ => signal.TrySetResult(true));
-
-        using var cts = new CancellationTokenSource();
-        var worker = CreateProcessor();
-
-        await worker.StartAsync(cts.Token);
-        await Task.WhenAny(signal.Task, Task.Delay(3000));
-        await cts.CancelAsync();
-
         await _outboxRepository.DidNotReceive()
-            .IncrementRetryCountAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+            .MarkAsProcessedAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -230,7 +199,7 @@ public class OutboxProcessorTests
             occurredOn: DateTime.UtcNow.AddMinutes(-1));
 
         _outboxRepository
-            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { msg2, msg1 }); // reversed to validate ordering
 
         var processedCount = 0;

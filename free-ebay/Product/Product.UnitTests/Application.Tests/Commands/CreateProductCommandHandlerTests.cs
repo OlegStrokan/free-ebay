@@ -55,15 +55,14 @@ public class CreateProductCommandHandlerTests
     }
 
     [Test]
-    public async Task Handle_ShouldReturnFailure_WhenPersistenceThrows()
+    public void Handle_ShouldThrow_WhenPersistenceThrows()
     {
         _persistence
             .CreateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("DB error"));
 
-        var result = await _handler.Handle(ValidCommand(), CancellationToken.None);
-
-        Assert.That(result.IsSuccess, Is.False);
+        // Infrastructure exceptions propagate so the caller can log them with full stack trace.
+        Assert.ThrowsAsync<Exception>(() => _handler.Handle(ValidCommand(), CancellationToken.None));
     }
 
     [Test]
