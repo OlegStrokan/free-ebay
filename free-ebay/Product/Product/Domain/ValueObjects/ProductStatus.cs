@@ -68,5 +68,8 @@ public sealed class ProductStatus
         _ => throw new InvalidValueException($"Unknown ProductStatus name: {name}")
     };
 
+    public override bool Equals(object? obj) => obj is ProductStatus other && Value == other.Value;
+    public override int GetHashCode() => Value.GetHashCode();
+
     public override string ToString() => Name;
 }

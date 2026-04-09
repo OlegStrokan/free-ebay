@@ -23,8 +23,8 @@ public sealed record Money
     public static Money Default(string currency = "USD") => new(0, currency);
     
     public bool IsGreaterThanZero() => Amount > 0;
-    public bool IsGreaterThen(Money other) => Amount > other.Amount;
-    public bool IsLessThen(Money other) => Amount < other.Amount;
+    public bool IsGreaterThan(Money other) => Amount > other.Amount;
+    public bool IsLessThan(Money other) => Amount < other.Amount;
     
     public Money Add(Money other)
     {

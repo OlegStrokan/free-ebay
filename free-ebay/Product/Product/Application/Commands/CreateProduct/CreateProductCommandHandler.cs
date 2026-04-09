@@ -45,9 +45,7 @@ internal sealed class CreateProductCommandHandler : IRequestHandler<CreateProduc
         {
             return Result<Guid>.Failure(ex.Message);
         }
-        catch (Exception ex)
-        {
-            return Result<Guid>.Failure(ex.Message);
-        }
+        // Infrastructure exceptions (DB failures, serialization errors, etc.) propagate
+        // so the caller's exception handler can log them with full stack trace.
     }
 }
