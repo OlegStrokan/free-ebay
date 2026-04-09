@@ -20,69 +20,77 @@ internal sealed class ProductPersistenceService(
 
     public async Task CreateProductAsync(Product product, CancellationToken ct = default)
     {
-        await using var tx = await dbContext.Database
-            .BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        try
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            await productRepository.AddAsync(product, ct);
-
-            foreach (var @event in product.DomainEvents)
+            await using var tx = await dbContext.Database
+                .BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+            try
             {
-                await outboxRepository.AddAsync(
-                    @event.EventId,
-                    @event.GetType().Name,
-                    JsonSerializer.Serialize(@event, @event.GetType()),
-                    @event.OccurredOn,
-                    product.Id.Value.ToString(),
-                    ct);
+                await productRepository.AddAsync(product, ct);
+
+                foreach (var @event in product.DomainEvents)
+                {
+                    await outboxRepository.AddAsync(
+                        @event.EventId,
+                        @event.GetType().Name,
+                        JsonSerializer.Serialize(@event, @event.GetType()),
+                        @event.OccurredOn,
+                        product.Id.Value.ToString(),
+                        ct);
+                }
+
+                product.ClearDomainEvents();
+
+                await dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                logger.LogInformation("Created product {ProductId}", product.Id.Value);
             }
-
-            product.ClearDomainEvents();
-
-            await dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-
-            logger.LogInformation("Created product {ProductId}", product.Id.Value);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Transaction failed while creating product {ProductId}", product.Id.Value);
-            await tx.RollbackAsync(ct);
-            throw;
-        }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Transaction failed while creating product {ProductId}", product.Id.Value);
+                await tx.RollbackAsync(ct);
+                throw;
+            }
+        });
     }
 
     public async Task UpdateProductAsync(Product product, CancellationToken ct = default)
     {
-        await using var tx = await dbContext.Database
-            .BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        try
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            await productRepository.UpdateAsync(product, ct);
-
-            foreach (var @event in product.DomainEvents)
+            await using var tx = await dbContext.Database
+                .BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+            try
             {
-                await outboxRepository.AddAsync(
-                    @event.EventId,
-                    @event.GetType().Name,
-                    JsonSerializer.Serialize(@event, @event.GetType()),
-                    @event.OccurredOn,
-                    product.Id.Value.ToString(),
-                    ct);
+                await productRepository.UpdateAsync(product, ct);
+
+                foreach (var @event in product.DomainEvents)
+                {
+                    await outboxRepository.AddAsync(
+                        @event.EventId,
+                        @event.GetType().Name,
+                        JsonSerializer.Serialize(@event, @event.GetType()),
+                        @event.OccurredOn,
+                        product.Id.Value.ToString(),
+                        ct);
+                }
+
+                product.ClearDomainEvents();
+
+                await dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                logger.LogDebug("Updated product {ProductId}", product.Id.Value);
             }
-
-            product.ClearDomainEvents();
-
-            await dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-
-            logger.LogDebug("Updated product {ProductId}", product.Id.Value);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Transaction failed while updating product {ProductId}", product.Id.Value);
-            await tx.RollbackAsync(ct);
-            throw;
-        }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Transaction failed while updating product {ProductId}", product.Id.Value);
+                await tx.RollbackAsync(ct);
+                throw;
+            }
+        });
     }
 }

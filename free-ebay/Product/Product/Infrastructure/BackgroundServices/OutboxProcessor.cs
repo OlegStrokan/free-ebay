@@ -48,7 +48,7 @@ public sealed class OutboxProcessor(
         using var scope = serviceProvider.CreateScope();
         var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
 
-        var messages = await outboxRepository.GetUnprocessedMessagesAsync(_batchSize, ct);
+        var messages = await outboxRepository.GetUnprocessedMessagesAsync(_batchSize, _maxRetries, ct);
         if (messages.Count == 0)
             return;
 
@@ -74,16 +74,6 @@ public sealed class OutboxProcessor(
 
             foreach (var message in group)
             {
-                if (message.RetryCount >= _maxRetries)
-                {
-                    logger.LogError(
-                        "Message {MessageId} of type {Type} exceeded max retries ({MaxRetries}). Marking as processed to prevent infinite retry.",
-                        message.Id, message.Type, _maxRetries);
-
-                    await groupOutbox.MarkAsProcessedAsync(message.Id, groupCt);
-                    continue;
-                }
-
                 try
                 {
                     await eventPublisher.PublishRawAsync(

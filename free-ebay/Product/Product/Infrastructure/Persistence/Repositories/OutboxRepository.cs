@@ -15,10 +15,10 @@ internal sealed class OutboxRepository(ProductDbContext dbContext) : IOutboxRepo
         // SaveChanges called by ProductPersistenceService inside the transaction
     }
 
-    public async Task<List<OutboxMessage>> GetUnprocessedMessagesAsync(int batchSize, CancellationToken ct = default)
+    public async Task<List<OutboxMessage>> GetUnprocessedMessagesAsync(int batchSize, int maxRetries, CancellationToken ct = default)
     {
         return await dbContext.OutboxMessages
-            .Where(m => m.ProcessedOn == null)
+            .Where(m => m.ProcessedOn == null && m.RetryCount < maxRetries)
             .OrderBy(m => m.OccurredOn)
             .Take(batchSize)
             .ToListAsync(ct);

@@ -12,14 +12,14 @@ public sealed class ProcessedOutboxCleanupService(
         {
             try
             {
-                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
-
                 using var scope = serviceProvider.CreateScope();
                 var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
 
                 await outboxRepository.DeleteProcessedMessagesAsync(stoppingToken);
 
                 logger.LogInformation("Cleaned up processed outbox messages older than 7 days");
+
+                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
             }
             catch (OperationCanceledException)
             {
