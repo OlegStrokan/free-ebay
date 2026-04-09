@@ -4,7 +4,7 @@ using Domain.Exceptions;
 
 namespace Domain.Entities;
 
-// will be send to order service back
+// will be sent to the order service
 public sealed class OutboundOrderCallback : Entity<Guid>
 {
     private OutboundOrderCallback()

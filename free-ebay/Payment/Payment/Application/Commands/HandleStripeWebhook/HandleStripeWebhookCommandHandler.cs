@@ -178,7 +178,7 @@ internal sealed class HandleStripeWebhookCommandHandler(
 
                 if (payment.Status is PaymentStatus.RefundPending or PaymentStatus.RefundFailed)
                 {
-                    payment.MarkRefunded(refund.Id, providerRefundId, now);
+                    payment.MarkRefunded(refund.Id, providerRefundId, refund.Amount, now);
                 }
 
                 await orderCallbackQueueService.QueueRefundSucceededAsync(payment, refund, cancellationToken);

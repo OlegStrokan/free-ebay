@@ -1,8 +1,10 @@
 using Application.Common;
+using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.ValueObjects;
 using Infrastructure.Services;
+using NSubstitute;
 using System.Text.Json;
 
 namespace Infrastructure.Tests.Services;
@@ -38,7 +40,7 @@ public class OrderCallbackPayloadSerializerTests
     [Fact]
     public void SerializePaymentSucceeded_ShouldContainExpectedPayloadFields()
     {
-        var serializer = new OrderCallbackPayloadSerializer();
+        var serializer = new OrderCallbackPayloadSerializer(Substitute.For<IClock>());
         var payment = CreatePayment();
 
         var json = serializer.SerializePaymentSucceeded("evt-1", payment);
@@ -56,7 +58,7 @@ public class OrderCallbackPayloadSerializerTests
     [Fact]
     public void SerializePaymentFailed_ShouldIncludeErrorDetails()
     {
-        var serializer = new OrderCallbackPayloadSerializer();
+        var serializer = new OrderCallbackPayloadSerializer(Substitute.For<IClock>());
         var payment = CreatePayment();
         var reason = FailureReason.Create("DECLINED", "bank decline");
 
@@ -72,7 +74,7 @@ public class OrderCallbackPayloadSerializerTests
     [Fact]
     public void SerializeRefundSucceeded_ShouldContainRefundIdentifiers()
     {
-        var serializer = new OrderCallbackPayloadSerializer();
+        var serializer = new OrderCallbackPayloadSerializer(Substitute.For<IClock>());
         var payment = CreatePayment();
         var refund = CreateRefund(payment);
 
@@ -88,7 +90,7 @@ public class OrderCallbackPayloadSerializerTests
     [Fact]
     public void SerializeRefundFailed_ShouldContainFailureFields()
     {
-        var serializer = new OrderCallbackPayloadSerializer();
+        var serializer = new OrderCallbackPayloadSerializer(Substitute.For<IClock>());
         var payment = CreatePayment();
         var refund = CreateRefund(payment);
         var reason = FailureReason.Create("RF_FAIL", "provider failed");

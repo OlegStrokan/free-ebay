@@ -25,6 +25,8 @@ public sealed class Payment : AggregateRoot<PaymentId>
     
     public ProviderRefundId? ProviderRefundId { get; private set; }
     
+    public decimal TotalRefundedAmount { get; private set; }
+    
     public FailureReason? FailureReason { get; private set; }
     
     public DateTime CreatedAt { get; private set; }
@@ -85,7 +87,7 @@ public sealed class Payment : AggregateRoot<PaymentId>
         var now = createdAt ?? DateTime.UtcNow;
 
         var payment = new Payment(
-            PaymentId.CreateUnique(),
+            id,
             orderId.Trim(),
             customerId.Trim(),
             amount,
@@ -152,9 +154,9 @@ public sealed class Payment : AggregateRoot<PaymentId>
             throw new InvalidValueException("Refund amount must be greater than zero");
         }
 
-        if (amount.Amount > Amount.Amount)
+        if (amount.Amount > Amount.Amount - TotalRefundedAmount)
         {
-            throw new DomainException("Refund amount cannot exceed original payment amount");
+            throw new DomainException("Refund amount cannot exceed remaining refundable amount");
         }
 
         if (!string.Equals(amount.Currency, Amount.Currency, StringComparison.Ordinal))
@@ -177,7 +179,7 @@ public sealed class Payment : AggregateRoot<PaymentId>
         AddDomainEvent(new RefundRequestedEvent(Id, refundId, amount, reason.Trim(), now));
     }
 
-    public void MarkRefunded(RefundId refundId, ProviderRefundId? providerRefundId = null, DateTime? refundedAt = null)
+    public void MarkRefunded(RefundId refundId, ProviderRefundId? providerRefundId = null, Money? amountRefunded = null, DateTime? refundedAt = null)
     {
         PaymentStateMachine.EnsureCanTransition(Status, PaymentStatus.Refunded);
 
@@ -185,6 +187,10 @@ public sealed class Payment : AggregateRoot<PaymentId>
         Status = PaymentStatus.Refunded;
         ProviderRefundId = providerRefundId ?? ProviderRefundId;
         FailureReason = null;
+        if (amountRefunded is not null)
+        {
+            TotalRefundedAmount += amountRefunded.Amount;
+        }
         UpdatedAt = now;
 
         AddDomainEvent(new RefundSucceededEvent(Id, refundId, ProviderRefundId, now));

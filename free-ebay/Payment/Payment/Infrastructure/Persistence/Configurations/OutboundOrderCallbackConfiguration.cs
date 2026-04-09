@@ -27,7 +27,6 @@ internal sealed class OutboundOrderCallbackConfiguration : IEntityTypeConfigurat
 
         builder.HasIndex(x => x.CallbackEventId).IsUnique();
         builder.HasIndex(x => new { x.Status, x.NextRetryAt });
-        builder.HasIndex(x => new { x.Status, x.NextRetryAt });
         builder.HasIndex(x => x.OrderId);
     }
 }

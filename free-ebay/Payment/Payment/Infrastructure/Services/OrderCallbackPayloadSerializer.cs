@@ -1,12 +1,13 @@
 using Application.Common;
 using Application.Gateways;
+using Application.Interfaces;
 using Domain.Entities;
 using Domain.ValueObjects;
 using System.Text.Json;
 
 namespace Infrastructure.Services;
 
-internal sealed class OrderCallbackPayloadSerializer : IOrderCallbackPayloadSerializer
+internal sealed class OrderCallbackPayloadSerializer(IClock clock) : IOrderCallbackPayloadSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -21,7 +22,7 @@ internal sealed class OrderCallbackPayloadSerializer : IOrderCallbackPayloadSeri
             OrderId: payment.OrderId,
             PaymentId: payment.Id.Value,
             ProviderPaymentIntentId: payment.ProviderPaymentIntentId?.Value,
-            OccurredOn: DateTime.UtcNow);
+            OccurredOn: clock.UtcNow);
 
         return JsonSerializer.Serialize(payload, SerializerOptions);
     }
@@ -36,7 +37,7 @@ internal sealed class OrderCallbackPayloadSerializer : IOrderCallbackPayloadSeri
             ProviderPaymentIntentId: payment.ProviderPaymentIntentId?.Value,
             ErrorCode: reason.Code,
             ErrorMessage: reason.Message,
-            OccurredOn: DateTime.UtcNow);
+            OccurredOn: clock.UtcNow);
 
         return JsonSerializer.Serialize(payload, SerializerOptions);
     }
@@ -50,7 +51,7 @@ internal sealed class OrderCallbackPayloadSerializer : IOrderCallbackPayloadSeri
             PaymentId: payment.Id.Value,
             RefundId: refund.Id.Value,
             ProviderRefundId: refund.ProviderRefundId?.Value,
-            OccurredOn: DateTime.UtcNow);
+            OccurredOn: clock.UtcNow);
 
         return JsonSerializer.Serialize(payload, SerializerOptions);
     }
@@ -66,7 +67,7 @@ internal sealed class OrderCallbackPayloadSerializer : IOrderCallbackPayloadSeri
             ProviderRefundId: refund.ProviderRefundId?.Value,
             ErrorCode: reason.Code,
             ErrorMessage: reason.Message,
-            OccurredOn: DateTime.UtcNow);
+            OccurredOn: clock.UtcNow);
 
         return JsonSerializer.Serialize(payload, SerializerOptions);
     }

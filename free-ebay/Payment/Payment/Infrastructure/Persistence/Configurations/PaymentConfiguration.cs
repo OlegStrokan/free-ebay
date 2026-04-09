@@ -67,6 +67,11 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .HasMaxLength(128)
             .HasConversion(ValueObjectConverters.NullableProviderRefundId);
 
+        builder.Property(x => x.TotalRefundedAmount)
+            .HasColumnName("total_refunded_amount")
+            .HasPrecision(18, 2)
+            .IsRequired();
+
         builder.OwnsOne(x => x.FailureReason, failure =>
         {
             failure.Property(x => x.Code)

@@ -1,11 +1,14 @@
 using Application.Commands.EnqueueOrderCallback;
 using Application.Common;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 
 namespace Api.Endpoints;
 
 public static class AdminOrderCallbackEndpoint
 {
+    private const string ApiKeyHeader = "X-Admin-Key";
+
     public static IEndpointRouteBuilder MapAdminOrderCallbackEndpoint(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/api/v1/internal/admin/order-callbacks/enqueue", HandleAsync);
@@ -14,9 +17,23 @@ public static class AdminOrderCallbackEndpoint
 
     public static async Task<IResult> HandleAsync(
         EnqueueOrderCallbackHttpRequest request,
+        HttpContext httpContext,
+        IConfiguration configuration,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
+        var expectedKey = configuration["Admin:ApiKey"];
+        if (string.IsNullOrWhiteSpace(expectedKey))
+        {
+            return Results.StatusCode(503);
+        }
+
+        var providedKey = httpContext.Request.Headers[ApiKeyHeader].FirstOrDefault();
+        if (!string.Equals(providedKey, expectedKey, StringComparison.Ordinal))
+        {
+            return Results.Unauthorized();
+        }
+
         if (!TryParseCallbackType(request.CallbackType, out var callbackType))
         {
             return Results.BadRequest(new
