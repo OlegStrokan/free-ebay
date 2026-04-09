@@ -21,6 +21,10 @@ public interface IPaymentRepository
         int maxCount,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<PaymentId, Payment>> GetByIdsAsync(
+        IReadOnlyCollection<PaymentId> paymentIds,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(Payment payment, CancellationToken cancellationToken = default);
 
     Task UpdateAsync(Payment payment, CancellationToken cancellationToken = default);

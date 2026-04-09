@@ -96,6 +96,20 @@ internal sealed class ReconcilePendingPaymentsCommandHandler(
                         callbacksQueued++;
                         break;
                     }
+
+                    default:
+                        continue;
+                }
+
+                try
+                {
+                    await unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "Failed to save reconciliation result for payment {PaymentId}; skipping",
+                        payment.Id.Value);
                 }
             }
 
@@ -104,19 +118,25 @@ internal sealed class ReconcilePendingPaymentsCommandHandler(
                 request.BatchSize,
                 cancellationToken);
 
+            var refundPaymentIds = pendingRefunds
+                .Select(r => r.PaymentId)
+                .Distinct()
+                .ToList();
+
+            var paymentsById = await paymentRepository.GetByIdsAsync(refundPaymentIds, cancellationToken);
+
             foreach (var refund in pendingRefunds)
             {
                 refundsChecked++;
 
-                  var payment = await paymentRepository.GetByIdAsync(refund.PaymentId, cancellationToken);
-                  if (payment is null)
-                  {
-                      logger.LogWarning(
-                          "Skipping refund reconciliation for refund {RefundId} because payment {PaymentId} was not found",
-                          refund.Id.Value,
-                          refund.PaymentId.Value);
-                      continue;
-                  }
+                if (!paymentsById.TryGetValue(refund.PaymentId, out var payment))
+                {
+                    logger.LogWarning(
+                        "Skipping refund reconciliation for refund {RefundId} because payment {PaymentId} was not found",
+                        refund.Id.Value,
+                        refund.PaymentId.Value);
+                    continue;
+                }
 
                 // probability is near 0%: all pending requests must have providerRefundIdValue
                 // but shit happens, it is near zero runtime cost so why not
@@ -190,9 +210,18 @@ internal sealed class ReconcilePendingPaymentsCommandHandler(
                         break;
                     }
                 }
-            }
 
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+                try
+                {
+                    await unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "Failed to save reconciliation result for refund {RefundId}; skipping",
+                        refund.Id.Value);
+                }
+            }
 
             return Result<ReconciliationResultDto>.Success(new ReconciliationResultDto(
                 PaymentsChecked: paymentsChecked,

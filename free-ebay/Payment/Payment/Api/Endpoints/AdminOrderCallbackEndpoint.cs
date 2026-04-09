@@ -1,4 +1,5 @@
 using Application.Commands.EnqueueOrderCallback;
+using Application.Common;
 using MediatR;
 
 namespace Api.Endpoints;

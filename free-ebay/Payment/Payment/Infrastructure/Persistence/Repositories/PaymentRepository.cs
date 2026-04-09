@@ -48,6 +48,18 @@ internal sealed class PaymentRepository(PaymentDbContext dbContext) : IPaymentRe
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<PaymentId, Payment>> GetByIdsAsync(
+        IReadOnlyCollection<PaymentId> paymentIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (paymentIds.Count == 0)
+            return new Dictionary<PaymentId, Payment>();
+
+        return await dbContext.Payments
+            .Where(x => paymentIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+    }
+
     public async Task AddAsync(Payment payment, CancellationToken cancellationToken = default)
     {
         await dbContext.Payments.AddAsync(payment, cancellationToken);

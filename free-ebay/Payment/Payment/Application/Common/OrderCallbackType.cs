@@ -1,4 +1,4 @@
-namespace Application.Commands.EnqueueOrderCallback;
+namespace Application.Common;
 
 public enum OrderCallbackType
 {
