@@ -1,40 +1,42 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Application.Interfaces;
+using Application.Models;
 using Confluent.Kafka;
-using Domain.Common;
-using Domain.Interfaces;
 using Infrastructure.Messaging;
+using Infrastructure.Persistence.DbContext;
 using Infrastructure.Services;
-using Infrastructure.Services.EventIdempotencyChecker;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.BackgroundServices;
 
-// reflection based code sometimes can smell to much voodoo, but many cqrs framwework do the same
-// kafka has no auto-instrumentation build for opentelemetry so we traced it manually
+// kafka has no auto-instrumentation built for opentelemetry so we trace it manually
 public sealed class KafkaReadModelSynchronizer : BackgroundService
 {
     private static readonly ActivitySource _activitySource = new("OrderService.Kafka");
 
-    private readonly IServiceProvider serviceProvider;
-    private readonly ILogger<KafkaReadModelSynchronizer> logger;
-    private readonly IConsumer<string, string> consumer;
-    private readonly List<string> topics;
-    private readonly IDomainEventTypeRegistry eventTypeRegistry;
-    private readonly IReadModelHandlerRegistry handlerRegistry;
+    private const int MaxImmediateRetries = 3;
+    private static readonly TimeSpan[] RetryDelays =
+    [
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+    ];
+
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<KafkaReadModelSynchronizer> _logger;
+    private readonly IConsumer<string, string> _consumer;
+    private readonly List<string> _topics;
+    private readonly HashSet<TopicPartition> _pausedPartitions = new();
 
     public KafkaReadModelSynchronizer(
         IServiceProvider serviceProvider,
         IOptions<KafkaOptions> kafkaOptions,
-        IDomainEventTypeRegistry eventTypeRegistry,
-        IReadModelHandlerRegistry handlerRegistry,
         ILogger<KafkaReadModelSynchronizer> logger)
     {
-        this.serviceProvider = serviceProvider;
-        this.logger = logger;
-        this.eventTypeRegistry = eventTypeRegistry;
-        this.handlerRegistry = handlerRegistry;
+        _serviceProvider = serviceProvider;
+        _logger = logger;
 
         var opts = kafkaOptions.Value;
 
@@ -48,239 +50,313 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             IsolationLevel = IsolationLevel.ReadCommitted
         };
 
-        consumer = new ConsumerBuilder<string, string>(kafkaConfig)
-            .SetErrorHandler((_e, error) => { logger.LogError("Kafka consumer error: {Error}", error.Reason); })
+        _consumer = new ConsumerBuilder<string, string>(kafkaConfig)
+            .SetErrorHandler((_e, error) => logger.LogError("Kafka consumer error: {Error}", error.Reason))
             .Build();
 
-        topics = new List<string>
-        {
-            opts.OrderEventsTopic,
-            opts.ReturnEventsTopic
-        };
+        _topics = [opts.OrderEventsTopic, opts.ReturnEventsTopic];
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await Task.Yield();
-        
-        consumer.Subscribe(topics);
 
-        logger.LogInformation("Kafka read model synchronizer started. Subscribed to topics: {Topics}",
-            string.Join(", ", topics));
+        _consumer.Subscribe(_topics);
+
+        _logger.LogInformation("Kafka read model synchronizer started. Subscribed to topics: {Topics}",
+            string.Join(", ", _topics));
 
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
+                await TryResumePausedPartitionsAsync(stoppingToken);
+
                 try
                 {
-                    var consumeResult = consumer.Consume(stoppingToken);
+                    // Timeout-based poll so TryResumePausedPartitions gets a heartbeat
+                    // even when the topic is quiet. Never blocks shutdown indefinitely.
+                    var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(1));
+                    if (consumeResult is null) continue;
 
-                    if (consumeResult?.Message != null)
+                    var eventType = GetHeader(consumeResult, "event-type");
+                    if (string.IsNullOrEmpty(eventType))
                     {
-                        // restore trace context propagated from the publisher
-                        Activity? activity = null;
-                        var traceHeader = consumeResult.Message.Headers
-                            .FirstOrDefault(h => h.Key == "traceparent");
-                        if (traceHeader != null)
-                        {
-                            var traceparent = Encoding.UTF8.GetString(traceHeader.GetValueBytes());
-                            if (ActivityContext.TryParse(traceparent, null, out var parentCtx))
-                                activity = _activitySource.StartActivity(
-                                    "kafka.consume.read-model", ActivityKind.Consumer, parentCtx);
-                        }
+                        _logger.LogWarning(
+                            "Message at Partition {P} Offset {O} has no event-type header — skipping",
+                            consumeResult.Partition.Value, consumeResult.Offset.Value);
+                        _consumer.StoreOffset(consumeResult);
+                        _consumer.Commit(consumeResult);
+                        continue;
+                    }
 
-                        try
-                        {
-                            await ProcessMessageAsync(consumeResult, stoppingToken);
-                        }
-                        finally
-                        {
-                            activity?.Dispose();
-                        }
+                    ActivityContext parentCtx = default;
+                    var traceparent = GetHeader(consumeResult, "traceparent");
+                    if (traceparent is not null)
+                        ActivityContext.TryParse(traceparent, null, out parentCtx);
 
-                        // manually commit offset after processing
-                        consumer.StoreOffset(consumeResult);
-                        consumer.Commit();
+                    using var activity = _activitySource.StartActivity(
+                        $"kafka.consume.read-model.{eventType}", ActivityKind.Consumer, parentCtx);
+                    activity?.SetTag("messaging.system", "kafka");
+                    activity?.SetTag("messaging.kafka.consumer.group", "read-model-updater");
+
+                    var (success, lastEx) = await TryProcessWithRetriesAsync(consumeResult, stoppingToken);
+
+                    if (success)
+                    {
+                        _consumer.StoreOffset(consumeResult);
+                        _consumer.Commit(consumeResult);
+                    }
+                    else
+                    {
+                        await HandleExhaustedRetriesAsync(consumeResult, eventType, lastEx!, stoppingToken);
                     }
                 }
                 catch (ConsumeException ex)
                 {
-                    logger.LogError(ex, "Error consuming Kafka message");
+                    _logger.LogError(ex, "Kafka consume error: {Reason}", ex.Error.Reason);
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
-                    // stoppingToken was cancelled — exit the loop cleanly
                     throw;
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error processing Kafka message");
+                    _logger.LogError(ex, "Unexpected error in read model synchronizer outer loop");
+                    await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                 }
             }
         }
         finally
         {
-            consumer.Close();
+            _consumer.Close();
+            _logger.LogInformation("Kafka read model synchronizer stopped");
         }
-        
-        logger.LogInformation("Kafka read model synchronizer stopped");
-    }
-
-    private async Task ProcessMessageAsync(
-        ConsumeResult<string, string> consumeResult,
-        CancellationToken cancellationToken)
-    {
-        var eventTypeHeader = consumeResult.Message.Headers
-            .FirstOrDefault(h => h.Key == "event-type");
-
-        if (eventTypeHeader == null)
-        {
-            logger.LogWarning(
-                "Message missing event-type header. Offset: {Offset}",
-                consumeResult.Offset);
-            return;
-        }
-
-        var eventType = System.Text.Encoding.UTF8.GetString(eventTypeHeader.GetValueBytes());
-        var eventData = consumeResult.Message.Value;
-        var aggregateId = consumeResult.Message.Key;
-
-        logger.LogDebug(
-            "Processing event {EventType} from topic {Topic} at offset {Offset}",
-            eventType,
-            consumeResult.Topic,
-            consumeResult.Offset);
-        
-        try
-        {
-            await HandleEventDynamicallyAsync(eventType, aggregateId, eventData, cancellationToken);
-            
-            logger.LogInformation(
-                "Successfully processed event {EventType} at offset {Offset}", eventType, consumeResult.Offset);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to process event {EventType} at offset {Offset}. Will retry.",
-                eventType,
-                consumeResult.Offset);
-            throw; // rethrow to prevent commit
-        }
-    }
-
-
-    private async Task HandleEventDynamicallyAsync(
-        string eventType,
-        string aggregateId,
-        string eventData,
-        CancellationToken cancellationToken)
-    {
-        using var scope = serviceProvider.CreateScope();
-        var idempotencyChecker = scope.ServiceProvider.GetRequiredService<IEventIdempotencyChecker>();
-
-        var eventId = ExtractEventId(eventData);
-        if (await idempotencyChecker.HasBeenProcessedAsync(eventId, cancellationToken))
-        {
-            logger.LogInformation(
-                "Event {EventId} ({EventType}) already processed. Skipping duplicate.", eventId, eventType);
-            return;
-        }
-
-        if (!eventTypeRegistry.TryGetType(eventType, out var domainEventType))
-        {
-            logger.LogWarning("Unknown event type {EventType}. Skipping.", eventType);
-            return;
-        }
-
-        /*
-         * Load the properly-typed event from the event store.
-         * The event store uses custom JSON convertersso the deserialized event has fully-populated value objects
-         * This avoids trying to deserialize the Kafka payload directly, which uses DTO/raw formats
-         * that re incompatible with the domain event constructors.
-         */
-
-        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStoreRepository>();
-        var aggregateType = GetAggregateTypeFromEventType(domainEventType);
-        var allEvents = await eventStore.GetEventsAsync(aggregateId, aggregateType, cancellationToken);
-        var domainEvent = allEvents.FirstOrDefault(e => e.EventId == eventId);
-
-        if (domainEvent == null)
-        {
-            logger.LogError(
-                "Event {EventId} ({EventType}) not found in event store for aggregate {AggregateId}",
-                eventId, eventType, aggregateId);
-            return;
-        }
-
-        await RouteEventHandlerAsync(domainEvent, scope, cancellationToken);
-        await idempotencyChecker.MarkAsProcessedAsync(eventId, eventType, cancellationToken);
-    }
-
-    private static string GetAggregateTypeFromEventType(Type domainEventType)
-    {
-        var name = domainEventType.Name;
-        var ns = domainEventType.Namespace ?? string.Empty;
-        if (name.StartsWith("Return") || ns.Contains("Return"))
-            return AggregateTypes.ReturnRequest;
-        if (name.StartsWith("B2BOrder") || ns.Contains("B2BOrder"))
-            return AggregateTypes.B2BOrder;
-        if (name.StartsWith("RecurringOrder") || ns.Contains("RecurringOrder"))
-            return AggregateTypes.RecurringOrder;
-        return AggregateTypes.Order;
     }
     
-    /// <summary>
-    /// Route events to appropriate handlers using cached handler registry (no reflection).
-    /// Each updater type gets cached delegates for each event type on first use.
-    /// </summary>
-    private async Task RouteEventHandlerAsync(
-        IDomainEvent domainEvent,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
+    private async Task<(bool Success, Exception? LastException)> TryProcessWithRetriesAsync(
+        ConsumeResult<string, string> consumeResult,
+        CancellationToken ct)
     {
-        var eventType = domainEvent.GetType();
+        Exception? lastEx = null;
 
-        var updater = scope.ServiceProvider
-            .GetServices<IReadModelUpdater>()
-            .FirstOrDefault(u => u.CanHandle(eventType));
-
-        if (updater == null)
+        for (var attempt = 0; attempt < MaxImmediateRetries; attempt++)
         {
-            logger.LogWarning(
-                "No updater found for event type {EventType}",
-                eventType.Name);
-            return;
+            try
+            {
+                await DispatchAsync(consumeResult, ct);
+                return (true, null);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lastEx = ex;
+                _logger.LogWarning(
+                    ex,
+                    "Processing attempt {Attempt}/{Max} failed for Partition {P} Offset {O}",
+                    attempt + 1, MaxImmediateRetries,
+                    consumeResult.Partition.Value, consumeResult.Offset.Value);
+
+                if (attempt < MaxImmediateRetries - 1)
+                {
+                    var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 500));
+                    await Task.Delay(RetryDelays[attempt] + jitter, ct);
+                }
+            }
         }
 
-        // Use cached handler registry instead of reflection
-        await handlerRegistry.HandleAsync(domainEvent, updater, cancellationToken);
-
-        logger.LogDebug(
-            "Event {EventType} handled by {Updater}",
-            eventType.Name,
-            updater.GetType().Name);
+        return (false, lastEx);
     }
 
-    private Guid ExtractEventId(string eventData)
+    private async Task DispatchAsync(ConsumeResult<string, string> consumeResult, CancellationToken ct)
     {
+        var eventType = GetHeader(consumeResult, "event-type")!;
+        var aggregateId = consumeResult.Message.Key ?? string.Empty;
+        var eventData = consumeResult.Message.Value;
+
+        _logger.LogDebug(
+            "Processing event {EventType} from topic {Topic} at offset {Offset}",
+            eventType, consumeResult.Topic, consumeResult.Offset);
+
+        using var scope = _serviceProvider.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ReadModelEventDispatcher>();
+        await dispatcher.DispatchAsync(eventType, aggregateId, eventData, ct);
+
+        _logger.LogInformation(
+            "Successfully processed event {EventType} at offset {Offset}",
+            eventType, consumeResult.Offset);
+    }
+
+    private async Task HandleExhaustedRetriesAsync(
+        ConsumeResult<string, string> consumeResult,
+        string eventType,
+        Exception ex,
+        CancellationToken ct)
+    {
+        var kind = ReadModelFailureClassifier.Classify(ex);
+
+        switch (kind)
+        {
+            case ReadModelFailureKind.Systemic:
+                _logger.LogError(
+                    ex,
+                    "Systemic failure (DB/network) for {EventType} at Partition {P} Offset {O}. " +
+                    "Pausing partition until DB recovers.",
+                    eventType, consumeResult.Partition.Value, consumeResult.Offset.Value);
+
+                _consumer.Seek(new TopicPartitionOffset(consumeResult.TopicPartition, consumeResult.Offset));
+                PausePartition(consumeResult.TopicPartition);
+                break;
+
+            case ReadModelFailureKind.MessageSpecific:
+                _logger.LogWarning(
+                    ex,
+                    "Message-specific failure for {EventType} at Partition {P} Offset {O}. " +
+                    "Moving to durable retry store.",
+                    eventType, consumeResult.Partition.Value, consumeResult.Offset.Value);
+
+                var persisted = await TryPersistRetryRecordAsync(consumeResult, eventType, ex, ct);
+
+                if (persisted)
+                {
+                    _consumer.StoreOffset(consumeResult);
+                    _consumer.Commit(consumeResult);
+                }
+                else
+                {
+                    _logger.LogError(
+                        "Failed to persist retry record for {EventType} at Partition {P} Offset {O}. " +
+                        "NOT committing Kafka offset.",
+                        eventType, consumeResult.Partition.Value, consumeResult.Offset.Value);
+
+                    _consumer.Seek(new TopicPartitionOffset(consumeResult.TopicPartition, consumeResult.Offset));
+                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
+                }
+                break;
+        }
+    }
+
+    private async Task<bool> TryPersistRetryRecordAsync(
+        ConsumeResult<string, string> consumeResult,
+        string eventType,
+        Exception ex,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var retryRepo = scope.ServiceProvider.GetRequiredService<IKafkaRetryRepository>();
+
+            var record = KafkaRetryRecord.Create(
+                eventId: TryExtractEventId(consumeResult.Message.Value),
+                eventType: eventType,
+                topic: consumeResult.Topic,
+                partition: consumeResult.Partition.Value,
+                offset: consumeResult.Offset.Value,
+                messageKey: consumeResult.Message.Key,
+                payload: consumeResult.Message.Value,
+                headers: SerializeHeaders(consumeResult.Message.Headers),
+                correlationId: GetHeader(consumeResult, "traceparent"),
+                errorMessage: Truncate(ex.Message, 2000),
+                errorType: ex.GetType().FullName,
+                nextRetryAt: DateTime.UtcNow.AddMinutes(3));
+
+            await retryRepo.PersistAsync(record, ct);
+            return true;
+        }
+        catch (Exception persistEx)
+        {
+            _logger.LogError(persistEx, "Retry store persistence failed for event {EventType}", eventType);
+            return false;
+        }
+    }
+
+    private void PausePartition(TopicPartition tp)
+    {
+        if (_pausedPartitions.Add(tp))
+        {
+            _consumer.Pause([tp]);
+            _logger.LogWarning(
+                "Paused partition {Topic}-{Partition} due to systemic DB/network failure",
+                tp.Topic, tp.Partition.Value);
+        }
+    }
+
+    private async Task TryResumePausedPartitionsAsync(CancellationToken ct)
+    {
+        if (_pausedPartitions.Count == 0) return;
+
+        var healthy = await IsDbHealthyAsync(ct);
+        if (!healthy) return;
+
+        foreach (var tp in _pausedPartitions)
+        {
+            _consumer.Resume([tp]);
+            _logger.LogInformation(
+                "Resumed partition {Topic}-{Partition} — DB is healthy again",
+                tp.Topic, tp.Partition.Value);
+        }
+
+        _pausedPartitions.Clear();
+    }
+
+    private async Task<bool> IsDbHealthyAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            return await db.Database.CanConnectAsync(ct);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private static string? GetHeader(ConsumeResult<string, string> result, string key)
+    {
+        var header = result.Message.Headers.FirstOrDefault(h => h.Key == key);
+        return header is null ? null : Encoding.UTF8.GetString(header.GetValueBytes());
+    }
+
+    private Guid? TryExtractEventId(string? eventData)
+    {
+        if (eventData is null) return null;
         try
         {
             using var doc = JsonDocument.Parse(eventData);
-            if (doc.RootElement.TryGetProperty("EventId", out var eventIdElement))
-                return Guid.Parse(eventIdElement.GetString()!);
-
-            throw new InvalidOperationException("Message is missing a valid 'EventId' property");
+            if (doc.RootElement.TryGetProperty("EventId", out var el))
+                return Guid.TryParse(el.GetString(), out var id) ? id : null;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to extract EventId from event data");
-            throw;
+            _logger.LogDebug(ex, "Could not extract EventId from payload — retry record will be saved without it");
         }
+        return null;
     }
+
+    private static string? SerializeHeaders(Headers? headers)
+    {
+        if (headers is null || headers.Count == 0) return null;
+        var dict = new Dictionary<string, string>();
+        foreach (var h in headers)
+            dict[h.Key] = Encoding.UTF8.GetString(h.GetValueBytes());
+        return JsonSerializer.Serialize(dict);
+    }
+
+    private static string? Truncate(string? value, int maxLength) =>
+        value is null ? null
+        : value.Length <= maxLength ? value
+        : value[..maxLength];
 
     public override void Dispose()
     {
-        consumer?.Dispose();
+        _consumer?.Dispose();
         base.Dispose();
     }
 }
