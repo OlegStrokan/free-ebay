@@ -268,7 +268,6 @@ public sealed class CapturePaymentStep(
 
         // Skip refund if payment is Uncertain - it might succeed later via webhook/reconciliation
         // Skip if Failed - we can't refund what wasn't charged
-        // @think: is this correct?
         if (context.PaymentStatus is OrderSagaPaymentStatus.Uncertain or OrderSagaPaymentStatus.Failed)
         {
             logger.LogInformation(

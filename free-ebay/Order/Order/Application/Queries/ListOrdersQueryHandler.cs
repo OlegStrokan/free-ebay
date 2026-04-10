@@ -12,7 +12,6 @@ public class ListOrdersQueryHandler(
     ILogger<ListOrdersQueryHandler> logger)
     : IRequestHandler<ListOrdersQuery, Result<List<OrderSummaryResponse>>>
 {
-    // @think: is this should be here?
     private const int MaxPageSize = 100;
 
     public async Task<Result<List<OrderSummaryResponse>>> Handle(

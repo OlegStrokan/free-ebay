@@ -203,8 +203,25 @@ public abstract class SagaBase<TData, TContext> : ISagaBase<TData>
             .OrderBy(s => s.Order)
             .ToList();
 
+        // Steps that completed during a previous (interrupted) resume pass can be skipped.
+        // The resume step itself (fromStepName) must always run - it previously returned
+        // WaitForEvent and its step log is therefore also marked Completed, so we exclude
+        // it from the skip-set explicitly
+        var alreadyCompleted = sagaState.Steps
+            .Where(s => s.Status == StepStatus.Completed && s.StepName != fromStepName)
+            .Select(s => s.StepName)
+            .ToHashSet();
+
         foreach (var step in remainingSteps)
         {
+            if (alreadyCompleted.Contains(step.StepName))
+            {
+                _logger.LogInformation(
+                    "Skipping already-completed step {StepName} during resume of saga {SagaId}",
+                    step.StepName, sagaState.Id);
+                continue;
+            }
+
             var stepResult = await ExecuteStepAsync(
                 sagaState.Id, step, data, typedContext, cancellationToken);
 

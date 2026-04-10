@@ -56,8 +56,7 @@ public class UpdateQuoteDraftCommandHandler(
             return Result.Failure(ex.Message);
         }
     }
-
-//@think: should it be like that?
+    
     private static void ApplyChange(B2BOrder order, QuoteItemChangeDto change)
     {
         var productId = change.ProductId.HasValue
