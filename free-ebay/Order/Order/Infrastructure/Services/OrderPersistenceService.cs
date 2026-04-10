@@ -26,6 +26,7 @@ public class OrderPersistenceService(
     
     // we use optimistic locking to prevent.....locking.
     // more details you can find in integration tests
+    // "action" should be idempotent
     public async Task UpdateOrderAsync(
         Guid orderId,
         Func<Order, Task> action,

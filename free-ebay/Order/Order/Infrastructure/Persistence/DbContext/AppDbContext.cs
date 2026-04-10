@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
     public DbSet<DeadLetterMessage> DeadLetterMessages => Set<DeadLetterMessage>();
     public DbSet<AggregateSnapshot> AggregateSnapshots => Set<AggregateSnapshot>();
     public DbSet<RequestReturnLookup> ReturnRequestLookups => Set<RequestReturnLookup>();
+    public DbSet<KafkaRetryRecord> KafkaRetryRecords => Set<KafkaRetryRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -34,6 +35,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
         builder.ApplyConfiguration(new DeadLetterMessageConfiguration());
         builder.ApplyConfiguration(new AggregateSnapshotConfiguration());
         builder.ApplyConfiguration(new ReturnRequestLookupConfiguration());
+        builder.ApplyConfiguration(new KafkaRetryRecordConfiguration());
     }
     
 }
