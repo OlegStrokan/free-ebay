@@ -81,6 +81,7 @@ public static class InfrastructureModule
         services.AddScoped<IReturnRequestLookupRepository, ReturnRequestLookupRepository>();
         services.AddScoped<IB2BOrderReadRepository, B2BOrderReadRepository>();
         services.AddScoped<IRecurringOrderReadRepository, RecurringOrderReadRepository>();
+        services.AddScoped<IKafkaRetryRepository, KafkaRetryRepository>();
 
         // Services
         services.AddScoped<IOrderPersistenceService, OrderPersistenceService>();
@@ -102,7 +103,8 @@ public static class InfrastructureModule
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<B2BOrderReadModelUpdater>());
         services.AddScoped<RecurringOrderReadModelUpdater>();
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<RecurringOrderReadModelUpdater>());
-        services.AddSingleton<IWriteRegionOwnershipResolver, DeterministicWriteRegionOwnershipResolver>();
+        services.AddScoped<IWriteRegionOwnershipResolver, DeterministicWriteRegionOwnershipResolver>();
+        services.AddScoped<ReadModelEventDispatcher>();
 
         // Gateways
         services.AddScoped<IProductGateway, ProductGateway>();
@@ -119,6 +121,7 @@ public static class InfrastructureModule
         services.AddHostedService<RecurringOrderSchedulerService>();
         services.AddHostedService<SagaOrchestrationService>();
         services.AddHostedService<KafkaReadModelSynchronizer>();
+        services.AddHostedService<KafkaReadModelRetryWorker>();
         services.AddHostedService<SagaWatchdogService>();
         services.AddHostedService<ProcessedEventsCleanupService>();
         services.AddHostedService<CompensationRefundRetryWorker>();

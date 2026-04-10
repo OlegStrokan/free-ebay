@@ -39,6 +39,7 @@ public sealed class KafkaRetryRepository(
     public async Task MarkSucceededAsync(Guid id, CancellationToken ct = default)
     {
         var record = await GetRequiredAsync(id, ct);
+        // @think: is this policically correct to call domain method in persistance service?
         record.MarkSucceeded();
         await dbContext.SaveChangesAsync(ct);
 
