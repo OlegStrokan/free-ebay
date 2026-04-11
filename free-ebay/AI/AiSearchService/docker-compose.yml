@@ -1,24 +1,25 @@
+# Run shared infra first:  docker compose -f ../../docker-compose.infra.yml up -d
 name: ai-search-service-deps
 
+networks:
+  free-ebay-local:
+    external: true
+
 services:
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant_data:/qdrant/storage
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-
-volumes:
-  qdrant_data:
-  elasticsearch_data:
+  # ai-search-service:
+  #   build: .
+  #   environment:
+  #     AI_SEARCH_EMBEDDING_SERVICE_URL: "http://embedding-service:8001"
+  #     AI_SEARCH_OLLAMA_BASE_URL: "http://ollama:11434"
+  #     AI_SEARCH_LLM_MODEL: "phi3:mini"
+  #     AI_SEARCH_QDRANT_URL: "http://qdrant:6333"
+  #     AI_SEARCH_QDRANT_COLLECTION: "products"
+  #     AI_SEARCH_ES_URL: "http://elasticsearch:9200"
+  #     AI_SEARCH_ES_INDEX: "products"
+  #     AI_SEARCH_GRPC_PORT: "50051"
+  #     AI_SEARCH_HTTP_PORT: "8003"
+  #   ports:
+  #     - "50051:50051"
+  #     - "8003:8003"
+  #   networks:
+  #     - free-ebay-local

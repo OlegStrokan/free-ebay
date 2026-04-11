@@ -1,12 +1,18 @@
+# Run shared infra first:  docker compose -f ../../docker-compose.infra.yml up -d
 name: embedding-service-deps
 
-services:
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
+networks:
+  free-ebay-local:
+    external: true
 
-volumes:
-  ollama_data:
+services:
+  # embedding-service:
+  #   build: .
+  #   environment:
+  #     EMBEDDING_OLLAMA_BASE_URL: "http://ollama:11434"
+  #     EMBEDDING_DEFAULT_MODEL: "nomic-embed-text"
+  #     EMBEDDING_PORT: "8001"
+  #   ports:
+  #     - "8001:8001"
+  #   networks:
+  #     - free-ebay-local
