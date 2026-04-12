@@ -1,0 +1,172 @@
+# ── Shared local infrastructure ──────────────────────────────────────────────
+# Start once:  docker compose -f docker-compose.infra.yml up -d
+# All service composes attach to the "free-ebay-local" network as external.
+#
+# What lives here (shared, one instance each):
+#   redis          — one instance, all services share it
+#   kafka+zk       — one broker, all topics auto-created
+#   elasticsearch  — one node, Catalog/Search/Product share it
+#   qdrant         — vector store for AI search
+#   ollama         — LLM + embedding models
+#   mailhog        — local SMTP trap
+#   jaeger         — distributed tracing UI
+#
+# Each service owns its own PostgreSQL container (in its own docker-compose.yml).
+
+name: free-ebay-infra
+
+networks:
+  free-ebay-local:
+    name: free-ebay-local
+    driver: bridge
+
+volumes:
+  redis_data:
+  zookeeper_data:
+  kafka_data:
+  elasticsearch_data:
+  qdrant_data:
+  ollama_data:
+
+services:
+
+  # ── Redis — shared session store + Order saga state ────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: free-ebay-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Zookeeper (required by Kafka) ──────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: free-ebay-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: "2181"
+      ZOOKEEPER_TICK_TIME: "2000"
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper
+    networks:
+      - free-ebay-local
+
+  # ── Kafka — single broker, all topics auto-created ─────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: free-ebay-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: "1"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # INTERNAL = container-to-container; EXTERNAL = host machine access
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: "3"
+    ports:
+      - "9092:9092"   # container-to-container (services running in Docker)
+      - "9093:9093"   # host access (dotnet run locally, tests)
+    volumes:
+      - kafka_data:/var/lib/kafka
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ── Elasticsearch — keyword search, catalog browse ─────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: free-ebay-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -v red"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  # ── Qdrant — vector store for AI search ───────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.9.2
+    container_name: free-ebay-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Ollama — LLM (phi3:mini) + embeddings (nomic-embed-text) ──────────────
+  # Models are pulled on first start — takes a few minutes.
+  # Monitor: docker logs free-ebay-ollama -f
+  ollama:
+    image: ollama/ollama:0.3.6
+    container_name: free-ebay-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  # ── Mailhog — local SMTP trap, UI at http://localhost:8025 ────────────────
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: free-ebay-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - free-ebay-local
+
+  # ── Jaeger — distributed tracing, UI at http://localhost:16686 ────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: free-ebay-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - free-ebay-local
