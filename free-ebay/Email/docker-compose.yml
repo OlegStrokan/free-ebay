@@ -1,17 +1,51 @@
+# Run shared infra first:  docker compose -f ../docker-compose.infra.yml up -d
 name: email-service-deps
 
+networks:
+  free-ebay-local:
+    external: true
+
+volumes:
+  email_postgres_data:
+
 services:
+
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
+    container_name: email-postgres
     environment:
-      POSTGRES_DB: email_service
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: email_service
     ports:
-      - "5434:5432"
+      - "5440:5432"
+    volumes:
+      - email_postgres_data:/var/lib/postgresql/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d email_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    ports:
-      - "1025:1025"
-      - "8025:8025"
+  # email-service:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=email_service;Username=postgres;Password=postgres"
+  #     Kafka__BootstrapServers: "kafka:9092"
+  #     Email__SmtpHost: "mailhog"
+  #     Email__SmtpPort: "1025"
+  #     Email__EnableSsl: "false"
+  #     Email__DefaultFromAddress: "no-reply@free-ebay.com"
+  #     Kestrel__EndpointDefaults__Protocols: Http2
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #   ports:
+  #     - "8087:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - free-ebay-local
