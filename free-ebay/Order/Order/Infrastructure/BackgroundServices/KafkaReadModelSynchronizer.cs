@@ -17,7 +17,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
     private static readonly ActivitySource _activitySource = new("OrderService.Kafka");
 
     private const int MaxImmediateRetries = 3;
-    private static readonly TimeSpan[] RetryDelays =
+    private static readonly TimeSpan[] DefaultRetryDelays =
     [
         TimeSpan.FromSeconds(1),
         TimeSpan.FromSeconds(2),
@@ -28,6 +28,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
     private readonly ILogger<KafkaReadModelSynchronizer> _logger;
     private readonly IConsumer<string, string> _consumer;
     private readonly List<string> _topics;
+    private readonly TimeSpan[] _retryDelays;
     private readonly HashSet<TopicPartition> _pausedPartitions = new();
 
     public KafkaReadModelSynchronizer(
@@ -55,6 +56,23 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             .Build();
 
         _topics = [opts.OrderEventsTopic, opts.ReturnEventsTopic];
+        _retryDelays = DefaultRetryDelays;
+    }
+
+    // Testability constructor - injects a pre-built consumer so unit tests can substitute it.
+    public KafkaReadModelSynchronizer(
+        IServiceProvider serviceProvider,
+        ILogger<KafkaReadModelSynchronizer> logger,
+        IConsumer<string, string> consumer,
+        IOptions<KafkaOptions> kafkaOptions,
+        TimeSpan[]? retryDelays = null)
+    {
+        _serviceProvider = serviceProvider;
+        _logger = logger;
+        _consumer = consumer;
+        var opts = kafkaOptions.Value;
+        _topics = [opts.OrderEventsTopic, opts.ReturnEventsTopic];
+        _retryDelays = retryDelays ?? DefaultRetryDelays;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -164,7 +182,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
                 if (attempt < MaxImmediateRetries - 1)
                 {
                     var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 500));
-                    await Task.Delay(RetryDelays[attempt] + jitter, ct);
+                    await Task.Delay(_retryDelays[attempt] + jitter, ct);
                 }
             }
         }
@@ -183,7 +201,7 @@ public sealed class KafkaReadModelSynchronizer : BackgroundService
             eventType, consumeResult.Topic, consumeResult.Offset);
 
         using var scope = _serviceProvider.CreateScope();
-        var dispatcher = scope.ServiceProvider.GetRequiredService<ReadModelEventDispatcher>();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<IReadModelEventDispatcher>();
         await dispatcher.DispatchAsync(eventType, aggregateId, eventData, ct);
 
         _logger.LogInformation(

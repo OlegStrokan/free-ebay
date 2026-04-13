@@ -14,7 +14,7 @@ public sealed class ReadModelEventDispatcher(
     IDomainEventTypeRegistry eventTypeRegistry,
     IReadModelHandlerRegistry handlerRegistry,
     IEnumerable<IReadModelUpdater> updaters,
-    ILogger<ReadModelEventDispatcher> logger)
+    ILogger<ReadModelEventDispatcher> logger) : IReadModelEventDispatcher
 {
     
     public async Task<bool> DispatchAsync(

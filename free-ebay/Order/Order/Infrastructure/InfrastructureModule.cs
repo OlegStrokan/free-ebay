@@ -104,7 +104,7 @@ public static class InfrastructureModule
         services.AddScoped<RecurringOrderReadModelUpdater>();
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<RecurringOrderReadModelUpdater>());
         services.AddScoped<IWriteRegionOwnershipResolver, DeterministicWriteRegionOwnershipResolver>();
-        services.AddScoped<ReadModelEventDispatcher>();
+        services.AddScoped<IReadModelEventDispatcher, ReadModelEventDispatcher>();
 
         // Gateways
         services.AddScoped<IProductGateway, ProductGateway>();

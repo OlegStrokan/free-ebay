@@ -72,7 +72,7 @@ public sealed class KafkaReadModelRetryWorker(
         {
             await retryRepo.MarkInProgressAsync(record.Id, ct);
 
-            var dispatcher = scope.ServiceProvider.GetRequiredService<ReadModelEventDispatcher>();
+            var dispatcher = scope.ServiceProvider.GetRequiredService<IReadModelEventDispatcher>();
             var aggregateId = record.MessageKey ?? string.Empty;
 
             await dispatcher.DispatchAsync(record.EventType, aggregateId, record.Payload, ct);
