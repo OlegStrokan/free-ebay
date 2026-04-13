@@ -1,0 +1,26 @@
+# Run shared infra first:  docker compose -f ../docker-compose.infra.yml up -d
+name: gateway-service-deps
+
+networks:
+  free-ebay-local:
+    external: true
+
+services:
+  # gateway-api:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     GrpcServices__AuthUrl: "http://auth-service:8080"
+  #     GrpcServices__UserUrl: "http://user-service:8080"
+  #     GrpcServices__ProductUrl: "http://product-service:8080"
+  #     GrpcServices__OrderUrl: "http://order-service:8080"
+  #     GrpcServices__PaymentUrl: "http://payment-service:8080"
+  #     GrpcServices__InventoryUrl: "http://inventory-service:8080"
+  #     GrpcServices__SearchUrl: "http://search-service:8080"
+  #     Jwt__Authority: "http://auth-service:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #   ports:
+  #     - "5000:8080"   # gateway available at http://localhost:5000
+  #   networks:
+  #     - free-ebay-local
