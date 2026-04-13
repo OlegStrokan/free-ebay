@@ -90,6 +90,9 @@ public sealed class IntegrationFixture : IAsyncLifetime
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<B2BOrderReadModelUpdater>());
         services.AddScoped<IReadModelUpdater>(sp => sp.GetRequiredService<RecurringOrderReadModelUpdater>());
         services.AddScoped<IEventIdempotencyChecker, EventIdempotencyChecker>();
+        services.AddSingleton<IReadModelHandlerRegistry, ReadModelHandlerRegistry>();
+        services.AddScoped<IKafkaRetryRepository, KafkaRetryRepository>();
+        services.AddScoped<IReadModelEventDispatcher, ReadModelEventDispatcher>();
 
         Services = services.BuildServiceProvider();
         
