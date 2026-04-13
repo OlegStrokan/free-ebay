@@ -1,36 +1,71 @@
 name: order-service-deps
 
+networks:
+  free-ebay-local:
+    external: true
+
+volumes:
+  order_postgres_write_data:
+  order_postgres_read_data:
+
 services:
+
   postgres-write:
     image: postgres:16-alpine
+    container_name: order-postgres-write
     environment:
-      POSTGRES_DB: order
       POSTGRES_USER: order
       POSTGRES_PASSWORD: order_write_pass
+      POSTGRES_DB: order
     ports:
-      - "5432:5432"
+      - "5437:5432"
     volumes:
-      - postgres_write_data:/var/lib/postgresql/data
+      - order_postgres_write_data:/var/lib/postgresql/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order -d order"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   postgres-read:
     image: postgres:16-alpine
+    container_name: order-postgres-read
     environment:
-      POSTGRES_DB: order_read
       POSTGRES_USER: order_read
       POSTGRES_PASSWORD: order_read_pass
+      POSTGRES_DB: order_read
     ports:
-      - "5433:5432"
+      - "5438:5432"
     volumes:
-      - postgres_read_data:/var/lib/postgresql/data
+      - order_postgres_read_data:/var/lib/postgresql/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_read -d order_read"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-volumes:
-  postgres_write_data:
-  postgres_read_data:
-  redis_data:
+  # order-service:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ConnectionStrings__Postgres: "Host=postgres-write;Port=5432;Database=order;Username=order;Password=order_write_pass"
+  #     ConnectionStrings__PostgresReadModel: "Host=postgres-read;Port=5432;Database=order_read;Username=order_read;Password=order_read_pass"
+  #     ConnectionStrings__Redis: "redis:6379"
+  #     Kafka__BootstrapServers: "kafka:9092"
+  #     Kestrel__EndpointDefaults__Protocols: Http2
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #     Shipping__ApiKey: "replace-me"
+  #   ports:
+  #     - "8085:8080"
+  #   depends_on:
+  #     postgres-write:
+  #       condition: service_healthy
+  #     postgres-read:
+  #       condition: service_healthy
+  #   networks:
+  #     - free-ebay-local

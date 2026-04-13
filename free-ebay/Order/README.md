@@ -61,11 +61,10 @@ step 0 - no-op success, attempting to cancel order and indident escalation in no
 step 1 - reserve inventory product, release on compensation, create incident ticket if release fails
 step 2 - process payment: this step got reworked. previously it just YOLO'd a backend payment call every time. now it branches:
 
-if frontend sent a `paymentIntentId` (meaning user already pre-authorized on frontend with `capture_method: manual`, survived 3DS, that whole circus) — we just capture it. it's the B2C card path. capture succeed? move on. capture fail? compensation runs. gateway times out? `Uncertain` + `WaitingForEvent` same as before.
+if frontend sent a `paymentIntentId` (meaning user already pre-authorized on frontend with `capture_method: manual`, survived 3DS, that whole circus) - we just capture it. 
+it's the B2C card path. capture succeed? move on. capture fail? compensation runs. gateway times out? `Uncertain` + `WaitingForEvent` same as before.
 
-if no `paymentIntentId` — BNPL, COD, recurring, B2B, whatever — we do the old backend-initiated payment call and handle pending/requiresAction the same way we always did.
-
-why this change? because the old flow was creating an order record BEFORE the user finished 3DS. so the user could bail after 3DS, order already exists, payment intent is floating in the void, inventory is locked, everyone is sad. now frontend holds the authorization, user completes auth, sends us the `paymentIntentId`, we capture after inventory is confirmed. clean.
+if no `paymentIntentId` - BNPL, COD, recurring, B2B, whatever - we do the old backend-initiated payment call and handle pending/requiresAction the same way we always did.
 
 compensation for step 2:
 - if capture already happened (PaymentId exists in context) — refund, same as before
