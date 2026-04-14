@@ -1,8 +1,18 @@
+# Run shared infra first:  docker compose -f ../docker-compose.infra.yml up -d
 name: auth-service-deps
 
+networks:
+  free-ebay-local:
+    external: true
+
+volumes:
+  auth_postgres_data:
+
 services:
+
   postgres:
     image: postgres:16-alpine
+    container_name: auth-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -11,6 +21,28 @@ services:
       - "5432:5432"
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-volumes:
-  auth_postgres_data:
+  # auth-service:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=auth_service;Username=postgres;Password=postgres"
+  #     Jwt__Authority: "http://localhost:8080"
+  #     Jwt__SecretKey: "change-me-auth-secret-minimum-32-characters"
+  #     Kestrel__EndpointDefaults__Protocols: Http2
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - free-ebay-local
