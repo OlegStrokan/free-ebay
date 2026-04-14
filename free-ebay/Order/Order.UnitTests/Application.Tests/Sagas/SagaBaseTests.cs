@@ -82,7 +82,6 @@ public class SagaBaseTests
             Arg.Any<CancellationToken>());
     }
 
-    // @todo: something wrong with this test
     [Fact]
     public async Task ExecuteAsync_ShouldPauseSaga_WhenStepReturnsWaitingForEventMetadata()
     {
