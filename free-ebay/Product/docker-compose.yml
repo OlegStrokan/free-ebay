@@ -1,16 +1,49 @@
+# Run shared infra first:  docker compose -f ../docker-compose.infra.yml up -d
 name: product-service-deps
 
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: product_service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+networks:
+  free-ebay-local:
+    external: true
 
 volumes:
-  postgres_data:
+  product_postgres_data:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: product-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: product_service
+    ports:
+      - "5435:5432"
+    volumes:
+      - product_postgres_data:/var/lib/postgresql/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d product_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # product-service:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=product_service;Username=postgres;Password=postgres"
+  #     Kafka__BootstrapServers: "kafka:9092"
+  #     Elasticsearch__Url: "http://elasticsearch:9200"
+  #     Elasticsearch__IndexName: "products"
+  #     Kestrel__EndpointDefaults__Protocols: Http2
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #   ports:
+  #     - "8083:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - free-ebay-local
