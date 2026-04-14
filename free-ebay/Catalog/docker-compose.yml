@@ -1,28 +1,47 @@
+# Run shared infra first:  docker compose -f ../docker-compose.infra.yml up -d
 name: catalog-service-deps
 
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-
-  catalog-postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: catalog_retry
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - catalog_pg_data:/var/lib/postgresql/data
+networks:
+  free-ebay-local:
+    external: true
 
 volumes:
-  elasticsearch_data:
-  catalog_pg_data:
+  catalog_postgres_data:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: catalog-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: catalog_retry
+    ports:
+      - "5439:5432"
+    volumes:
+      - catalog_postgres_data:/var/lib/postgresql/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d catalog_retry"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # catalog-service:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=catalog_retry;Username=postgres;Password=postgres"
+  #     Elasticsearch__Url: "http://elasticsearch:9200"
+  #     Elasticsearch__IndexName: "products"
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #   ports:
+  #     - "8086:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - free-ebay-local
