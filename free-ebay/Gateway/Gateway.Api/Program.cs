@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 var builder = WebApplication.CreateBuilder(args);
 var jwtAuthority = builder.Configuration["Jwt:Authority"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
 
 if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(jwtAudience))
 {
@@ -15,13 +16,17 @@ if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(jwtAudienc
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = jwtAuthority;
+        if (string.IsNullOrWhiteSpace(jwtSecretKey))
+            options.Authority = jwtAuthority;
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
             ValidateAudience = !string.IsNullOrWhiteSpace(jwtAudience),
             ValidAudience = jwtAudience,
-            ValidateIssuer = !builder.Environment.IsDevelopment()
+            ValidateIssuer = !builder.Environment.IsDevelopment(),
+            IssuerSigningKey = string.IsNullOrWhiteSpace(jwtSecretKey) ? null :
+                new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                    System.Text.Encoding.UTF8.GetBytes(jwtSecretKey))
         };
     });
 builder.Services.AddAuthorization();
