@@ -1,3 +1,5 @@
+using Application.Dtos;
+using Domain.Entities.DeliveryInfo;
 using Domain.Entities.User;
 using Protos.User;
 using BlockUserResponse = Application.UseCases.BlockUser.BlockUserResponse;
@@ -60,110 +62,61 @@ public static class UserMapper
         };
     }
 
+    public static DeliveryInfoProto ToProto(this DeliveryInfoDto dto)
+    {
+        return new DeliveryInfoProto
+        {
+            Id = dto.Id,
+            Street = dto.Street,
+            City = dto.City,
+            PostalCode = dto.PostalCode,
+            CountryDestination = dto.CountryDestination,
+        };
+    }
+
+    public static DeliveryInfoProto ToProto(this DeliveryInfo entity)
+    {
+        return new DeliveryInfoProto
+        {
+            Id = entity.Id,
+            Street = entity.Street,
+            City = entity.City,
+            PostalCode = entity.PostalCode,
+            CountryDestination = entity.CountryDestination,
+        };
+    }
+
     public static CreateUserResponseProto ToProto(this CreateUserResponse response)
     {
-        return new CreateUserResponseProto
-        {
-            Data = new UserProto
-            {
-                Id = response.Id,
-                FullName = response.Fullname,
-                Email = response.Email,
-                Phone = response.Phone,
-                Status = response.Status.ToProto(),
-                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-                CountryCode = response.CountryCode,
-                CustomerTier = response.CustomerTier.ToProto(),
-                IsEmailVerified = response.IsEmailVerified,
-            }
-        };
+        return new CreateUserResponseProto { Data = MapToUserProto(response) };
     }
 
     public static CreateUserResponseProto ToProto(this CreateUserResponse response, string phone)
     {
-        return new CreateUserResponseProto
-        {
-            Data = new UserProto
-            {
-                Id = response.Id,
-                FullName = response.Fullname,
-                Email = response.Email,
-                Phone = phone ?? "",
-                Status = response.Status.ToProto(),
-                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-                CountryCode = response.CountryCode,
-                CustomerTier = response.CustomerTier.ToProto(),
-                IsEmailVerified = response.IsEmailVerified,
-            }
-        };
+        var proto = MapToUserProto(response);
+        proto.Phone = phone ?? "";
+        return new CreateUserResponseProto { Data = proto };
     }
 
     public static UserProto ToUserProto(this CreateUserResponse response)
     {
-        return new UserProto
-        {
-            Id = response.Id,
-            FullName = response.Fullname,
-            Email = response.Email,
-            Phone = response.Phone,
-            Status = response.Status.ToProto(),
-            CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-            UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-            CountryCode = response.CountryCode,
-            CustomerTier = response.CustomerTier.ToProto(),
-            IsEmailVerified = response.IsEmailVerified,
-        };
+        return MapToUserProto(response);
     }
 
     public static GetUserByEmailResponseProto ToProto(this GetUserByEmailResponse? response)
     {
-        if (response == null)
-        {
-            return new GetUserByEmailResponseProto();
-        }
+        if (response == null) return new GetUserByEmailResponseProto();
 
-        return new GetUserByEmailResponseProto
-        {
-            Data = new UserProto
-            {
-                Id = response.Id,
-                FullName = response.Fullname,
-                Email = response.Email,
-                Phone = response.Phone,
-                Status = response.Status.ToProto(),
-                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-                CountryCode = response.CountryCode,
-                CustomerTier = response.CustomerTier.ToProto(),
-                IsEmailVerified = response.IsEmailVerified,
-            }
-        };
+        return new GetUserByEmailResponseProto { Data = MapToUserProto(response) };
     }
 
     public static VerifyCredentialsResponseProto ToProto(this VerifyCredentialsResponse? response)
     {
-        if (response == null)
-        {
-            return new VerifyCredentialsResponseProto();
-        }
+        if (response == null) return new VerifyCredentialsResponseProto();
 
         return new VerifyCredentialsResponseProto
         {
-            Data = new UserProto
-            {
-                Id = response.Id,
-                FullName = response.Fullname,
-                Email = response.Email,
-                Phone = response.Phone,
-                Status = response.Status.ToProto(),
-                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-                CountryCode = response.CountryCode,
-                CustomerTier = response.CustomerTier.ToProto(),
-                IsEmailVerified = response.IsEmailVerified,
-            },
+            Data = MapToUserProto(response),
             IsValid = true,
         };
     }
@@ -172,67 +125,22 @@ public static class UserMapper
     {
         if (response == null) return new GetUserByIdResponseProto { Data = null };
 
-        return new GetUserByIdResponseProto
-        {
-            Data = new UserProto
-            {
-                Id = response.Id,
-                FullName = response.Fullname,
-                Email = response.Email,
-                Phone = response.Phone,
-                Status = response.Status.ToProto(),
-                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-                CountryCode = response.CountryCode,
-                CustomerTier = response.CustomerTier.ToProto(),
-                IsEmailVerified = response.IsEmailVerified,
-            }
-        };
+        return new GetUserByIdResponseProto { Data = MapToUserProto(response) };
     }
 
     public static UpdateUserResponseProto ToProto(this UpdateUserResponse response)
     {
-        return new UpdateUserResponseProto
-        {
-            Data =  new UserProto
-            {
-                Id = response.Id,
-                FullName = response.Fullname,
-                Email = response.Email,
-                Phone = response.Phone,
-                Status = response.Status.ToProto(),
-                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-                CountryCode = response.CountryCode,
-                CustomerTier = response.CustomerTier.ToProto(),
-                IsEmailVerified = response.IsEmailVerified,
-            }
-        };
+        return new UpdateUserResponseProto { Data = MapToUserProto(response) };
     }
 
     public static BlockUserResponseProto ToProto(this BlockUserResponse response)
     {
-        return new BlockUserResponseProto
-        {
-            Data = new UserProto
-            {
-                Id = response.Id,
-                FullName = response.Fullname,
-                Email = response.Email,
-                Phone = response.Phone,
-                Status = response.Status.ToProto(),
-                CreatedAt = new DateTimeOffset(response.CreatedAt).ToUnixTimeSeconds(),
-                UpdatedAt = new DateTimeOffset(response.UpdatedAt).ToUnixTimeSeconds(),
-                CountryCode = response.CountryCode,
-                CustomerTier = response.CustomerTier.ToProto(),
-                IsEmailVerified = response.IsEmailVerified,
-            }
-        };
+        return new BlockUserResponseProto { Data = MapToUserProto(response) };
     }
 
     public static UserProto ToProto(this UserEntity entity)
     {
-        return new UserProto
+        var proto = new UserProto
         {
             Id = entity.Id.ToString(),
             FullName = entity.Fullname,
@@ -245,13 +153,136 @@ public static class UserMapper
             CustomerTier = entity.CustomerTier.ToProto(),
             IsEmailVerified = entity.IsEmailVerified,
         };
+        proto.DeliveryInfo.AddRange(entity.DeliveryInfos.Select(d => d.ToProto()));
+        return proto;
     }
 
     public static CreateUserResponseProto ToCreateUserResponseProto(this UserEntity entity)
     {
-        return new CreateUserResponseProto
+        return new CreateUserResponseProto { Data = entity.ToProto() };
+    }
+
+    // ------------------------------------------------------------------
+    // private helpers
+    // ------------------------------------------------------------------
+
+    private static UserProto MapToUserProto(CreateUserResponse r)
+    {
+        var proto = new UserProto
         {
-            Data = entity.ToProto()
+            Id = r.Id,
+            FullName = r.Fullname,
+            Email = r.Email,
+            Phone = r.Phone,
+            Status = r.Status.ToProto(),
+            CreatedAt = new DateTimeOffset(r.CreatedAt).ToUnixTimeSeconds(),
+            UpdatedAt = new DateTimeOffset(r.UpdatedAt).ToUnixTimeSeconds(),
+            CountryCode = r.CountryCode,
+            CustomerTier = r.CustomerTier.ToProto(),
+            IsEmailVerified = r.IsEmailVerified,
         };
+        if (r.DeliveryInfos != null)
+            proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        return proto;
+    }
+
+    private static UserProto MapToUserProto(GetUserByEmailResponse r)
+    {
+        var proto = new UserProto
+        {
+            Id = r.Id,
+            FullName = r.Fullname,
+            Email = r.Email,
+            Phone = r.Phone,
+            Status = r.Status.ToProto(),
+            CreatedAt = new DateTimeOffset(r.CreatedAt).ToUnixTimeSeconds(),
+            UpdatedAt = new DateTimeOffset(r.UpdatedAt).ToUnixTimeSeconds(),
+            CountryCode = r.CountryCode,
+            CustomerTier = r.CustomerTier.ToProto(),
+            IsEmailVerified = r.IsEmailVerified,
+        };
+        if (r.DeliveryInfos != null)
+            proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        return proto;
+    }
+
+    private static UserProto MapToUserProto(VerifyCredentialsResponse r)
+    {
+        var proto = new UserProto
+        {
+            Id = r.Id,
+            FullName = r.Fullname,
+            Email = r.Email,
+            Phone = r.Phone,
+            Status = r.Status.ToProto(),
+            CreatedAt = new DateTimeOffset(r.CreatedAt).ToUnixTimeSeconds(),
+            UpdatedAt = new DateTimeOffset(r.UpdatedAt).ToUnixTimeSeconds(),
+            CountryCode = r.CountryCode,
+            CustomerTier = r.CustomerTier.ToProto(),
+            IsEmailVerified = r.IsEmailVerified,
+        };
+        if (r.DeliveryInfos != null)
+            proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        return proto;
+    }
+
+    private static UserProto MapToUserProto(GetUserByIdResponse r)
+    {
+        var proto = new UserProto
+        {
+            Id = r.Id,
+            FullName = r.Fullname,
+            Email = r.Email,
+            Phone = r.Phone,
+            Status = r.Status.ToProto(),
+            CreatedAt = new DateTimeOffset(r.CreatedAt).ToUnixTimeSeconds(),
+            UpdatedAt = new DateTimeOffset(r.UpdatedAt).ToUnixTimeSeconds(),
+            CountryCode = r.CountryCode,
+            CustomerTier = r.CustomerTier.ToProto(),
+            IsEmailVerified = r.IsEmailVerified,
+        };
+        if (r.DeliveryInfos != null)
+            proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        return proto;
+    }
+
+    private static UserProto MapToUserProto(UpdateUserResponse r)
+    {
+        var proto = new UserProto
+        {
+            Id = r.Id,
+            FullName = r.Fullname,
+            Email = r.Email,
+            Phone = r.Phone,
+            Status = r.Status.ToProto(),
+            CreatedAt = new DateTimeOffset(r.CreatedAt).ToUnixTimeSeconds(),
+            UpdatedAt = new DateTimeOffset(r.UpdatedAt).ToUnixTimeSeconds(),
+            CountryCode = r.CountryCode,
+            CustomerTier = r.CustomerTier.ToProto(),
+            IsEmailVerified = r.IsEmailVerified,
+        };
+        if (r.DeliveryInfos != null)
+            proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        return proto;
+    }
+
+    private static UserProto MapToUserProto(BlockUserResponse r)
+    {
+        var proto = new UserProto
+        {
+            Id = r.Id,
+            FullName = r.Fullname,
+            Email = r.Email,
+            Phone = r.Phone,
+            Status = r.Status.ToProto(),
+            CreatedAt = new DateTimeOffset(r.CreatedAt).ToUnixTimeSeconds(),
+            UpdatedAt = new DateTimeOffset(r.UpdatedAt).ToUnixTimeSeconds(),
+            CountryCode = r.CountryCode,
+            CustomerTier = r.CustomerTier.ToProto(),
+            IsEmailVerified = r.IsEmailVerified,
+        };
+        if (r.DeliveryInfos != null)
+            proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        return proto;
     }
 }

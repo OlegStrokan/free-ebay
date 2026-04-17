@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Domain.Common.Interfaces;
 using Domain.Repositories;
 using System.Net.Mail;
@@ -47,6 +48,7 @@ public class VerifyCredentialsUseCase(
             user.Status,
             user.CreatedAt,
             user.UpdatedAt,
-            user.IsEmailVerified);
+            user.IsEmailVerified,
+            user.DeliveryInfos.ToDtos());
     }
 }

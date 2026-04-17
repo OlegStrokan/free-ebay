@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Application.Dtos;
 using Domain.Entities.User;
 
 namespace Application.UseCases.BlockUser;
@@ -12,4 +14,5 @@ public record BlockUserResponse(
     UserStatus Status,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    bool IsEmailVerified = false);
+    bool IsEmailVerified = false,
+    IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null);

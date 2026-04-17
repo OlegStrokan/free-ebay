@@ -1,4 +1,5 @@
 
+using Domain.Entities.DeliveryInfo;
 using Domain.Entities.User;
 using Infrastructure.Configurations;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -10,10 +11,12 @@ namespace Infrastructure.DbContext;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.EntityFrameworkCore.DbContext(options)
 {
     public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<DeliveryInfo> DeliveryInfos => Set<DeliveryInfo>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfiguration(new UserEntityConfiguration());
+        builder.ApplyConfiguration(new DeliveryInfoEntityConfiguration());
         
         base.OnModelCreating(builder);
     }

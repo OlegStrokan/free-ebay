@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Domain.Entities.User;
 using Domain.Repositories;
 
@@ -31,6 +32,7 @@ public class BlockUserUseCase(IUserRepository repository) : IBlockUserUseCase
             updatedUser.Status,
             updatedUser.CreatedAt,
             updatedUser.UpdatedAt,
-            updatedUser.IsEmailVerified);
+            updatedUser.IsEmailVerified,
+            updatedUser.DeliveryInfos.ToDtos());
     }
 }

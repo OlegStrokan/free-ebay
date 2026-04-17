@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Domain.Common.Interfaces;
 using Domain.Entities.User;
 using Domain.Repositories;
@@ -46,7 +47,8 @@ public class CreateUserUseCase(
             user.Status,
             user.CreatedAt,
             user.UpdatedAt,
-            user.IsEmailVerified);
+            user.IsEmailVerified,
+            user.DeliveryInfos.ToDtos());
     }
 // @think: should this validation be in use-case or should we move it to gprc layer?
     private static void Validate(CreateUserCommand command)

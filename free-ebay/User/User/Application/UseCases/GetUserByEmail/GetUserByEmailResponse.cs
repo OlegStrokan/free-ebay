@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Application.Dtos;
 using Domain.Entities.User;
 
 namespace Application.UseCases.GetUserByEmail;
@@ -12,4 +14,5 @@ public record GetUserByEmailResponse(
     UserStatus Status,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    bool IsEmailVerified);
+    bool IsEmailVerified,
+    IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null);

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using DeliveryInfoEntity = Domain.Entities.DeliveryInfo.DeliveryInfo;
 
 namespace Domain.Entities.User;
 
@@ -30,4 +32,6 @@ public class UserEntity
 
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    public List<DeliveryInfoEntity> DeliveryInfos { get; set; } = [];
 }

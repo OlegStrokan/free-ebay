@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Domain.Repositories;
 using System.Net.Mail;
 
@@ -39,6 +40,7 @@ public class GetUserByEmailUseCase(IUserRepository repository) : IGetUserByEmail
             user.Status,
             user.CreatedAt,
             user.UpdatedAt,
-            user.IsEmailVerified);
+            user.IsEmailVerified,
+            user.DeliveryInfos.ToDtos());
     }
 }

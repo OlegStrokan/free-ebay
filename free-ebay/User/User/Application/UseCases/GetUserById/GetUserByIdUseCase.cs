@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Domain.Repositories;
 
 namespace Application.UseCases.GetUserById;
@@ -23,6 +24,7 @@ public class GetUserByIdUseCase(IUserRepository repository) : IGetUserByIdUseCas
             existingUser.Status,
             existingUser.CreatedAt,
             existingUser.UpdatedAt,
-            existingUser.IsEmailVerified);
+            existingUser.IsEmailVerified,
+            existingUser.DeliveryInfos.ToDtos());
     }
 }

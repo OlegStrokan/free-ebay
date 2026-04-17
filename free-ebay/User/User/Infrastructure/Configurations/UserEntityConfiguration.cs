@@ -29,5 +29,10 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(u => u.Status).IsRequired().HasDefaultValue(UserStatus.Active);
         builder.Property(u => u.CreatedAt).IsRequired().HasDefaultValueSql("CURRENT_TIMESTAMP");
         builder.Property(u => u.UpdatedAt).IsRequired().HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        builder.HasMany(u => u.DeliveryInfos)
+            .WithOne()
+            .HasForeignKey(d => d.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -9,14 +9,18 @@ public class UserRepository(AppDbContext dbContext) : IUserRepository
 {
     public async Task<UserEntity?> GetUserById(string id)
     {
-        return await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
+        return await dbContext.Users
+            .Include(u => u.DeliveryInfos)
+            .FirstOrDefaultAsync(x => x.Id == id);
 
     }
 
     public async Task<UserEntity?> GetUserByEmail(string email)
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
-        return await dbContext.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail);
+        return await dbContext.Users
+            .Include(u => u.DeliveryInfos)
+            .FirstOrDefaultAsync(x => x.Email == normalizedEmail);
     }
 
     public async Task<bool> ExistsByEmail(string email)

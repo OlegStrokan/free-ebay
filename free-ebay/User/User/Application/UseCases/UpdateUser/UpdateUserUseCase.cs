@@ -1,3 +1,4 @@
+using Application.Dtos;
 using Domain.Entities.User;
 using Domain.Repositories;
 using System.Net.Mail;
@@ -57,7 +58,8 @@ public class UpdateUserUseCase (IUserRepository repository) : IUpdateUserUseCase
             user.Status,
             user.CreatedAt,
             user.UpdatedAt,
-            user.IsEmailVerified);
+            user.IsEmailVerified,
+            user.DeliveryInfos.ToDtos());
     }
 
     private static void Validate(UpdateUserCommand command)
