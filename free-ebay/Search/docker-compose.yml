@@ -1,16 +1,23 @@
+# Run shared infra first:  docker compose -f ../docker-compose.infra.yml up -d
 name: search-service-deps
 
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+networks:
+  free-ebay-local:
+    external: true
 
-volumes:
-  elasticsearch_data:
+services:
+  # search-service:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     Elasticsearch__Url: "http://elasticsearch:9200"
+  #     Elasticsearch__IndexName: "products"
+  #     AiSearch__Enabled: "true"
+  #     AiSearch__GrpcUrl: "http://ai-search-service:50051"
+  #     Kestrel__EndpointDefaults__Protocols: Http2
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #   ports:
+  #     - "8088:8080"
+  #   networks:
+  #     - free-ebay-local
