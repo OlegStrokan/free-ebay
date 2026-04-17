@@ -1,16 +1,46 @@
+# Run shared infra first:  docker compose -f ../docker-compose.infra.yml up -d
 name: user-service-deps
 
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: user_service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+networks:
+  free-ebay-local:
+    external: true
 
 volumes:
-  postgres_data:
+  user_postgres_data:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: user-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: user_service
+    ports:
+      - "5433:5432"
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+    networks:
+      - free-ebay-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d user_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # user-service:
+  #   build: .
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #     ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=user_service;Username=postgres;Password=postgres"
+  #     Kestrel__EndpointDefaults__Protocols: Http2
+  #     ASPNETCORE_URLS: "http://+:8080"
+  #     Otel__Endpoint: "http://jaeger:4317"
+  #   ports:
+  #     - "8081:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - free-ebay-local
