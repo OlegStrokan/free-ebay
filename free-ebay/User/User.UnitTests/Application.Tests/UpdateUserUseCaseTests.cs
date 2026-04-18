@@ -93,7 +93,8 @@ public class UpdateUserUseCaseTests
             "nonExistingUser",
             "email@example.com",
             "Name",
-            "+12345293206"
+            "+12345293206",
+            "DE"
         );
 
         var useCase = new UpdateUserUseCase(userRepository);

@@ -30,16 +30,12 @@ public class UpdateUserUseCase (IUserRepository repository) : IUpdateUserUseCase
         existingUser.Fullname = command.Fullname.Trim();
         existingUser.Phone = command.Phone.Trim();
 
-        if (!string.IsNullOrWhiteSpace(command.CountryCode))
+        var countryCode = command.CountryCode.Trim().ToUpperInvariant();
+        if (countryCode.Length != 2)
         {
-            var countryCode = command.CountryCode.Trim().ToUpperInvariant();
-            if (countryCode.Length != 2)
-            {
-                throw new ArgumentException("Country code must be a 2-letter ISO code", nameof(command.CountryCode));
-            }
-
-            existingUser.CountryCode = countryCode;
+            throw new ArgumentException("Country code must be a 2-letter ISO code", nameof(command.CountryCode));
         }
+        existingUser.CountryCode = countryCode;
 
         if (command.CustomerTier.HasValue)
         {

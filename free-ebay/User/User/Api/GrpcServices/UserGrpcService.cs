@@ -67,7 +67,7 @@ public class UserGrpcService(
                 request.Email,
                 request.FullName,
                 request.Phone,
-                string.IsNullOrWhiteSpace(request.CountryCode) ? null : request.CountryCode,
+                request.CountryCode,
                 request.CustomerTier.ToEntity()));
 
             return result.ToProto();

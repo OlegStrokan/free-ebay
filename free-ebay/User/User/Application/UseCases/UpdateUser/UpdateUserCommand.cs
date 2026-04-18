@@ -7,5 +7,5 @@ public record UpdateUserCommand(
     string Email,
     string Fullname,
     string Phone,
-    string? CountryCode = null,
+    string CountryCode = "",
     CustomerTier? CustomerTier = null);
