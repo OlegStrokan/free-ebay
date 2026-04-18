@@ -1,3 +1,4 @@
+using Domain.Entities.DeliveryInfo;
 using Domain.Entities.User;
 using Infrastructure.DbContext;
 using Infrastructure.Repositories;
@@ -124,5 +125,86 @@ public class UserRepositoryTests
         var userRepository = new UserRepository(dbContext);
 
         await userRepository.DeleteUser("non_existing_id");
+    }
+
+    [Fact]
+    public async Task GetUserById_ShouldIncludeDeliveryInfos()
+    {
+        var dbContext = GetDbContext("DeliveryInfoDb");
+        var userRepository = new UserRepository(dbContext);
+
+        var user = new UserEntity
+        {
+            Id = "user-di-1",
+            Email = "delivery@example.com",
+            Fullname = "Jane Doe",
+            Password = "password",
+            Phone = "+420293829",
+            CountryCode = "DE",
+            CreatedAt = DateTime.UtcNow,
+            DeliveryInfos =
+            [
+                new DeliveryInfo
+                {
+                    Id = "di-unit-1",
+                    UserId = "user-di-1",
+                    Street = "Main St 1",
+                    City = "Prague",
+                    PostalCode = "11000",
+                    CountryDestination = "CZ",
+                },
+            ],
+        };
+
+        await userRepository.CreateUser(user);
+
+        var fetched = await userRepository.GetUserById(user.Id);
+
+        Assert.NotNull(fetched);
+        Assert.Single(fetched!.DeliveryInfos);
+        Assert.Equal("di-unit-1", fetched.DeliveryInfos[0].Id);
+        Assert.Equal("Main St 1", fetched.DeliveryInfos[0].Street);
+        Assert.Equal("Prague", fetched.DeliveryInfos[0].City);
+        Assert.Equal("11000", fetched.DeliveryInfos[0].PostalCode);
+        Assert.Equal("CZ", fetched.DeliveryInfos[0].CountryDestination);
+    }
+
+    [Fact]
+    public async Task GetUserByEmail_ShouldIncludeDeliveryInfos()
+    {
+        var dbContext = GetDbContext("DeliveryInfoByEmailDb");
+        var userRepository = new UserRepository(dbContext);
+
+        var user = new UserEntity
+        {
+            Id = "user-di-2",
+            Email = "delivery2@example.com",
+            Fullname = "Jane Doe",
+            Password = "password",
+            Phone = "+420293829",
+            CountryCode = "DE",
+            CreatedAt = DateTime.UtcNow,
+            DeliveryInfos =
+            [
+                new DeliveryInfo
+                {
+                    Id = "di-unit-2",
+                    UserId = "user-di-2",
+                    Street = "Oak Ave 5",
+                    City = "Berlin",
+                    PostalCode = "10115",
+                    CountryDestination = "DE",
+                },
+            ],
+        };
+
+        await userRepository.CreateUser(user);
+
+        var fetched = await userRepository.GetUserByEmail("delivery2@example.com");
+
+        Assert.NotNull(fetched);
+        Assert.Single(fetched!.DeliveryInfos);
+        Assert.Equal("di-unit-2", fetched.DeliveryInfos[0].Id);
+        Assert.Equal("Oak Ave 5", fetched.DeliveryInfos[0].Street);
     }
 }

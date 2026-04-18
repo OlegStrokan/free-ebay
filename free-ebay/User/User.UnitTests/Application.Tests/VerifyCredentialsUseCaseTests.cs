@@ -41,6 +41,8 @@ public class VerifyCredentialsUseCaseTests
         Assert.Equal(existingUser.Email, result.Email);
         Assert.Equal(existingUser.Fullname, result.Fullname);
         Assert.Equal(existingUser.IsEmailVerified, result.IsEmailVerified);
+        Assert.NotNull(result.DeliveryInfos);
+        Assert.Empty(result.DeliveryInfos);
 
         await userRepository.Received(1).GetUserByEmail("test@example.com");
         passwordHasher.Received(1).VerifyPassword("Password123", existingUser.Password);

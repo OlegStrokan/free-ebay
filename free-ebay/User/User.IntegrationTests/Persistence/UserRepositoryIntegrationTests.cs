@@ -1,3 +1,4 @@
+using Domain.Entities.DeliveryInfo;
 using Domain.Entities.User;
 using Domain.Repositories;
 using FluentAssertions;
@@ -175,6 +176,102 @@ public sealed class UserRepositoryIntegrationTests : IClassFixture<IntegrationFi
             $"  {email.ToUpperInvariant()}  "));
 
         await act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task GetUserById_ShouldIncludeDeliveryInfos_WhenPresent()
+    {
+        await using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var id = Guid.NewGuid().ToString();
+        var user = BuildUser(id, $"delivery-{Guid.NewGuid():N}@example.com");
+        await repo.CreateUser(user);
+
+        var deliveryInfo = new DeliveryInfo
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = id,
+            Street = "Main St 1",
+            City = "Prague",
+            PostalCode = "11000",
+            CountryDestination = "CZ",
+        };
+
+        db.DeliveryInfos.Add(deliveryInfo);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var fetched = await repo.GetUserById(id);
+
+        fetched.Should().NotBeNull();
+        fetched!.DeliveryInfos.Should().HaveCount(1);
+        fetched.DeliveryInfos[0].Id.Should().Be(deliveryInfo.Id);
+        fetched.DeliveryInfos[0].Street.Should().Be("Main St 1");
+        fetched.DeliveryInfos[0].City.Should().Be("Prague");
+        fetched.DeliveryInfos[0].PostalCode.Should().Be("11000");
+        fetched.DeliveryInfos[0].CountryDestination.Should().Be("CZ");
+    }
+
+    [Fact]
+    public async Task GetUserByEmail_ShouldIncludeDeliveryInfos_WhenPresent()
+    {
+        await using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var id = Guid.NewGuid().ToString();
+        var email = $"delivery-email-{Guid.NewGuid():N}@example.com";
+        await repo.CreateUser(BuildUser(id, email));
+
+        db.DeliveryInfos.Add(new DeliveryInfo
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = id,
+            Street = "Oak Ave 5",
+            City = "Berlin",
+            PostalCode = "10115",
+            CountryDestination = "DE",
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var fetched = await repo.GetUserByEmail(email);
+
+        fetched.Should().NotBeNull();
+        fetched!.DeliveryInfos.Should().HaveCount(1);
+        fetched.DeliveryInfos[0].Street.Should().Be("Oak Ave 5");
+        fetched.DeliveryInfos[0].City.Should().Be("Berlin");
+    }
+
+    [Fact]
+    public async Task DeleteUser_ShouldCascadeDelete_DeliveryInfos()
+    {
+        await using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var id = Guid.NewGuid().ToString();
+        await repo.CreateUser(BuildUser(id, $"cascade-{Guid.NewGuid():N}@example.com"));
+
+        var diId = Guid.NewGuid().ToString();
+        db.DeliveryInfos.Add(new DeliveryInfo
+        {
+            Id = diId,
+            UserId = id,
+            Street = "Pine Rd 9",
+            City = "Vienna",
+            PostalCode = "1010",
+            CountryDestination = "AT",
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        await repo.DeleteUser(id);
+
+        var orphan = await db.DeliveryInfos.AsNoTracking().FirstOrDefaultAsync(d => d.Id == diId);
+        orphan.Should().BeNull();
     }
 
     private static UserEntity BuildUser(

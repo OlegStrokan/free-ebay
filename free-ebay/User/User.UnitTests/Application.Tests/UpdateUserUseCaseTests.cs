@@ -65,7 +65,9 @@ public class UpdateUserUseCaseTests
         Assert.Equal(updatedUser.CountryCode, result.CountryCode);
         Assert.Equal(updatedUser.CustomerTier, result.CustomerTier);
         Assert.Equal(updatedUser.IsEmailVerified, result.IsEmailVerified);
-        
+        Assert.NotNull(result.DeliveryInfos);
+        Assert.Empty(result.DeliveryInfos);
+
         await userRepository.Received(1).GetUserById("userId");
         await userRepository.Received(1).GetUserByEmail("testnew@example.com");
         await userRepository.Received(1).UpdateUser(

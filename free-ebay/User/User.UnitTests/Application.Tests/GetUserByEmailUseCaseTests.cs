@@ -38,8 +38,53 @@ public class GetUserByEmailUseCaseTests
         Assert.Equal(existingUser.Email, result.Email);
         Assert.Equal(existingUser.Fullname, result.Fullname);
         Assert.Equal(existingUser.IsEmailVerified, result.IsEmailVerified);
+        Assert.NotNull(result.DeliveryInfos);
+        Assert.Empty(result.DeliveryInfos);
 
         await userRepository.Received(1).GetUserByEmail("test@example.com");
+    }
+
+    [Fact]
+    public async Task ShouldMapDeliveryInfos_WhenPresent()
+    {
+        var userRepository = Substitute.For<IUserRepository>();
+
+        var delivery = new Domain.Entities.DeliveryInfo.DeliveryInfo
+        {
+            Id = "di-2",
+            UserId = "userId",
+            Street = "Oak Ave 5",
+            City = "Berlin",
+            PostalCode = "10115",
+            CountryDestination = "DE",
+        };
+
+        var existingUser = new UserEntity
+        {
+            Id = "userId",
+            Email = "test@example.com",
+            Password = "hashed-password",
+            Fullname = "John Doe",
+            Phone = "+1234567890",
+            CountryCode = "DE",
+            CustomerTier = CustomerTier.Standard,
+            Status = UserStatus.Active,
+            IsEmailVerified = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            DeliveryInfos = [delivery],
+        };
+
+        userRepository.GetUserByEmail("test@example.com").Returns(existingUser);
+
+        var useCase = new GetUserByEmailUseCase(userRepository);
+        var result = await useCase.ExecuteAsync("test@example.com");
+
+        Assert.NotNull(result);
+        Assert.Single(result!.DeliveryInfos!);
+        Assert.Equal("di-2", result.DeliveryInfos![0].Id);
+        Assert.Equal("Oak Ave 5", result.DeliveryInfos[0].Street);
+        Assert.Equal("Berlin", result.DeliveryInfos[0].City);
     }
 
     [Fact]

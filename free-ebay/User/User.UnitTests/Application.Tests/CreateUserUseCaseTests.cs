@@ -69,6 +69,8 @@ public class CreateUserUseCaseTests
         Assert.Equal("DE", createdUser.CountryCode);
         Assert.Equal(CustomerTier.Standard, createdUser.CustomerTier);
         Assert.False(createdUser.IsEmailVerified);
+        Assert.NotNull(result.DeliveryInfos);
+        Assert.Empty(result.DeliveryInfos);
 
         await userRepository.Received(1).ExistsByEmail(normalizedEmail);
         passwordHasher.Received(1).HashPassword(command.Password);

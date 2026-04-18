@@ -1,4 +1,6 @@
 using Api.Mappers;
+using Application.Dtos;
+using Domain.Entities.DeliveryInfo;
 using Domain.Entities.User;
 using Protos.User;
 using BlockUserResponse = Application.UseCases.BlockUser.BlockUserResponse;
@@ -422,5 +424,123 @@ public class UserMapperTests
         Assert.Equal("Test User", result.Data.FullName);
         Assert.Equal("+1234567890", result.Data.Phone);
         Assert.True(result.Data.IsEmailVerified);
+    }
+
+    [Fact]
+    public void DeliveryInfoDto_ToProto_ShouldMapAllFields()
+    {
+        var dto = new DeliveryInfoDto("di-1", "Main St 1", "Prague", "11000", "CZ");
+
+        var result = dto.ToProto();
+
+        Assert.Equal("di-1", result.Id);
+        Assert.Equal("Main St 1", result.Street);
+        Assert.Equal("Prague", result.City);
+        Assert.Equal("11000", result.PostalCode);
+        Assert.Equal("CZ", result.CountryDestination);
+    }
+
+    [Fact]
+    public void DeliveryInfoEntity_ToProto_ShouldMapAllFields()
+    {
+        var entity = new DeliveryInfo
+        {
+            Id = "di-2",
+            UserId = "user-1",
+            Street = "Oak Ave 5",
+            City = "Berlin",
+            PostalCode = "10115",
+            CountryDestination = "DE",
+        };
+
+        var result = entity.ToProto();
+
+        Assert.Equal("di-2", result.Id);
+        Assert.Equal("Oak Ave 5", result.Street);
+        Assert.Equal("Berlin", result.City);
+        Assert.Equal("10115", result.PostalCode);
+        Assert.Equal("DE", result.CountryDestination);
+    }
+
+    [Fact]
+    public void CreateUserResponse_ToProto_ShouldIncludeDeliveryInfos()
+    {
+        var createdAt = DateTime.UtcNow;
+        var response = new CreateUserResponse(
+            "user_123",
+            "test@example.com",
+            "John Doe",
+            "+1234567890",
+            "DE",
+            CustomerTier.Standard,
+            UserStatus.Active,
+            createdAt,
+            createdAt,
+            false,
+            [new DeliveryInfoDto("di-1", "Main St 1", "Prague", "11000", "CZ")]
+        );
+
+        var result = response.ToProto();
+
+        Assert.Single(result.Data.DeliveryInfo);
+        Assert.Equal("di-1", result.Data.DeliveryInfo[0].Id);
+        Assert.Equal("Main St 1", result.Data.DeliveryInfo[0].Street);
+        Assert.Equal("Prague", result.Data.DeliveryInfo[0].City);
+        Assert.Equal("11000", result.Data.DeliveryInfo[0].PostalCode);
+        Assert.Equal("CZ", result.Data.DeliveryInfo[0].CountryDestination);
+    }
+
+    [Fact]
+    public void CreateUserResponse_ToProto_ShouldHaveEmptyDeliveryInfo_WhenNull()
+    {
+        var createdAt = DateTime.UtcNow;
+        var response = new CreateUserResponse(
+            "user_123",
+            "test@example.com",
+            "John Doe",
+            "+1234567890",
+            "DE",
+            CustomerTier.Standard,
+            UserStatus.Active,
+            createdAt,
+            createdAt,
+            false
+        );
+
+        var result = response.ToProto();
+
+        Assert.Empty(result.Data.DeliveryInfo);
+    }
+
+    [Fact]
+    public void UserEntity_ToProto_ShouldIncludeDeliveryInfos()
+    {
+        var entity = new UserEntity
+        {
+            Id = "user_123",
+            Email = "entity@example.com",
+            Fullname = "Entity User",
+            Phone = "+5555555555",
+            CountryCode = "DE",
+            CustomerTier = CustomerTier.Standard,
+            IsEmailVerified = false,
+            Password = "password",
+            Status = UserStatus.Active,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            DeliveryInfos =
+            [
+                new DeliveryInfo { Id = "di-3", UserId = "user_123", Street = "Pine Rd 9", City = "Vienna", PostalCode = "1010", CountryDestination = "AT" },
+            ],
+        };
+
+        var result = entity.ToProto();
+
+        Assert.Single(result.DeliveryInfo);
+        Assert.Equal("di-3", result.DeliveryInfo[0].Id);
+        Assert.Equal("Pine Rd 9", result.DeliveryInfo[0].Street);
+        Assert.Equal("Vienna", result.DeliveryInfo[0].City);
+        Assert.Equal("1010", result.DeliveryInfo[0].PostalCode);
+        Assert.Equal("AT", result.DeliveryInfo[0].CountryDestination);
     }
 }
