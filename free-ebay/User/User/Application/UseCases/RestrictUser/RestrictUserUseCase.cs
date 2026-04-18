@@ -1,20 +1,20 @@
 using Application.Dtos;
-using Domain.Entities.BlockedUser;
 using Domain.Entities.User;
+using Domain.Entities.UserRestriction;
 using Domain.Repositories;
 
-namespace Application.UseCases.BlockUser;
+namespace Application.UseCases.RestrictUser;
 
-public class BlockUserUseCase(
+public class RestrictUserUseCase(
     IUserRepository userRepository,
-    IBlockedUserRepository blockedUserRepository) : IBlockUserUseCase
+    IUserRestrictionRepository restrictionRepository) : IRestrictUserUseCase
 {
     private static readonly HashSet<string> _allowedRoles = ["Admin", "Moderator"];
 
-    public async Task<BlockUserResponse> ExecuteAsync(BlockUserCommand command)
+    public async Task<RestrictUserResponse> ExecuteAsync(RestrictUserCommand command)
     {
         if (command.TargetUserId == command.ActorUserId)
-            throw new InvalidOperationException("User cannot block themselves");
+            throw new InvalidOperationException("Actor cannot restrict themselves");
 
         var actor = await userRepository.GetUserById(command.ActorUserId);
         if (actor == null)
@@ -22,29 +22,34 @@ public class BlockUserUseCase(
 
         var actorRoles = actor.UserRoles.Select(ur => ur.Role.Name).ToHashSet();
         if (!actorRoles.Overlaps(_allowedRoles))
-            throw new UnauthorizedAccessException("Only Admins and Moderators can block users");
+            throw new UnauthorizedAccessException("Only Admins and Moderators can restrict users");
 
         var target = await userRepository.GetUserById(command.TargetUserId);
         if (target == null)
             throw new KeyNotFoundException($"User with ID {command.TargetUserId} not found");
 
-        if (target.Status == UserStatus.Blocked)
-            throw new InvalidOperationException($"User {command.TargetUserId} is already blocked");
+        if (target.Status != UserStatus.Active)
+            throw new InvalidOperationException($"User {command.TargetUserId} already has an active restriction");
 
-        target.Status = UserStatus.Blocked;
+        target.Status = command.Type == RestrictionType.Banned
+            ? UserStatus.Banned
+            : UserStatus.Restricted;
+
         var updatedUser = await userRepository.UpdateUser(target);
 
-        var blockedRecord = new BlockedUserEntity
+        var restriction = new UserRestrictionEntity
         {
             Id = Guid.NewGuid().ToString(),
-            BlockedUserId = command.TargetUserId,
-            BlockedById = command.ActorUserId,
+            RestrictedUserId = command.TargetUserId,
+            RestrictedById = command.ActorUserId,
+            Type = command.Type,
             Reason = command.Reason,
-            BlockedAt = DateTime.UtcNow,
+            RestrictedAt = DateTime.UtcNow,
+            ExpiresAt = command.ExpiresAt,
         };
-        await blockedUserRepository.AddAsync(blockedRecord);
+        await restrictionRepository.AddAsync(restriction);
 
-        return new BlockUserResponse(
+        return new RestrictUserResponse(
             updatedUser.Id,
             updatedUser.Email,
             updatedUser.Fullname,
@@ -54,8 +59,10 @@ public class BlockUserUseCase(
             updatedUser.Status,
             updatedUser.CreatedAt,
             updatedUser.UpdatedAt,
-            BlockedById: command.ActorUserId,
+            RestrictedById: command.ActorUserId,
+            RestrictionType: command.Type,
             Reason: command.Reason,
+            ExpiresAt: command.ExpiresAt,
             IsEmailVerified: updatedUser.IsEmailVerified,
             DeliveryInfos: updatedUser.DeliveryInfos.ToDtos(),
             Roles: updatedUser.UserRoles.Select(ur => ur.Role.Name).ToList());

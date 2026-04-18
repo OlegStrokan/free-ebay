@@ -39,10 +39,5 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
             .WithOne(ur => ur.User)
             .HasForeignKey(ur => ur.UserId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasMany(u => u.BlockedUserRecords)
-            .WithOne(b => b.BlockedUser)
-            .HasForeignKey(b => b.BlockedUserId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }

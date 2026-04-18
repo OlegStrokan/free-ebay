@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using DeliveryInfoEntity = Domain.Entities.DeliveryInfo.DeliveryInfo;
 using Domain.Entities.Role;
-using Domain.Entities.BlockedUser;
+using Domain.Entities.UserRestriction;
 
 namespace Domain.Entities.User;
 
 public enum UserStatus
 {
     Active = 0,
-    Blocked = 1,
+    Restricted = 1,
+    Banned = 2,
 }
 
 public enum CustomerTier
@@ -37,5 +38,5 @@ public class UserEntity
 
     public List<DeliveryInfoEntity> DeliveryInfos { get; set; } = [];
     public List<UserRoleEntity> UserRoles { get; set; } = [];
-    public List<BlockedUserEntity> BlockedUserRecords { get; set; } = [];
+    public List<UserRestrictionEntity> Restrictions { get; set; } = [];
 }

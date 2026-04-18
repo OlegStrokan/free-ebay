@@ -1,6 +1,7 @@
 using Api.Mappers;
 using Application.UseCases.AssignRole;
-using Application.UseCases.BlockUser;
+using Application.UseCases.RestrictUser;
+using Application.UseCases.LiftRestriction;
 using Application.UseCases.CreateUser;
 using Application.UseCases.DeleteUser;
 using Application.UseCases.GetAllRoles;
@@ -20,7 +21,8 @@ using AssignRoleResponseProto   = Protos.Role.AssignRoleResponse;
 using RevokeRoleResponseProto   = Protos.Role.RevokeRoleResponse;
 using GetUserRolesResponseProto = Protos.Role.GetUserRolesResponse;
 using GetAllRolesResponseProto  = Protos.Role.GetAllRolesResponse;
-using BlockUserResponseProto = Protos.User.BlockUserResponse;
+using RestrictUserResponseProto = Protos.User.RestrictUserResponse;
+using LiftRestrictionResponseProto = Protos.User.LiftRestrictionResponse;
 using CreateUserResponseProto = Protos.User.CreateUserResponse;
 using GetUserByEmailResponseProto = Protos.User.GetUserByEmailResponse;
 using GetUserByIdResponseProto = Protos.User.GetUserByIdResponse;
@@ -38,7 +40,8 @@ public class UserGrpcService(
     IGetUserByEmailUseCase getUserByEmailUseCase,
     IVerifyCredentialsUseCase verifyCredentialsUseCase,
     IDeleteUserUseCase deleteUserUseCase,
-    IBlockUserUseCase blockUserUseCase,
+    IRestrictUserUseCase restrictUserUseCase,
+    ILiftRestrictionUseCase liftRestrictionUseCase,
     IUpdatePasswordUseCase updatePasswordUseCase,
     IVerifyUserEmailUseCase verifyUserEmailUseCase,
     IUpdateUserPasswordUseCase updateUserPasswordUseCase,
@@ -117,7 +120,7 @@ public class UserGrpcService(
         return new DeleteUserResponse();
     }
 
-    public override async Task<BlockUserResponseProto> BlockUser(BlockUserRequest request, ServerCallContext context)
+    public override async Task<RestrictUserResponseProto> RestrictUser(RestrictUserRequest request, ServerCallContext context)
     {
         if (string.IsNullOrWhiteSpace(request.TargetUserId))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "target_user_id is required"));
@@ -126,11 +129,46 @@ public class UserGrpcService(
         if (string.IsNullOrWhiteSpace(request.Reason))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "reason is required"));
 
+        var type = request.Type == RestrictionTypeProto.RestrictionTypeBanned
+            ? Domain.Entities.UserRestriction.RestrictionType.Banned
+            : Domain.Entities.UserRestriction.RestrictionType.Restricted;
+
+        DateTime? expiresAt = request.HasExpiresAt
+            ? DateTimeOffset.FromUnixTimeSeconds(request.ExpiresAt).UtcDateTime
+            : null;
+
         try
         {
-            var result = await blockUserUseCase.ExecuteAsync(
-                new BlockUserCommand(request.TargetUserId, request.ActorUserId, request.Reason));
+            var result = await restrictUserUseCase.ExecuteAsync(
+                new RestrictUserCommand(request.TargetUserId, request.ActorUserId, type, request.Reason, expiresAt));
             return result.ToProto();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+    }
+
+    public override async Task<LiftRestrictionResponseProto> LiftRestriction(LiftRestrictionRequest request, ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.TargetUserId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "target_user_id is required"));
+        if (string.IsNullOrWhiteSpace(request.ActorUserId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "actor_user_id is required"));
+
+        try
+        {
+            var result = await liftRestrictionUseCase.ExecuteAsync(
+                new LiftRestrictionCommand(request.TargetUserId, request.ActorUserId));
+            return new LiftRestrictionResponseProto { Success = result.Success };
         }
         catch (KeyNotFoundException ex)
         {

@@ -1,10 +1,10 @@
-using System.Collections.Generic;
 using Application.Dtos;
 using Domain.Entities.User;
+using Domain.Entities.UserRestriction;
 
-namespace Application.UseCases.BlockUser;
+namespace Application.UseCases.RestrictUser;
 
-public record BlockUserResponse(
+public record RestrictUserResponse(
     string Id,
     string Email,
     string Fullname,
@@ -14,8 +14,10 @@ public record BlockUserResponse(
     UserStatus Status,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    string BlockedById,
+    string RestrictedById,
+    RestrictionType RestrictionType,
     string Reason,
+    DateTime? ExpiresAt,
     bool IsEmailVerified = false,
     IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null,
     IReadOnlyList<string>? Roles = null);

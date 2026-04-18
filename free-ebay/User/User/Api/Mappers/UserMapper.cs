@@ -2,7 +2,7 @@ using Application.Dtos;
 using Domain.Entities.DeliveryInfo;
 using Domain.Entities.User;
 using Protos.User;
-using BlockUserResponse = Application.UseCases.BlockUser.BlockUserResponse;
+using RestrictUserResponse = Application.UseCases.RestrictUser.RestrictUserResponse;
 using CreateUserResponse = Application.UseCases.CreateUser.CreateUserResponse;
 using CreateUserResponseProto = Protos.User.CreateUserResponse;
 using GetUserByEmailResponse = Application.UseCases.GetUserByEmail.GetUserByEmailResponse;
@@ -11,7 +11,7 @@ using GetUserByEmailResponseProto = Protos.User.GetUserByEmailResponse;
 using VerifyCredentialsResponse = Application.UseCases.VerifyCredentials.VerifyCredentialsResponse;
 using VerifyCredentialsResponseProto = Protos.User.VerifyCredentialsResponse;
 using UpdateUserResponse = Application.UseCases.UpdateUser.UpdateUserResponse;
-using BlockUserResponseProto = Protos.User.BlockUserResponse;
+using RestrictUserResponseProto = Protos.User.RestrictUserResponse;
 using GetUserByIdResponseProto = Protos.User.GetUserByIdResponse;
 using UpdateUserResponseProto = Protos.User.UpdateUserResponse;
 
@@ -25,7 +25,8 @@ public static class UserMapper
         return status switch
         {
             UserStatus.Active => UserStatusProto.Active,
-            UserStatus.Blocked => UserStatusProto.Blocked,
+            UserStatus.Restricted => UserStatusProto.Restricted,
+            UserStatus.Banned => UserStatusProto.Banned,
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
     }
@@ -35,7 +36,8 @@ public static class UserMapper
         return status switch
         {
             UserStatusProto.Active => UserStatus.Active,
-            UserStatusProto.Blocked => UserStatus.Blocked,
+            UserStatusProto.Restricted => UserStatus.Restricted,
+            UserStatusProto.Banned => UserStatus.Banned,
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
     }
@@ -133,9 +135,9 @@ public static class UserMapper
         return new UpdateUserResponseProto { Data = MapToUserProto(response) };
     }
 
-    public static BlockUserResponseProto ToProto(this BlockUserResponse response)
+    public static RestrictUserResponseProto ToProto(this RestrictUserResponse response)
     {
-        return new BlockUserResponseProto { Data = MapToUserProto(response) };
+        return new RestrictUserResponseProto { Data = MapToUserProto(response) };
     }
 
     public static UserProto ToProto(this UserEntity entity)
@@ -277,7 +279,7 @@ public static class UserMapper
         return proto;
     }
 
-    private static UserProto MapToUserProto(BlockUserResponse r)
+    private static UserProto MapToUserProto(RestrictUserResponse r)
     {
         var proto = new UserProto
         {
