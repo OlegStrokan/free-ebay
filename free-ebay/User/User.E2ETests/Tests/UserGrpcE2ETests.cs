@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Grpc.Core;
+using Protos.Role;
 using Protos.User;
 using User.E2ETests.Infrastructure;
 using Xunit;
@@ -256,15 +257,29 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
     [Fact]
     public async Task BlockUser_ShouldSetStatusToBlocked()
     {
-        var created = await CreateUserAsync();
+        var target = await CreateUserAsync();
+        var actor  = await CreateUserAsync();
 
-        var blocked = await _client.BlockUserAsync(new BlockUserRequest { Id = created.Id });
+        // Grant the actor Admin role so they have permission to block
+        await _client.AssignRoleAsync(new AssignRoleRequest
+        {
+            UserId     = actor.Id,
+            RoleName   = "Admin",
+            AssignedBy = actor.Id,
+        });
+
+        var blocked = await _client.BlockUserAsync(new BlockUserRequest
+        {
+            TargetUserId = target.Id,
+            ActorUserId  = actor.Id,
+            Reason       = "E2E test block",
+        });
 
         blocked.Data.Should().NotBeNull();
-        blocked.Data.Id.Should().Be(created.Id);
+        blocked.Data.Id.Should().Be(target.Id);
         blocked.Data.Status.Should().Be(UserStatusProto.Blocked);
 
-        var fetched = await _client.GetUserByIdAsync(new GetUserByIdRequest { Id = created.Id });
+        var fetched = await _client.GetUserByIdAsync(new GetUserByIdRequest { Id = target.Id });
         fetched.Data.Status.Should().Be(UserStatusProto.Blocked);
     }
 

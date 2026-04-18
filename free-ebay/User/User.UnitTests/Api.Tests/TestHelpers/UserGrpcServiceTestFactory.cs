@@ -1,9 +1,13 @@
 using Api.GrpcServices;
+using Application.UseCases.AssignRole;
 using Application.UseCases.BlockUser;
 using Application.UseCases.CreateUser;
 using Application.UseCases.DeleteUser;
+using Application.UseCases.GetAllRoles;
 using Application.UseCases.GetUserByEmail;
 using Application.UseCases.GetUserById;
+using Application.UseCases.GetUserRoles;
+using Application.UseCases.RevokeRole;
 using Application.UseCases.UpdatePassword;
 using Application.UseCases.UpdateUserPassword;
 using Application.UseCases.UpdateUser;
@@ -25,7 +29,11 @@ internal static class UserGrpcServiceTestFactory
         IBlockUserUseCase? blockUserUseCase = null,
         IUpdatePasswordUseCase? updatePasswordUseCase = null,
         IVerifyUserEmailUseCase? verifyUserEmailUseCase = null,
-        IUpdateUserPasswordUseCase? updateUserPasswordUseCase = null)
+        IUpdateUserPasswordUseCase? updateUserPasswordUseCase = null,
+        IAssignRoleUseCase? assignRoleUseCase = null,
+        IRevokeRoleUseCase? revokeRoleUseCase = null,
+        IGetUserRolesUseCase? getUserRolesUseCase = null,
+        IGetAllRolesUseCase? getAllRolesUseCase = null)
     {
         return new UserGrpcService(
             createUserUseCase ?? Substitute.For<ICreateUserUseCase>(),
@@ -37,6 +45,10 @@ internal static class UserGrpcServiceTestFactory
             blockUserUseCase ?? Substitute.For<IBlockUserUseCase>(),
             updatePasswordUseCase ?? Substitute.For<IUpdatePasswordUseCase>(),
             verifyUserEmailUseCase ?? Substitute.For<IVerifyUserEmailUseCase>(),
-            updateUserPasswordUseCase ?? Substitute.For<IUpdateUserPasswordUseCase>());
+            updateUserPasswordUseCase ?? Substitute.For<IUpdateUserPasswordUseCase>(),
+            assignRoleUseCase ?? Substitute.For<IAssignRoleUseCase>(),
+            revokeRoleUseCase ?? Substitute.For<IRevokeRoleUseCase>(),
+            getUserRolesUseCase ?? Substitute.For<IGetUserRolesUseCase>(),
+            getAllRolesUseCase ?? Substitute.For<IGetAllRolesUseCase>());
     }
 }

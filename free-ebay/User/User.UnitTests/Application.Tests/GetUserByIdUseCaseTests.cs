@@ -47,6 +47,8 @@ public class GetUserByIdUseCaseTests
         Assert.Equal(existingUser.IsEmailVerified, result.IsEmailVerified);
         Assert.NotNull(result.DeliveryInfos);
         Assert.Empty(result.DeliveryInfos);
+        Assert.NotNull(result.Roles);
+        Assert.Empty(result.Roles);
 
         await userRepository.Received(1).GetUserById(existingUser.Id);
     }

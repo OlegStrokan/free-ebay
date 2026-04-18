@@ -1,6 +1,7 @@
 using Api.Mappers;
 using Application.Dtos;
 using Domain.Entities.DeliveryInfo;
+using Domain.Entities.Role;
 using Domain.Entities.User;
 using Protos.User;
 using BlockUserResponse = Application.UseCases.BlockUser.BlockUserResponse;
@@ -351,7 +352,9 @@ public class UserMapperTests
             UserStatus.Blocked,
             createdAt,
             updatedAt,
-            true);
+            BlockedById: "admin_001",
+            Reason: "Violated terms of service",
+            IsEmailVerified: true);
 
         var result = response.ToProto();
 
@@ -363,6 +366,59 @@ public class UserMapperTests
         Assert.Equal("DE", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Standard, result.Data.CustomerTier);
         Assert.True(result.Data.IsEmailVerified);
+        Assert.Empty(result.Data.Roles);
+    }
+
+    [Fact]
+    public void BlockUserResponse_ToProto_ShouldMapRoles_WhenPresent()
+    {
+        var createdAt = DateTime.UtcNow;
+        var updatedAt = createdAt.AddMinutes(1);
+
+        var response = new BlockUserResponse(
+            "user_123",
+            "blocked@example.com",
+            "Blocked User",
+            "+121212121",
+            "DE",
+            CustomerTier.Standard,
+            UserStatus.Blocked,
+            createdAt,
+            updatedAt,
+            BlockedById: "admin_001",
+            Reason: "Fraud",
+            IsEmailVerified: false,
+            Roles: ["User", "Seller"]);
+
+        var result = response.ToProto();
+
+        Assert.Equal(2, result.Data.Roles.Count);
+        Assert.Contains("User", result.Data.Roles);
+        Assert.Contains("Seller", result.Data.Roles);
+    }
+
+    [Fact]
+    public void CreateUserResponse_ToProto_ShouldMapRoles_WhenPresent()
+    {
+        var createdAt = DateTime.UtcNow;
+        var response = new CreateUserResponse(
+            "user_123",
+            "test@example.com",
+            "John Doe",
+            "+1234567890",
+            "DE",
+            CustomerTier.Standard,
+            UserStatus.Active,
+            createdAt,
+            createdAt,
+            false,
+            null,
+            ["User"]);
+
+        var result = response.ToProto();
+
+        Assert.Single(result.Data.Roles);
+        Assert.Equal("User", result.Data.Roles[0]);
     }
 
     [Fact]
@@ -395,6 +451,36 @@ public class UserMapperTests
         Assert.True(result.IsEmailVerified);
         Assert.True(result.CreatedAt > 0);
         Assert.True(result.UpdatedAt > 0);
+        Assert.Empty(result.Roles);
+    }
+
+    [Fact]
+    public void UserEntity_ToProto_ShouldMapRoles_WhenPresent()
+    {
+        var role = new RoleEntity { Id = "role-admin", Name = "Admin", Description = "Admin", IsSystem = true };
+        var entity = new UserEntity
+        {
+            Id = "user_123",
+            Email = "entity@example.com",
+            Fullname = "Entity User",
+            Phone = "+5555555555",
+            CountryCode = "DE",
+            CustomerTier = CustomerTier.Standard,
+            IsEmailVerified = false,
+            Password = "password",
+            Status = UserStatus.Active,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            UserRoles =
+            [
+                new UserRoleEntity { UserId = "user_123", RoleId = role.Id, AssignedBy = "system", AssignedAt = DateTime.UtcNow, Role = role },
+            ],
+        };
+
+        var result = entity.ToProto();
+
+        Assert.Single(result.Roles);
+        Assert.Equal("Admin", result.Roles[0]);
     }
 
     [Fact]

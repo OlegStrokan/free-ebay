@@ -71,6 +71,8 @@ public class CreateUserUseCaseTests
         Assert.False(createdUser.IsEmailVerified);
         Assert.NotNull(result.DeliveryInfos);
         Assert.Empty(result.DeliveryInfos);
+        Assert.NotNull(result.Roles);
+        Assert.Empty(result.Roles);
 
         await userRepository.Received(1).ExistsByEmail(normalizedEmail);
         passwordHasher.Received(1).HashPassword(command.Password);
