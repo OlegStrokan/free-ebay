@@ -48,9 +48,10 @@ public class CreateUserUseCase(
             user.CreatedAt,
             user.UpdatedAt,
             user.IsEmailVerified,
-            user.DeliveryInfos.ToDtos());
+            user.DeliveryInfos.ToDtos(),
+            user.UserRoles.Select(ur => ur.Role.Name).ToList());
     }
-// @think: should this validation be in use-case or should we move it to gprc layer?
+
     private static void Validate(CreateUserCommand command)
     {
         if (string.IsNullOrWhiteSpace(command.Fullname))

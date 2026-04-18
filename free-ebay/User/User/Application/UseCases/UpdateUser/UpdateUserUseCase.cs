@@ -55,7 +55,8 @@ public class UpdateUserUseCase (IUserRepository repository) : IUpdateUserUseCase
             user.CreatedAt,
             user.UpdatedAt,
             user.IsEmailVerified,
-            user.DeliveryInfos.ToDtos());
+            user.DeliveryInfos.ToDtos(),
+            user.UserRoles.Select(ur => ur.Role.Name).ToList());
     }
 
     private static void Validate(UpdateUserCommand command)

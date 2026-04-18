@@ -8,8 +8,7 @@ message UserProto {
   string full_name = 2;
   string email = 3;
   string phone = 4;
-  // i don't give a fuck about RBAC, and about AIPAC too
-  // string role = 5;
+  repeated string roles = 5;
   repeated DeliveryInfoProto delivery_info = 6;
   UserStatusProto status = 7;
   int64 createdAt = 8;

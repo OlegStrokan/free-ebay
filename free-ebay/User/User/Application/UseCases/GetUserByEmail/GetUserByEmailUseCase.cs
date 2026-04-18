@@ -41,6 +41,7 @@ public class GetUserByEmailUseCase(IUserRepository repository) : IGetUserByEmail
             user.CreatedAt,
             user.UpdatedAt,
             user.IsEmailVerified,
-            user.DeliveryInfos.ToDtos());
+            user.DeliveryInfos.ToDtos(),
+            user.UserRoles.Select(ur => ur.Role.Name).ToList());
     }
 }

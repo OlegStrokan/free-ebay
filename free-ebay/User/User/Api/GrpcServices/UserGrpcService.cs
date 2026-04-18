@@ -1,16 +1,25 @@
 using Api.Mappers;
+using Application.UseCases.AssignRole;
 using Application.UseCases.BlockUser;
 using Application.UseCases.CreateUser;
 using Application.UseCases.DeleteUser;
+using Application.UseCases.GetAllRoles;
 using Application.UseCases.GetUserByEmail;
 using Application.UseCases.GetUserById;
+using Application.UseCases.GetUserRoles;
+using Application.UseCases.RevokeRole;
 using Application.UseCases.UpdatePassword;
 using Application.UseCases.UpdateUserPassword;
 using Application.UseCases.UpdateUser;
 using Application.UseCases.VerifyCredentials;
 using Application.UseCases.VerifyUserEmail;
 using Grpc.Core;
+using Protos.Role;
 using Protos.User;
+using AssignRoleResponseProto   = Protos.Role.AssignRoleResponse;
+using RevokeRoleResponseProto   = Protos.Role.RevokeRoleResponse;
+using GetUserRolesResponseProto = Protos.Role.GetUserRolesResponse;
+using GetAllRolesResponseProto  = Protos.Role.GetAllRolesResponse;
 using BlockUserResponseProto = Protos.User.BlockUserResponse;
 using CreateUserResponseProto = Protos.User.CreateUserResponse;
 using GetUserByEmailResponseProto = Protos.User.GetUserByEmailResponse;
@@ -32,7 +41,11 @@ public class UserGrpcService(
     IBlockUserUseCase blockUserUseCase,
     IUpdatePasswordUseCase updatePasswordUseCase,
     IVerifyUserEmailUseCase verifyUserEmailUseCase,
-    IUpdateUserPasswordUseCase updateUserPasswordUseCase) : UserServiceProto.UserServiceProtoBase
+    IUpdateUserPasswordUseCase updateUserPasswordUseCase,
+    IAssignRoleUseCase assignRoleUseCase,
+    IRevokeRoleUseCase revokeRoleUseCase,
+    IGetUserRolesUseCase getUserRolesUseCase,
+    IGetAllRolesUseCase getAllRolesUseCase) : UserServiceProto.UserServiceProtoBase
 {
     public override async Task<CreateUserResponseProto> CreateUser(CreateUserRequest request, ServerCallContext context)
     {
@@ -43,7 +56,7 @@ public class UserGrpcService(
                 request.Password,
                 request.FullName,
                 request.Phone,
-                string.IsNullOrWhiteSpace(request.CountryCode) ? "DE" : request.CountryCode,
+                request.CountryCode,
                 request.CustomerTier.ToEntity()));
 
             return user.ToProto();
@@ -106,18 +119,30 @@ public class UserGrpcService(
 
     public override async Task<BlockUserResponseProto> BlockUser(BlockUserRequest request, ServerCallContext context)
     {
+        if (string.IsNullOrWhiteSpace(request.TargetUserId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "target_user_id is required"));
+        if (string.IsNullOrWhiteSpace(request.ActorUserId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "actor_user_id is required"));
+        if (string.IsNullOrWhiteSpace(request.Reason))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "reason is required"));
+
         try
         {
-            var result = await blockUserUseCase.ExecuteAsync(new BlockUserCommand(request.Id));
+            var result = await blockUserUseCase.ExecuteAsync(
+                new BlockUserCommand(request.TargetUserId, request.ActorUserId, request.Reason));
             return result.ToProto();
         }
         catch (KeyNotFoundException ex)
         {
             throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
         }
-        catch (ArgumentException ex)
+        catch (UnauthorizedAccessException ex)
         {
-            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
         }
     }
 
@@ -210,5 +235,83 @@ public class UserGrpcService(
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
         }
+    }
+
+    public override async Task<AssignRoleResponseProto> AssignRole(AssignRoleRequest request, ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.UserId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "user_id is required"));
+        if (string.IsNullOrWhiteSpace(request.RoleName))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "role_name is required"));
+        if (string.IsNullOrWhiteSpace(request.AssignedBy))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "assigned_by is required"));
+
+        try
+        {
+            var result = await assignRoleUseCase.ExecuteAsync(
+                new AssignRoleCommand(request.UserId, request.RoleName, request.AssignedBy));
+            return new AssignRoleResponseProto { Success = result.Success };
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.AlreadyExists, ex.Message));
+        }
+    }
+
+    public override async Task<RevokeRoleResponseProto> RevokeRole(RevokeRoleRequest request, ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.UserId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "user_id is required"));
+        if (string.IsNullOrWhiteSpace(request.RoleName))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "role_name is required"));
+
+        try
+        {
+            var result = await revokeRoleUseCase.ExecuteAsync(
+                new RevokeRoleCommand(request.UserId, request.RoleName));
+            return new RevokeRoleResponseProto { Success = result.Success };
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+    }
+
+    public override async Task<GetUserRolesResponseProto> GetUserRoles(GetUserRolesRequest request, ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.UserId))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "user_id is required"));
+
+        try
+        {
+            var result = await getUserRolesUseCase.ExecuteAsync(new GetUserRolesQuery(request.UserId));
+            var response = new GetUserRolesResponseProto();
+            response.Roles.AddRange(result.RoleNames.Select(name => new RoleProto { Name = name }));
+            return response;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+        }
+    }
+
+    public override async Task<GetAllRolesResponseProto> GetAllRoles(GetAllRolesRequest request, ServerCallContext context)
+    {
+        var result = await getAllRolesUseCase.ExecuteAsync();
+        var response = new GetAllRolesResponseProto();
+        response.Roles.AddRange(result.RoleNames.Select(name => new RoleProto { Name = name }));
+        return response;
     }
 }

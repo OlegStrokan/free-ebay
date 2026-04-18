@@ -15,4 +15,5 @@ public record CreateUserResponse(
 	DateTime CreatedAt,
 	DateTime UpdatedAt,
 	bool IsEmailVerified = false,
-	IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null);
+  IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null,
+  IReadOnlyList<string>? Roles = null);

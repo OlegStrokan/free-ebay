@@ -1,5 +1,7 @@
 
+using Domain.Entities.BlockedUser;
 using Domain.Entities.DeliveryInfo;
+using Domain.Entities.Role;
 using Domain.Entities.User;
 using Infrastructure.Configurations;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -12,11 +14,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : Microsoft.En
 {
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<DeliveryInfo> DeliveryInfos => Set<DeliveryInfo>();
+    public DbSet<RoleEntity> Roles => Set<RoleEntity>();
+    public DbSet<UserRoleEntity> UserRoles => Set<UserRoleEntity>();
+    public DbSet<BlockedUserEntity> BlockedUsers => Set<BlockedUserEntity>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfiguration(new UserEntityConfiguration());
         builder.ApplyConfiguration(new DeliveryInfoEntityConfiguration());
+        builder.ApplyConfiguration(new RoleEntityConfiguration());
+        builder.ApplyConfiguration(new UserRoleEntityConfiguration());
+        builder.ApplyConfiguration(new BlockedUserEntityConfiguration());
         
         base.OnModelCreating(builder);
     }

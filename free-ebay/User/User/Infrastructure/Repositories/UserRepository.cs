@@ -11,8 +11,9 @@ public class UserRepository(AppDbContext dbContext) : IUserRepository
     {
         return await dbContext.Users
             .Include(u => u.DeliveryInfos)
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(x => x.Id == id);
-
     }
 
     public async Task<UserEntity?> GetUserByEmail(string email)
@@ -20,6 +21,8 @@ public class UserRepository(AppDbContext dbContext) : IUserRepository
         var normalizedEmail = email.Trim().ToLowerInvariant();
         return await dbContext.Users
             .Include(u => u.DeliveryInfos)
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(x => x.Email == normalizedEmail);
     }
 

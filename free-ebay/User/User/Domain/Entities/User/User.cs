@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using DeliveryInfoEntity = Domain.Entities.DeliveryInfo.DeliveryInfo;
+using Domain.Entities.Role;
+using Domain.Entities.BlockedUser;
 
 namespace Domain.Entities.User;
 
@@ -34,4 +36,6 @@ public class UserEntity
     public DateTime UpdatedAt { get; set; }
 
     public List<DeliveryInfoEntity> DeliveryInfos { get; set; } = [];
+    public List<UserRoleEntity> UserRoles { get; set; } = [];
+    public List<BlockedUserEntity> BlockedUserRecords { get; set; } = [];
 }

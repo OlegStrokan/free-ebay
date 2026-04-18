@@ -25,6 +25,7 @@ public class GetUserByIdUseCase(IUserRepository repository) : IGetUserByIdUseCas
             existingUser.CreatedAt,
             existingUser.UpdatedAt,
             existingUser.IsEmailVerified,
-            existingUser.DeliveryInfos.ToDtos());
+            existingUser.DeliveryInfos.ToDtos(),
+            existingUser.UserRoles.Select(ur => ur.Role.Name).ToList());
     }
 }

@@ -1,10 +1,14 @@
 using Api.GrpcServices;
 using Domain.Common.Interfaces;
+using Application.UseCases.AssignRole;
 using Application.UseCases.BlockUser;
 using Application.UseCases.CreateUser;
 using Application.UseCases.DeleteUser;
+using Application.UseCases.GetAllRoles;
 using Application.UseCases.GetUserByEmail;
 using Application.UseCases.GetUserById;
+using Application.UseCases.GetUserRoles;
+using Application.UseCases.RevokeRole;
 using Application.UseCases.UpdatePassword;
 using Application.UseCases.UpdateUserPassword;
 using Application.UseCases.UpdateUser;
@@ -35,8 +39,14 @@ builder.Services.AddScoped<IBlockUserUseCase, BlockUserUseCase>();
 builder.Services.AddScoped<IUpdatePasswordUseCase, UpdatePasswordUseCase>();
 builder.Services.AddScoped<IVerifyUserEmailUseCase, VerifyUserEmailUseCase>();
 builder.Services.AddScoped<IUpdateUserPasswordUseCase, UpdateUserPasswordUseCase>();
+builder.Services.AddScoped<IAssignRoleUseCase, AssignRoleUseCase>();
+builder.Services.AddScoped<IRevokeRoleUseCase, RevokeRoleUseCase>();
+builder.Services.AddScoped<IGetUserRolesUseCase, GetUserRolesUseCase>();
+builder.Services.AddScoped<IGetAllRolesUseCase, GetAllRolesUseCase>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IBlockedUserRepository, BlockedUserRepository>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 

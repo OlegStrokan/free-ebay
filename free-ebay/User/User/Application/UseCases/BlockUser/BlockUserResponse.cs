@@ -14,5 +14,8 @@ public record BlockUserResponse(
     UserStatus Status,
     DateTime CreatedAt,
     DateTime UpdatedAt,
+    string BlockedById,
+    string Reason,
     bool IsEmailVerified = false,
-    IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null);
+    IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null,
+    IReadOnlyList<string>? Roles = null);

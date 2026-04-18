@@ -154,6 +154,7 @@ public static class UserMapper
             IsEmailVerified = entity.IsEmailVerified,
         };
         proto.DeliveryInfo.AddRange(entity.DeliveryInfos.Select(d => d.ToProto()));
+        proto.Roles.AddRange(entity.UserRoles.Select(ur => ur.Role.Name));
         return proto;
     }
 
@@ -183,6 +184,8 @@ public static class UserMapper
         };
         if (r.DeliveryInfos != null)
             proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        if (r.Roles != null)
+            proto.Roles.AddRange(r.Roles);
         return proto;
     }
 
@@ -203,6 +206,8 @@ public static class UserMapper
         };
         if (r.DeliveryInfos != null)
             proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        if (r.Roles != null)
+            proto.Roles.AddRange(r.Roles);
         return proto;
     }
 
@@ -223,6 +228,8 @@ public static class UserMapper
         };
         if (r.DeliveryInfos != null)
             proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        if (r.Roles != null)
+            proto.Roles.AddRange(r.Roles);
         return proto;
     }
 
@@ -243,6 +250,8 @@ public static class UserMapper
         };
         if (r.DeliveryInfos != null)
             proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        if (r.Roles != null)
+            proto.Roles.AddRange(r.Roles);
         return proto;
     }
 
@@ -263,6 +272,8 @@ public static class UserMapper
         };
         if (r.DeliveryInfos != null)
             proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        if (r.Roles != null)
+            proto.Roles.AddRange(r.Roles);
         return proto;
     }
 
@@ -283,6 +294,8 @@ public static class UserMapper
         };
         if (r.DeliveryInfos != null)
             proto.DeliveryInfo.AddRange(r.DeliveryInfos.Select(d => d.ToProto()));
+        if (r.Roles != null)
+            proto.Roles.AddRange(r.Roles);
         return proto;
     }
 }

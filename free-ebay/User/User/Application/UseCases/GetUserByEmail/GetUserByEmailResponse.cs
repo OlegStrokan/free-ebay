@@ -15,4 +15,5 @@ public record GetUserByEmailResponse(
     DateTime CreatedAt,
     DateTime UpdatedAt,
     bool IsEmailVerified,
-    IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null);
+    IReadOnlyList<DeliveryInfoDto>? DeliveryInfos = null,
+    IReadOnlyList<string>? Roles = null);
