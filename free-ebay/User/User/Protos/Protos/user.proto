@@ -28,7 +28,8 @@ message DeliveryInfoProto {
 
 enum UserStatusProto {
   ACTIVE = 0;
-  BLOCKED = 1;
+  RESTRICTED = 1;
+  BANNED = 2;
 }
 
 enum CustomerTierProto {
