@@ -255,12 +255,12 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
     }
 
     [Fact]
-    public async Task BlockUser_ShouldSetStatusToBlocked()
+    public async Task RestrictUser_ShouldSetStatusToRestricted()
     {
         var target = await CreateUserAsync();
         var actor  = await CreateUserAsync();
 
-        // Grant the actor Admin role so they have permission to block
+        // Grant the actor Admin role so they have permission to restrict
         await _client.AssignRoleAsync(new AssignRoleRequest
         {
             UserId     = actor.Id,
@@ -268,19 +268,53 @@ public sealed class UserGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
             AssignedBy = actor.Id,
         });
 
-        var blocked = await _client.BlockUserAsync(new BlockUserRequest
+        var restricted = await _client.RestrictUserAsync(new RestrictUserRequest
         {
             TargetUserId = target.Id,
             ActorUserId  = actor.Id,
-            Reason       = "E2E test block",
+            Type         = RestrictionTypeProto.RestrictionTypeRestricted,
+            Reason       = "E2E test restriction",
         });
 
-        blocked.Data.Should().NotBeNull();
-        blocked.Data.Id.Should().Be(target.Id);
-        blocked.Data.Status.Should().Be(UserStatusProto.Blocked);
+        restricted.Data.Should().NotBeNull();
+        restricted.Data.Id.Should().Be(target.Id);
+        restricted.Data.Status.Should().Be(UserStatusProto.Restricted);
 
         var fetched = await _client.GetUserByIdAsync(new GetUserByIdRequest { Id = target.Id });
-        fetched.Data.Status.Should().Be(UserStatusProto.Blocked);
+        fetched.Data.Status.Should().Be(UserStatusProto.Restricted);
+    }
+
+    [Fact]
+    public async Task LiftRestriction_ShouldRestoreStatusToActive()
+    {
+        var target = await CreateUserAsync();
+        var actor  = await CreateUserAsync();
+
+        await _client.AssignRoleAsync(new AssignRoleRequest
+        {
+            UserId     = actor.Id,
+            RoleName   = "Admin",
+            AssignedBy = actor.Id,
+        });
+
+        await _client.RestrictUserAsync(new RestrictUserRequest
+        {
+            TargetUserId = target.Id,
+            ActorUserId  = actor.Id,
+            Type         = RestrictionTypeProto.RestrictionTypeRestricted,
+            Reason       = "Temporary restriction",
+        });
+
+        var lifted = await _client.LiftRestrictionAsync(new LiftRestrictionRequest
+        {
+            TargetUserId = target.Id,
+            ActorUserId  = actor.Id,
+        });
+
+        lifted.Success.Should().BeTrue();
+
+        var fetched = await _client.GetUserByIdAsync(new GetUserByIdRequest { Id = target.Id });
+        fetched.Data.Status.Should().Be(UserStatusProto.Active);
     }
 
     [Fact]

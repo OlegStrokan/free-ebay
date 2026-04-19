@@ -1,6 +1,7 @@
 using Api.GrpcServices;
 using Application.UseCases.AssignRole;
-using Application.UseCases.BlockUser;
+using Application.UseCases.RestrictUser;
+using Application.UseCases.LiftRestriction;
 using Application.UseCases.CreateUser;
 using Application.UseCases.DeleteUser;
 using Application.UseCases.GetAllRoles;
@@ -26,7 +27,8 @@ internal static class UserGrpcServiceTestFactory
         IGetUserByEmailUseCase? getUserByEmailUseCase = null,
         IVerifyCredentialsUseCase? verifyCredentialsUseCase = null,
         IDeleteUserUseCase? deleteUserUseCase = null,
-        IBlockUserUseCase? blockUserUseCase = null,
+        IRestrictUserUseCase? restrictUserUseCase = null,
+        ILiftRestrictionUseCase? liftRestrictionUseCase = null,
         IUpdatePasswordUseCase? updatePasswordUseCase = null,
         IVerifyUserEmailUseCase? verifyUserEmailUseCase = null,
         IUpdateUserPasswordUseCase? updateUserPasswordUseCase = null,
@@ -42,7 +44,8 @@ internal static class UserGrpcServiceTestFactory
             getUserByEmailUseCase ?? Substitute.For<IGetUserByEmailUseCase>(),
             verifyCredentialsUseCase ?? Substitute.For<IVerifyCredentialsUseCase>(),
             deleteUserUseCase ?? Substitute.For<IDeleteUserUseCase>(),
-            blockUserUseCase ?? Substitute.For<IBlockUserUseCase>(),
+            restrictUserUseCase ?? Substitute.For<IRestrictUserUseCase>(),
+            liftRestrictionUseCase ?? Substitute.For<ILiftRestrictionUseCase>(),
             updatePasswordUseCase ?? Substitute.For<IUpdatePasswordUseCase>(),
             verifyUserEmailUseCase ?? Substitute.For<IVerifyUserEmailUseCase>(),
             updateUserPasswordUseCase ?? Substitute.For<IUpdateUserPasswordUseCase>(),

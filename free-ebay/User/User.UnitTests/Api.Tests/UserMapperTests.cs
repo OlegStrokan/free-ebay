@@ -4,7 +4,7 @@ using Domain.Entities.DeliveryInfo;
 using Domain.Entities.Role;
 using Domain.Entities.User;
 using Protos.User;
-using BlockUserResponse = Application.UseCases.BlockUser.BlockUserResponse;
+using RestrictUserResponse = Application.UseCases.RestrictUser.RestrictUserResponse;
 using CreateUserResponse = Application.UseCases.CreateUser.CreateUserResponse;
 using GetUserByEmailResponse = Application.UseCases.GetUserByEmail.GetUserByEmailResponse;
 using GetUserByIdResponse = Application.UseCases.GetUserById.GetUserByIdResponse;
@@ -26,13 +26,23 @@ public class UserMapperTests
     }
 
     [Fact]
-    public void ToProto_ShouldMapBlockedStatus()
+    public void ToProto_ShouldMapRestrictedStatus()
     {
-        var status = UserStatus.Blocked;
+        var status = UserStatus.Restricted;
 
         var result = status.ToProto();
 
-        Assert.Equal(UserStatusProto.Blocked, result);
+        Assert.Equal(UserStatusProto.Restricted, result);
+    }
+
+    [Fact]
+    public void ToProto_ShouldMapBannedStatus()
+    {
+        var status = UserStatus.Banned;
+
+        var result = status.ToProto();
+
+        Assert.Equal(UserStatusProto.Banned, result);
     }
 
     [Fact]
@@ -46,13 +56,23 @@ public class UserMapperTests
     }
 
     [Fact]
-    public void ToEntity_ShouldMapBlockedStatus()
+    public void ToEntity_ShouldMapRestrictedStatus()
     {
-        var status = UserStatusProto.Blocked;
+        var status = UserStatusProto.Restricted;
 
         var result = status.ToEntity();
 
-        Assert.Equal(UserStatus.Blocked, result);
+        Assert.Equal(UserStatus.Restricted, result);
+    }
+
+    [Fact]
+    public void ToEntity_ShouldMapBannedStatus()
+    {
+        var status = UserStatusProto.Banned;
+
+        var result = status.ToEntity();
+
+        Assert.Equal(UserStatus.Banned, result);
     }
 
     [Fact]
@@ -158,7 +178,7 @@ public class UserMapperTests
             "+420000000",
             "US",
             CustomerTier.Premium,
-            UserStatus.Blocked,
+            UserStatus.Restricted,
             createdAt,
             updatedAt,
             true
@@ -172,7 +192,7 @@ public class UserMapperTests
         Assert.Equal("+420000000", result.Phone);
         Assert.Equal("US", result.CountryCode);
         Assert.Equal(CustomerTierProto.Premium, result.CustomerTier);
-        Assert.Equal(UserStatusProto.Blocked, result.Status);
+        Assert.Equal(UserStatusProto.Restricted, result.Status);
         Assert.True(result.IsEmailVerified);
     }
 
@@ -316,7 +336,7 @@ public class UserMapperTests
             "+1111111111",
             "US",
             CustomerTier.Premium,
-            UserStatus.Blocked,
+            UserStatus.Restricted,
             createdAt,
             updatedAt,
             true
@@ -332,28 +352,30 @@ public class UserMapperTests
         Assert.Equal("+1111111111", result.Data.Phone);
         Assert.Equal("US", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Premium, result.Data.CustomerTier);
-        Assert.Equal(UserStatusProto.Blocked, result.Data.Status);
+        Assert.Equal(UserStatusProto.Restricted, result.Data.Status);
         Assert.True(result.Data.IsEmailVerified);
     }
 
     [Fact]
-    public void BlockUserResponse_ToProto_ShouldMapCorrectly()
+    public void RestrictUserResponse_ToProto_ShouldMapCorrectly()
     {
         var createdAt = DateTime.UtcNow;
         var updatedAt = createdAt.AddMinutes(1);
 
-        var response = new BlockUserResponse(
+        var response = new RestrictUserResponse(
             "user_123",
-            "blocked@example.com",
-            "Blocked User",
+            "restricted@example.com",
+            "Restricted User",
             "+121212121",
             "DE",
             CustomerTier.Standard,
-            UserStatus.Blocked,
+            UserStatus.Restricted,
             createdAt,
             updatedAt,
-            BlockedById: "admin_001",
+            RestrictedById: "admin_001",
+            RestrictionType: Domain.Entities.UserRestriction.RestrictionType.Restricted,
             Reason: "Violated terms of service",
+            ExpiresAt: null,
             IsEmailVerified: true);
 
         var result = response.ToProto();
@@ -361,8 +383,8 @@ public class UserMapperTests
         Assert.NotNull(result);
         Assert.NotNull(result.Data);
         Assert.Equal("user_123", result.Data.Id);
-        Assert.Equal("blocked@example.com", result.Data.Email);
-        Assert.Equal(UserStatusProto.Blocked, result.Data.Status);
+        Assert.Equal("restricted@example.com", result.Data.Email);
+        Assert.Equal(UserStatusProto.Restricted, result.Data.Status);
         Assert.Equal("DE", result.Data.CountryCode);
         Assert.Equal(CustomerTierProto.Standard, result.Data.CustomerTier);
         Assert.True(result.Data.IsEmailVerified);
@@ -370,23 +392,25 @@ public class UserMapperTests
     }
 
     [Fact]
-    public void BlockUserResponse_ToProto_ShouldMapRoles_WhenPresent()
+    public void RestrictUserResponse_ToProto_ShouldMapRoles_WhenPresent()
     {
         var createdAt = DateTime.UtcNow;
         var updatedAt = createdAt.AddMinutes(1);
 
-        var response = new BlockUserResponse(
+        var response = new RestrictUserResponse(
             "user_123",
-            "blocked@example.com",
-            "Blocked User",
+            "restricted@example.com",
+            "Restricted User",
             "+121212121",
             "DE",
             CustomerTier.Standard,
-            UserStatus.Blocked,
+            UserStatus.Banned,
             createdAt,
             updatedAt,
-            BlockedById: "admin_001",
+            RestrictedById: "admin_001",
+            RestrictionType: Domain.Entities.UserRestriction.RestrictionType.Banned,
             Reason: "Fraud",
+            ExpiresAt: null,
             IsEmailVerified: false,
             Roles: ["User", "Seller"]);
 
