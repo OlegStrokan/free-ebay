@@ -7,11 +7,11 @@ using Domain.Repositories;
 namespace Application.UseCases.Login;
 
 public class LoginUseCase
-    (
-        IRefreshTokenRepository refreshTokenRepository,
-        IIdGenerator idGenerator,
-        IUserGateway userGateway,
-        IJwtTokenGenerator jwtTokenGenerator
+(
+    IRefreshTokenRepository refreshTokenRepository,
+    IIdGenerator idGenerator,
+    IUserGateway userGateway,
+    IJwtTokenGenerator jwtTokenGenerator
 ) : ILoginUseCase
 {
     
@@ -24,15 +24,13 @@ public class LoginUseCase
             throw new UnauthorizedAccessException("Invalid email or password");
         }
 
-        // @todo: uncomment when user service will support it
-        // if (!user.isEmailVerified)
-        // 
-        //     throw new UnauthorizedAccessException("Invalid email or password");
-        // }
+        if (!user.IsEmailVerified) {
+            throw new UnauthorizedAccessException("Email not verified");
+        }
 
-        if (user.Status == UserStatus.Blocked)
+        if (user.Status == UserStatus.Banned)
         {
-            throw new UnauthorizedAccessException("Your account has been blocked");
+            throw new UnauthorizedAccessException("Your account has been banned");
         }
 
 
@@ -53,5 +51,5 @@ public class LoginUseCase
         await refreshTokenRepository.CreateAsync(refreshToken);
 
         return new LoginResponse(accessToken, refreshTokenValue, 3600, "Bearer");
-    }
+}
 }
