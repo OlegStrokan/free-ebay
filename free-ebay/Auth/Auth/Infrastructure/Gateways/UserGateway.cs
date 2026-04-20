@@ -6,11 +6,8 @@ using Protos.User;
 namespace Infrastructure.Gateways;
 
 
-/// <summary>
 /// infa implementation of user microservice
 /// clean as fuck
-/// </summary>
-/// <param name="userClient"></param>
 
 public class UserGateway
     (UserServiceProto.UserServiceProtoClient userClient, ILogger<UserGateway> logger) : IUserGateway
@@ -131,6 +128,7 @@ public class UserGateway
                 FullName = response.Data.FullName,
                 Phone = response.Data.Phone,
                 Status = MapUserStatus(response.Data.Status),
+                IsEmailVerified = response.Data.IsEmailVerified,
             };
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
@@ -191,7 +189,6 @@ public class UserGateway
 
     private UserGatewayDto MapToGatewayDto(UserProto user)
     {
-        // @todo: go get some automapper
         return new UserGatewayDto
         {
             Id = user.Id,
@@ -207,7 +204,8 @@ public class UserGateway
         return userStatus switch
         {
             UserStatusProto.Active => UserStatus.Active,
-            UserStatusProto.Blocked => UserStatus.Blocked,
+            UserStatusProto.Restricted => UserStatus.Restricted,
+            UserStatusProto.Banned => UserStatus.Banned,
             _ => UserStatus.Active
         };
     }

@@ -41,9 +41,9 @@ public class RefreshTokenUseCase
             throw new UnauthorizedAccessException("User not found");
         }
         
-        if (user.Status == UserStatus.Blocked)
+        if (user.Status == UserStatus.Banned)
         {
-            throw new UnauthorizedAccessException("User account is blocked");
+            throw new UnauthorizedAccessException("User account is banned");
         }
 
         var newAccessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);

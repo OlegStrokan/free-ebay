@@ -31,12 +31,13 @@ public class UserGatewayDto
     public string PasswordHash { get; set; } = string.Empty;
     public required string FullName { get; set; }
     public required string Phone { get; set; }
-    // public string IsEmailVerified { get; set; };
+    public bool IsEmailVerified { get; set; }
     public UserStatus Status { get; set; }
 }
 
 public enum UserStatus
 {
     Active,
-    Blocked
+    Restricted,
+    Banned
 }

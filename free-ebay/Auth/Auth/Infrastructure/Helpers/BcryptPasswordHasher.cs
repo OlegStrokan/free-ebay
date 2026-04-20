@@ -5,8 +5,7 @@ namespace Infrastructure.Helpers;
 
 public class BcryptPasswordHasher : IPasswordHasher
 {
-    //@think: it's probably too high
-    private const int WorkFactor = 12;
+    private const int WorkFactor = 10;
 
     public string HashPassword(string password)
     {

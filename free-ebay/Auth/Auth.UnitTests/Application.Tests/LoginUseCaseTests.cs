@@ -115,7 +115,7 @@ public class LoginUseCaseTests
     }
 
     [Fact]
-    public async Task ShouldThrowExceptionWhenUserIsBlocked()
+    public async Task ShouldThrowExceptionWhenUserIsBanned()
     {
         var refreshTokenRepository = Substitute.For<IRefreshTokenRepository>();
         var idGenerator = Substitute.For<IIdGenerator>();
@@ -128,7 +128,7 @@ public class LoginUseCaseTests
             Id = "user_ulid_id",
             Email = "oleh@gmail.com",
             FullName = "user_fullname",
-            Status = UserStatus.Blocked,
+            Status = UserStatus.Banned,
             Phone = "+01091939"
         };
 
@@ -141,7 +141,7 @@ public class LoginUseCaseTests
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => useCase.ExecuteAsync(command));
 
         
-        Assert.Equal("Your account has been blocked",  exception.Message);
+        Assert.Equal("Your account has been banned",  exception.Message);
     }
     
 }
