@@ -6,9 +6,7 @@ import "user.proto";
 
 service UserServiceProto {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
-  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
   rpc GetUserById(GetUserByIdRequest) returns (GetUserByIdResponse);
-  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 
   // for auth service
   rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserByEmailResponse);
@@ -61,34 +59,15 @@ message UpdateUserPasswordResponse {
   string message = 2;
 }
 
-// @think: maybe add getAllUsers
-// @todo: block user (change userStatus)
-// @todo: update password (change only password)
-
 message CreateUserRequest {
   string full_name = 1;
   string password = 2;
   string email = 3;
   string phone = 4;
-  // optional DeliveryInfoProto delivery_info = 5;
+  string country_code = 5;
+  CustomerTierProto customer_tier = 6;
 }
 
 message CreateUserResponse {
   optional UserProto data = 1;
 }
-
-message UpdateUserRequest {
-  string full_name = 1;
-  string email = 2;
-  string phone = 3;
-  //  optional DeliveryInfoProto delivery_info = 4;
-}
-
-message UpdateUserResponse {
-  UserProto data = 1;
-}
-
-message DeleteUserRequest {
-  string id = 1;
-}
-message DeleteUserResponse {}
