@@ -33,14 +33,15 @@ public class LoginUseCaseTests
             Email = "oleh@gmail.com",
             FullName = "user_fullname",
             Status = UserStatus.Active,
-            Phone = "+01091939"
+            Phone = "+01091939",
+            IsEmailVerified = true
         };
 
         // add "real" mocks
         
         idGenerator.GenerateId().Returns(generatedTokenId);
         userGateway.VerifyCredentialsAsync("oleh@gmail.com", "password123").Returns(user);
-        jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email).Returns(accessToken);
+        jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Roles).Returns(accessToken);
         jwtTokenGenerator.GenerateRefreshToken().Returns(refreshToken);
 
 
@@ -129,7 +130,8 @@ public class LoginUseCaseTests
             Email = "oleh@gmail.com",
             FullName = "user_fullname",
             Status = UserStatus.Banned,
-            Phone = "+01091939"
+            Phone = "+01091939",
+            IsEmailVerified = true
         };
 
         userGateway.VerifyCredentialsAsync("oleh@gmail.com", "password1939").Returns(user);

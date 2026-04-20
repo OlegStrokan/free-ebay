@@ -16,6 +16,7 @@ public class RequestPasswordResetUseCaseTests
         var passwordResetTokenRepository = Substitute.For<IPasswordResetTokenRepository>();
         var idGenerator = Substitute.For<IIdGenerator>();
         var userGateway = Substitute.For<IUserGateway>();
+        var emailGateway = Substitute.For<Application.Common.Interfaces.IEmailGateway>();
         
         var user = new UserGatewayDto
         {
@@ -42,7 +43,7 @@ public class RequestPasswordResetUseCaseTests
 
         var command = new RequestPasswordResetCommand(user.Email);
         
-        var useCase = new RequestPasswordResetUseCase(passwordResetTokenRepository, idGenerator, userGateway);
+        var useCase = new RequestPasswordResetUseCase(passwordResetTokenRepository, idGenerator, userGateway, emailGateway);
         var result = await useCase.ExecuteAsync(command);
         
         Assert.NotNull(result.ResetToken);
@@ -57,6 +58,7 @@ public class RequestPasswordResetUseCaseTests
                 t.UserId == user.Id &&
                 !string.IsNullOrEmpty(t.Token) &&
                 t.IsUsed == false));
+        await emailGateway.Received(1).SendPasswordResetEmailAsync(user.Email, Arg.Any<string>());
     }
 
     [Fact]
@@ -65,13 +67,14 @@ public class RequestPasswordResetUseCaseTests
         var passwordResetTokenRepository = Substitute.For<IPasswordResetTokenRepository>();
         var idGenerator = Substitute.For<IIdGenerator>();
         var userGateway = Substitute.For<IUserGateway>();
+        var emailGateway = Substitute.For<Application.Common.Interfaces.IEmailGateway>();
 
         userGateway.GetUserByEmailAsync(Arg.Any<string>()).Returns((UserGatewayDto?)null);
         
         var command = new RequestPasswordResetCommand(string.Empty);
 
         var useCase = new RequestPasswordResetUseCase(
-            passwordResetTokenRepository, idGenerator, userGateway);
+            passwordResetTokenRepository, idGenerator, userGateway, emailGateway);
 
         var result = await useCase.ExecuteAsync(command);
         

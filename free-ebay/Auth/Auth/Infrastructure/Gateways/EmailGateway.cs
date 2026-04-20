@@ -23,6 +23,7 @@ public class EmailGateway(IConfiguration configuration, ILogger<EmailGateway> lo
             fromAddress,
             "Verify your email address",
             BuildVerificationBody(verificationLink),
+            IsImportant: true,
             DateTime.UtcNow);
 
         await PublishAsync(VerificationEventType, recipientEmail, payload, cancellationToken);
@@ -42,6 +43,7 @@ public class EmailGateway(IConfiguration configuration, ILogger<EmailGateway> lo
             fromAddress,
             "Reset your password",
             BuildPasswordResetBody(resetLink),
+            IsImportant: true,
             DateTime.UtcNow);
 
         await PublishAsync(PasswordResetEventType, recipientEmail, payload, cancellationToken);
@@ -106,6 +108,7 @@ public class EmailGateway(IConfiguration configuration, ILogger<EmailGateway> lo
         string From,
         string Subject,
         string HtmlBody,
+        bool IsImportant,
         DateTime RequestedAtUtc);
 
     private sealed record PasswordResetRequested(
@@ -114,5 +117,6 @@ public class EmailGateway(IConfiguration configuration, ILogger<EmailGateway> lo
         string From,
         string Subject,
         string HtmlBody,
+        bool IsImportant,
         DateTime RequestedAtUtc);
 }

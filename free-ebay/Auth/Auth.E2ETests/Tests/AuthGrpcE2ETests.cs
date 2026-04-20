@@ -44,6 +44,9 @@ public sealed class AuthGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
         register.UserId.Should().NotBeNullOrWhiteSpace();
         register.Email.Should().Be(email);
 
+        var verifyToken = await GetLatestEmailVerificationTokenAsync(register.UserId);
+        await _client.VerifyEmailAsync(new VerifyEmailRequest { Token = verifyToken });
+
         var login = await _client.LoginAsync(new LoginRequest
         {
             Email = email,
@@ -66,7 +69,10 @@ public sealed class AuthGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
     [Fact]
     public async Task RefreshToken_ThenRevoke_ShouldBlockFurtherRefresh()
     {
-        var (_, email, password) = await RegisterUserAsync();
+        var (refreshUserId, email, password) = await RegisterUserAsync();
+
+        var verifyToken = await GetLatestEmailVerificationTokenAsync(refreshUserId);
+        await _client.VerifyEmailAsync(new VerifyEmailRequest { Token = verifyToken });
 
         var login = await _client.LoginAsync(new LoginRequest
         {
@@ -105,6 +111,9 @@ public sealed class AuthGrpcE2ETests : IClassFixture<E2ETestServer>, IAsyncLifet
     public async Task RequestReset_ThenResetPassword_ShouldAllowLoginWithNewPassword()
     {
         var (userId, email, oldPassword) = await RegisterUserAsync();
+
+        var emailVerifyToken = await GetLatestEmailVerificationTokenAsync(userId);
+        await _client.VerifyEmailAsync(new VerifyEmailRequest { Token = emailVerifyToken });
 
         var requestReset = await _client.RequestPasswordResetAsync(new RequestPasswordResetRequest
         {

@@ -196,6 +196,7 @@ public class UserGateway
             FullName = user.FullName,
             Phone = user.Phone,
             Status = MapUserStatus(user.Status),
+            IsEmailVerified = user.IsEmailVerified,
             Roles = [.. user.Roles]
         };
     }

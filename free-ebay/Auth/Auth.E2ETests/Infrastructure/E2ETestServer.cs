@@ -2,6 +2,7 @@ using Infrastructure.DbContext;
 using Grpc.Net.Client;
 using System.Net;
 using System.Net.Http;
+using Application.Common.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -119,6 +120,9 @@ public sealed class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifeti
 
                 return new UserServiceProto.UserServiceProtoClient(channel);
             });
+
+            services.RemoveAll<IEmailGateway>();
+            services.AddSingleton<IEmailGateway, NoOpEmailGateway>();
         });
     }
 
@@ -146,6 +150,15 @@ public sealed class E2ETestServer : WebApplicationFactory<Program>, IAsyncLifeti
 
         await _postgres.DisposeAsync();
     }
+}
+
+internal sealed class NoOpEmailGateway : IEmailGateway
+{
+    public Task SendVerificationEmailAsync(string recipientEmail, string verificationToken, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public Task SendPasswordResetEmailAsync(string recipientEmail, string resetToken, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 internal sealed class FakeUserStore
@@ -200,7 +213,7 @@ internal sealed class FakeUserStore
                 Email = normalizedEmail,
                 FullName = fullName.Trim(),
                 Phone = phone.Trim(),
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                PasswordHash = password, // already BCrypt-hashed by RegisterUseCase
                 Status = UserStatusProto.Active,
                 IsEmailVerified = false,
                 CreatedAt = now,
@@ -341,6 +354,7 @@ internal sealed class FakeUserGrpcService(FakeUserStore store) : UserServiceProt
             FullName = user.FullName,
             Phone = user.Phone,
             Status = user.Status,
+            IsEmailVerified = user.IsEmailVerified,
             CreatedAt = new DateTimeOffset(user.CreatedAt).ToUnixTimeSeconds(),
             UpdatedAt = new DateTimeOffset(user.UpdatedAt).ToUnixTimeSeconds(),
         };

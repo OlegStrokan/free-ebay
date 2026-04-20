@@ -46,7 +46,7 @@ public class RefreshTokenUseCaseUseCaseTests
         refreshTokenRepository.GetByTokenAsync(oldRefreshTokenValue).Returns(existingRefreshToken);
         idGenerator.GenerateId().Returns(refreshTokenId);
         userGateway.GetUserByIdAsync(user.Id).Returns(user);
-        jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email).Returns(newAccessToken);
+        jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Roles).Returns(newAccessToken);
         jwtTokenGenerator.GenerateRefreshToken().Returns(newRefreshTokenValue);
 
 
