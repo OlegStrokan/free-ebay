@@ -58,6 +58,7 @@ builder.Services.AddScoped<IResetPasswordUseCase, ResetPasswordUseCase>();
 
 // external systems
 builder.Services.AddScoped<IUserGateway, UserGateway>();
+builder.Services.AddScoped<IEmailGateway, EmailGateway>();
 
 // api
 builder.Services.AddGrpc();

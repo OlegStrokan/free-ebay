@@ -1,3 +1,4 @@
+using Application.Common.Interfaces;
 using Domain.Common.Interfaces;
 using Domain.Entities;
 using Domain.Gateways;
@@ -8,7 +9,8 @@ namespace Application.UseCases.RequestPasswordReset;
 public class RequestPasswordResetUseCase(
     IPasswordResetTokenRepository passwordResetTokenRepository,
     IIdGenerator idGenerator,
-    IUserGateway userGateway) : IRequestPasswordResetUseCase
+    IUserGateway userGateway,
+    IEmailGateway emailGateway) : IRequestPasswordResetUseCase
 {
     public async Task<RequestPasswordResetResponse> ExecuteAsync(RequestPasswordResetCommand command)
     {
@@ -37,9 +39,8 @@ public class RequestPasswordResetUseCase(
         };
 
         await passwordResetTokenRepository.CreateAsync(resetToken);
-        
-        
-        // @todo: send password reset email via email service
+
+        await emailGateway.SendPasswordResetEmailAsync(command.Email, resetToken.Token);
 
         return new RequestPasswordResetResponse(
             true,

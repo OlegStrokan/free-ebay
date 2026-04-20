@@ -10,7 +10,8 @@ public class RegisterUseCase(
     IEmailVerificationTokenRepository verificationTokenRepository, 
     IIdGenerator idGenerator,
     IUserGateway userGateway,
-    IPasswordHasher passwordHasher
+    IPasswordHasher passwordHasher,
+    IEmailGateway emailGateway
     ) : IRegisterUseCase
 {
 
@@ -40,8 +41,8 @@ public class RegisterUseCase(
         };
 
         await verificationTokenRepository.CreateAsync(verificationToken);
-        
-        // @todo: send verification email via email service 
+
+        await emailGateway.SendVerificationEmailAsync(command.Email, verificationToken.Token);
 
         return new RegisterResponse(userId, command.Email, command.Fullname, verificationToken.Token, SuccessMessage);
     }
