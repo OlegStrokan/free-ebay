@@ -31,7 +31,7 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
         }
     }
 
-    public string GenerateAccessToken(string userId, string email)
+    public string GenerateAccessToken(string userId, string email, IEnumerable<string> roles)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_secretKey);
@@ -45,8 +45,11 @@ public class JwtTokenService : IJwtTokenGenerator, IJwtTokenValidator
             new Claim(JwtRegisteredClaimNames.Email, email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
-        
-        // @todo add roles in foreach when user service will support roles
+
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {

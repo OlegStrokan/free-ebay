@@ -34,7 +34,7 @@ public class LoginUseCase
         }
 
 
-        var accessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var accessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Roles);
 
         var refreshTokenValue = jwtTokenGenerator.GenerateRefreshToken();
 

@@ -46,7 +46,7 @@ public class RefreshTokenUseCase
             throw new UnauthorizedAccessException("User account is banned");
         }
 
-        var newAccessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var newAccessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Roles);
  
         var newRefreshTokenValue = jwtTokenGenerator.GenerateRefreshToken();
 

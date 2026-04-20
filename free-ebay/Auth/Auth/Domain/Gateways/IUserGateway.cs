@@ -33,6 +33,7 @@ public class UserGatewayDto
     public required string Phone { get; set; }
     public bool IsEmailVerified { get; set; }
     public UserStatus Status { get; set; }
+    public IReadOnlyList<string> Roles { get; set; } = [];
 }
 
 public enum UserStatus
