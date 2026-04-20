@@ -14,6 +14,8 @@ public class RegisterUseCase(
     ) : IRegisterUseCase
 {
 
+    public const string SuccessMessage = "User registered successfully. Please verify your email";
+
     public async Task<RegisterResponse> ExecuteAsync(RegisterCommand command)
     {
         var hashedPassword = passwordHasher.HashPassword(command.Password);
@@ -31,7 +33,6 @@ public class RegisterUseCase(
         {
             Id = idGenerator.GenerateId(),
             UserId = userId,
-            //@think: JWT, not GUID 😃🤡
             Token = Guid.NewGuid().ToString(),
             ExpiresAt = DateTime.UtcNow.AddHours(24),
             CreatedAt = DateTime.UtcNow,
@@ -42,6 +43,6 @@ public class RegisterUseCase(
         
         // @todo: send verification email via email service 
 
-        return new RegisterResponse(userId, command.Email, command.Fullname, verificationToken.Token, "User registered successfully. Please verify your email");
+        return new RegisterResponse(userId, command.Email, command.Fullname, verificationToken.Token, SuccessMessage);
     }
 }
