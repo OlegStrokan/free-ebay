@@ -16,7 +16,6 @@ public class LoginUseCaseTests
     [Fact]
     public async Task ShouldLoginSuccessfullyAndReturnTokens()
     {
-        // arrange and shit
 
         var refreshTokenRepository = Substitute.For<IRefreshTokenRepository>();
         var idGenerator =  Substitute.For<IIdGenerator>();
@@ -36,8 +35,6 @@ public class LoginUseCaseTests
             Phone = "+01091939",
             IsEmailVerified = true
         };
-
-        // add "real" mocks
         
         idGenerator.GenerateId().Returns(generatedTokenId);
         userGateway.VerifyCredentialsAsync("oleh@gmail.com", "password123").Returns(user);
@@ -77,7 +74,6 @@ public class LoginUseCaseTests
         var userGateway = Substitute.For<IUserGateway>();
         var jwtTokenGenerator = Substitute.For<IJwtTokenGenerator>();
         
-        // mock only userGateway to throw correct error
         userGateway.VerifyCredentialsAsync(Arg.Any<string>(), Arg.Any<string>()).Returns((UserGatewayDto?)null);
 
         var command = new LoginCommand("non_existing_email@mail.com", "password1939");

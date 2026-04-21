@@ -34,7 +34,6 @@ public class RequestPasswordResetUseCaseTests
             ExpiresAt = DateTime.UtcNow.AddDays(1),
             CreatedAt = DateTime.UtcNow,
             IsUsed = false,
-            // IpAddress = "127.0.0.1",
         };
 
         userGateway.GetUserByEmailAsync(user.Email).Returns(user);

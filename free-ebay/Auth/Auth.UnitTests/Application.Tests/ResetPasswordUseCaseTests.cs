@@ -25,7 +25,6 @@ public class ResetPasswordUseCaseTests
             ExpiresAt = DateTime.UtcNow.AddDays(1),
             CreatedAt = DateTime.UtcNow,
             IsUsed = false,
-            // IpAddress = "127.0.0.1",
         };
 
         passwordResetTokenRepository.GetByTokenAsync(resetToken.Token).Returns(resetToken);
@@ -86,7 +85,6 @@ public class ResetPasswordUseCaseTests
             ExpiresAt = DateTime.UtcNow.AddDays(1),
             CreatedAt = DateTime.UtcNow,
             IsUsed = true,
-            // IpAddress = "127.0.0.1",
         };
         
         passwordResetTokenRepository.GetByTokenAsync(resetToken.Token).Returns(resetToken);
@@ -120,7 +118,6 @@ public class ResetPasswordUseCaseTests
             ExpiresAt = DateTime.UtcNow.AddDays(-1),
             CreatedAt = DateTime.UtcNow,
             IsUsed = false,
-            // IpAddress = "127.0.0.1",
         };
         
         passwordResetTokenRepository.GetByTokenAsync(resetToken.Token).Returns(resetToken);
@@ -154,7 +151,6 @@ public class ResetPasswordUseCaseTests
             ExpiresAt = DateTime.UtcNow.AddDays(1),
             CreatedAt = DateTime.UtcNow,
             IsUsed = false,
-            // IpAddress = "127.0.0.1",
         };
         
         passwordResetTokenRepository.GetByTokenAsync(resetToken.Token).Returns(resetToken);
