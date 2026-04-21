@@ -6,8 +6,6 @@ using Protos.User;
 namespace Infrastructure.Gateways;
 
 
-/// infa implementation of user microservice
-/// clean as fuck
 
 public class UserGateway
     (UserServiceProto.UserServiceProtoClient userClient, ILogger<UserGateway> logger) : IUserGateway
@@ -28,12 +26,9 @@ public class UserGateway
 
             var response = await userClient.CreateUserAsync(request);
 
-            // @todo: add some status or indicator of success
-
             if (response.Data == null)
             {
-                // @todo: it's very shitty description, oukey?
-                throw new InvalidOperationException("User microservice returned null user");
+                throw new InvalidOperationException($"User service returned no data after creating user with email={email}");
             }
             
             logger.LogInformation("User created successfully: {UserId}", response.Data.Id);
@@ -114,22 +109,13 @@ public class UserGateway
             var request = new GetUserByIdRequest { Id = userId };
             var response = await userClient.GetUserByIdAsync(request);
 
-            // @think: we're checking if data == null + additionally check rpc not found exception. so much "ting"
             if (response.Data == null)
             {
                 logger.LogWarning("User not found: {UserId}", userId);
                 return null;
             }
 
-            return new UserGatewayDto
-            {
-                Id = response.Data.Id,
-                Email = response.Data.Email,
-                FullName = response.Data.FullName,
-                Phone = response.Data.Phone,
-                Status = MapUserStatus(response.Data.Status),
-                IsEmailVerified = response.Data.IsEmailVerified,
-            };
+            return MapToGatewayDto(response.Data);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
         {
