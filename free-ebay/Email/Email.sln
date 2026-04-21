@@ -5,6 +5,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Email", "Email\Email.csproj", "{9B26B4EA-EB08-4556-B513-5C85C94A01E0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Email.Tests", "Email.Tests\Email.Tests.csproj", "{6B7AD462-2FB5-46C8-A63A-84EF1DF7C76B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Email.IntegrationTests", "Email.IntegrationTests\Email.IntegrationTests.csproj", "{7651BED6-1EF9-441C-8882-8BB963B40CBB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +22,13 @@ Global
 		{9B26B4EA-EB08-4556-B513-5C85C94A01E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B26B4EA-EB08-4556-B513-5C85C94A01E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B26B4EA-EB08-4556-B513-5C85C94A01E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B7AD462-2FB5-46C8-A63A-84EF1DF7C76B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B7AD462-2FB5-46C8-A63A-84EF1DF7C76B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B7AD462-2FB5-46C8-A63A-84EF1DF7C76B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B7AD462-2FB5-46C8-A63A-84EF1DF7C76B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7651BED6-1EF9-441C-8882-8BB963B40CBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7651BED6-1EF9-441C-8882-8BB963B40CBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7651BED6-1EF9-441C-8882-8BB963B40CBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7651BED6-1EF9-441C-8882-8BB963B40CBB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

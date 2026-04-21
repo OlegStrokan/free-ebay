@@ -109,7 +109,7 @@ public sealed class KafkaEmailDlqReplayWorker(
         logger.LogInformation("DLQ replay run-once finished");
     }
 
-    private async Task ReplayMessageAsync(
+    internal async Task ReplayMessageAsync(
         Message<string, string> message,
         IProducer<string, string> producer,
         CancellationToken cancellationToken)

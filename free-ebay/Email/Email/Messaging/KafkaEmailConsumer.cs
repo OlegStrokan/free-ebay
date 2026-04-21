@@ -86,7 +86,7 @@ public sealed class KafkaEmailConsumer(
         }
     }
 
-    private async Task<bool> HandleMessageAsync(
+    internal async Task<bool> HandleMessageAsync(
         Message<string, string> message,
         IProducer<string, string> producer,
         CancellationToken cancellationToken)

@@ -12,4 +12,10 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Email.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
