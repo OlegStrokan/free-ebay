@@ -1,8 +1,6 @@
-using Email.Models;
-
 namespace Email.Services;
 
 public interface IEmailSender
 {
-    Task SendAsync(OrderConfirmationEmailRequested request, CancellationToken cancellationToken);
+    Task SendAsync(string to, string from, string subject, string htmlBody, CancellationToken cancellationToken);
 }

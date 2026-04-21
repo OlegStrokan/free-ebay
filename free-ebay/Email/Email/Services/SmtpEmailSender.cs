@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Mail;
-using Email.Models;
 using Email.Options;
 using Microsoft.Extensions.Options;
 
@@ -17,23 +16,18 @@ public sealed class SmtpEmailSender(
         Credentials = new NetworkCredential(emailOptions.Value.Username, emailOptions.Value.Password)
     };
 
-    public async Task SendAsync(OrderConfirmationEmailRequested request, CancellationToken cancellationToken)
+    public async Task SendAsync(string to, string from, string subject, string htmlBody, CancellationToken cancellationToken)
     {
-        var from = string.IsNullOrWhiteSpace(request.From)
-            ? _options.DefaultFromAddress
-            : request.From;
+        var resolvedFrom = string.IsNullOrWhiteSpace(from) ? _options.DefaultFromAddress : from;
 
-        using var message = new MailMessage(from, request.To, request.Subject, request.HtmlBody)
+        using var message = new MailMessage(resolvedFrom, to, subject, htmlBody)
         {
             IsBodyHtml = true
         };
 
         await _client.SendMailAsync(message, cancellationToken);
 
-        logger.LogInformation(
-            "Email sent for Order {OrderId} to {Recipient}",
-            request.OrderId,
-            request.To);
+        logger.LogInformation("Email sent to {Recipient} with subject '{Subject}'", to, subject);
     }
 
     public void Dispose() => _client.Dispose();

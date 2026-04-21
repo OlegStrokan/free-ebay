@@ -14,7 +14,9 @@ public sealed class KafkaEmailConsumer(
     IEmailSender emailSender,
     ILogger<KafkaEmailConsumer> logger) : BackgroundService
 {
-    private const string EventType = "OrderConfirmationEmailRequested";
+    private const string OrderConfirmationEventType = "OrderConfirmationEmailRequested";
+    private const string EmailVerificationEventType = "EmailVerificationRequested";
+    private const string PasswordResetEventType = "PasswordResetRequested";
     private readonly KafkaOptions _options = kafkaOptions.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -106,16 +108,30 @@ public sealed class KafkaEmailConsumer(
             return true;
         }
 
-        if (!string.Equals(wrapper.EventType, EventType, StringComparison.Ordinal))
+        return wrapper.EventType switch
         {
-            logger.LogWarning("Skipping unsupported event type {EventType}", wrapper.EventType);
-            return true;
-        }
+            OrderConfirmationEventType or EmailVerificationEventType or PasswordResetEventType
+                => await HandleEmailAsync(wrapper, producer, message, cancellationToken),
+            _ => LogUnsupported(wrapper.EventType)
+        };
+    }
 
-        OrderConfirmationEmailRequested? request;
+    private bool LogUnsupported(string eventType)
+    {
+        logger.LogWarning("Skipping unsupported event type {EventType}", eventType);
+        return true;
+    }
+
+    private async Task<bool> HandleEmailAsync(
+        EventWrapper wrapper,
+        IProducer<string, string> producer,
+        Message<string, string> message,
+        CancellationToken cancellationToken)
+    {
+        AuthEmailMessage? request;
         try
         {
-            request = wrapper.Payload.Deserialize<OrderConfirmationEmailRequested>();
+            request = wrapper.Payload.Deserialize<AuthEmailMessage>();
         }
         catch (Exception ex)
         {
@@ -131,9 +147,7 @@ public sealed class KafkaEmailConsumer(
 
         if (await processedMessageStore.IsProcessedAsync(wrapper.EventId, cancellationToken))
         {
-            logger.LogInformation(
-                "Skipping duplicate email message {MessageId}",
-                wrapper.EventId);
+            logger.LogInformation("Skipping duplicate email message {MessageId}", wrapper.EventId);
             return true;
         }
 
@@ -143,9 +157,8 @@ public sealed class KafkaEmailConsumer(
         {
             try
             {
-                // at least once delivery, raw smpt dont support exact once
-                // @todo: use external email provider in the future
-                await emailSender.SendAsync(request, cancellationToken);
+                await emailSender.SendAsync(request.To, request.From, request.Subject, request.HtmlBody, cancellationToken);
+                await processedMessageStore.MarkProcessedAsync(wrapper.EventId, cancellationToken);
                 logger.LogInformation("Processed email message {MessageId}", wrapper.EventId);
                 return true;
             }
@@ -167,7 +180,7 @@ public sealed class KafkaEmailConsumer(
                             message.Key,
                             message.Value,
                             GetReplayAttempt(message.Headers),
-                            "Important email delivery failed after max retries",
+                            "Email delivery failed after max retries",
                             ex,
                             cancellationToken);
                     }
@@ -177,7 +190,6 @@ public sealed class KafkaEmailConsumer(
                             ex,
                             "Non-important email {MessageId} failed and will not be sent to DLQ",
                             wrapper.EventId);
-                        // Mark non-important as processed to avoid a hot-loop on permanent failures.
                         await processedMessageStore.MarkProcessedAsync(wrapper.EventId, cancellationToken);
                     }
 
