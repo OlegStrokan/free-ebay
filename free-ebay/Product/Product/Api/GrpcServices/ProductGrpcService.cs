@@ -44,7 +44,7 @@ public class ProductGrpcService(
                     string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
 
             var ids = request.ProductIds
-                .Select(id => Guid.Parse(id))
+                .Select(Guid.Parse)
                 .ToList();
 
             var result = await mediator.Send(new GetProductPricesQuery(ids), context.CancellationToken);
@@ -75,7 +75,7 @@ public class ProductGrpcService(
                     string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
 
             var ids = request.ProductIds
-                .Select(id => Guid.Parse(id))
+                .Select(Guid.Parse)
                 .ToList();
 
             var result = await mediator.Send(new GetProductsQuery(ids), context.CancellationToken);

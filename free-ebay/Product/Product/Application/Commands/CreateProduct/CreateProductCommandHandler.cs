@@ -7,15 +7,9 @@ using MediatR;
 
 namespace Application.Commands.CreateProduct;
 
-internal sealed class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Result<Guid>>
+internal sealed class CreateProductCommandHandler(IProductPersistenceService persistence)
+    : IRequestHandler<CreateProductCommand, Result<Guid>>
 {
-    private readonly IProductPersistenceService _persistence;
-
-    public CreateProductCommandHandler(IProductPersistenceService persistence)
-    {
-        _persistence = persistence;
-    }
-
     public async Task<Result<Guid>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         try
@@ -37,7 +31,7 @@ internal sealed class CreateProductCommandHandler : IRequestHandler<CreateProduc
                 attributes,
                 request.ImageUrls);
 
-            await _persistence.CreateProductAsync(product, cancellationToken);
+            await persistence.CreateProductAsync(product, cancellationToken);
 
             return Result<Guid>.Success(product.Id.Value);
         }

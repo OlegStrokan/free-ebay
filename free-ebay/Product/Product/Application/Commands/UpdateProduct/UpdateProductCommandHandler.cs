@@ -6,21 +6,15 @@ using MediatR;
 
 namespace Application.Commands.UpdateProduct;
 
-internal sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand, Result>
+internal sealed class UpdateProductCommandHandler(IProductPersistenceService persistence)
+    : IRequestHandler<UpdateProductCommand, Result>
 {
-    private readonly IProductPersistenceService _persistence;
-
-    public UpdateProductCommandHandler(IProductPersistenceService persistence)
-    {
-        _persistence = persistence;
-    }
-
     public async Task<Result> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
         try
         {
             var productId = ProductId.From(request.ProductId);
-            var product   = await _persistence.GetByIdAsync(productId, cancellationToken);
+            var product   = await persistence.GetByIdAsync(productId, cancellationToken);
             if (product is null)
                 return Result.Failure($"Product with ID {request.ProductId} was not found.");
 
@@ -32,7 +26,7 @@ internal sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProduc
 
             product.Update(request.Name, request.Description, categoryId, price, attributes, request.ImageUrls);
 
-            await _persistence.UpdateProductAsync(product, cancellationToken);
+            await persistence.UpdateProductAsync(product, cancellationToken);
 
             return Result.Success();
         }

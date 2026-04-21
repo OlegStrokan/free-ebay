@@ -11,7 +11,7 @@ public sealed class OutboxMessage
     public int RetryCount { get; private set; }
     public string? Error { get; private set; }
 
-    private OutboxMessage() { } // EF Core
+    private OutboxMessage() { }
 
     public OutboxMessage(Guid id, string type, string content, DateTime occurredOn, string aggregateId)
     {
