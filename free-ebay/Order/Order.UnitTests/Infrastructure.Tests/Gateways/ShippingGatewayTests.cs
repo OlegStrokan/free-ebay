@@ -170,7 +170,7 @@ public class ShippingGatewayTests
         });
 
         var result = await Build(handler).CreateReturnShipmentAsync(
-            Guid.NewGuid(), Guid.NewGuid(), OneItem(), CancellationToken.None);
+            Guid.NewGuid(), Guid.NewGuid(), OneItem(), ShippingCarrier.Dpd, CancellationToken.None);
 
         Assert.Equal("ret-ship-1",   result.ReturnShipmentId);
         Assert.Equal("RET-TRK-001",  result.ReturnTrackingNumber);
@@ -183,6 +183,6 @@ public class ShippingGatewayTests
 
         await Assert.ThrowsAsync<InvalidAddressException>(() =>
             Build(handler).CreateReturnShipmentAsync(
-                Guid.NewGuid(), Guid.NewGuid(), OneItem(), CancellationToken.None));
+                Guid.NewGuid(), Guid.NewGuid(), OneItem(), ShippingCarrier.Dpd, CancellationToken.None));
     }
 }

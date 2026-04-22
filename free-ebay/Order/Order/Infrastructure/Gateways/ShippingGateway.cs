@@ -182,6 +182,7 @@ public sealed class ShippingGateway : IShippingGateway
         Guid orderId,
         Guid customerId,
         List<OrderItemDto> items,
+        ShippingCarrier carrier,
         CancellationToken cancellationToken)
     {
         var request = new CreateReturnShipmentRequest(

@@ -481,6 +481,7 @@ public class WireMockShippingGateway : IShippingGateway
         Guid orderId,
         Guid customerId,
         List<OrderItemDto> items,
+        ShippingCarrier carrier,
         CancellationToken cancellationToken)
     {
         var resp = await _http.PostAsJsonAsync(

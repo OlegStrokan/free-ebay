@@ -1,4 +1,5 @@
 using Application.Sagas.Steps;
+using Application.Common.Enums;
 using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
@@ -33,6 +34,7 @@ public class AwaitReturnShipmentStepTests
             data.CorrelationId,
             data.CustomerId,
             data.ReturnedItems,
+            data.ShippingCarrier,
             Arg.Any<CancellationToken>())
             .Returns(new ReturnShipmentResultDto(expectedShipmentId, "TRACK-1", DateTime.UtcNow.AddDays(2)));
 
@@ -46,6 +48,7 @@ public class AwaitReturnShipmentStepTests
             data.CorrelationId,
             data.CustomerId,
             data.ReturnedItems,
+            data.ShippingCarrier,
             Arg.Any<CancellationToken>());
 
         await _shippingGateway.Received().RegisterWebhookAsync(
@@ -68,7 +71,7 @@ public class AwaitReturnShipmentStepTests
         Assert.Equal("EXISTING-SHIP", context.ReturnShipmentId);
 
         await _shippingGateway.DidNotReceive().CreateReturnShipmentAsync(
-            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<List<OrderItemDto>>(), Arg.Any<CancellationToken>());
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<List<OrderItemDto>>(), Arg.Any<ShippingCarrier>(), Arg.Any<CancellationToken>());
 
         await _shippingGateway.Received(1).RegisterWebhookAsync(
             "EXISTING-SHIP",
@@ -88,6 +91,7 @@ public class AwaitReturnShipmentStepTests
                 Arg.Any<Guid>(), 
                 Arg.Any<Guid>(), 
                 Arg.Any<List<OrderItemDto>>(), 
+                Arg.Any<ShippingCarrier>(),
                 Arg.Any<CancellationToken>())
             .Throws(new Exception(errorMessage));
 
@@ -109,7 +113,8 @@ public class AwaitReturnShipmentStepTests
         _shippingGateway.CreateReturnShipmentAsync(
                 Arg.Any<Guid>(), 
                 Arg.Any<Guid>(), 
-                Arg.Any<List<OrderItemDto>>(), 
+                Arg.Any<List<OrderItemDto>>(),
+                Arg.Any<ShippingCarrier>(),
                 Arg.Any<CancellationToken>())
             .Returns(new ReturnShipmentResultDto("SHIP-OK", "TRACK-OK", DateTime.UtcNow.AddDays(1)));
 

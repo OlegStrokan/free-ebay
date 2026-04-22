@@ -34,6 +34,7 @@ public sealed class AwaitReturnShipmentStep(
                     orderId: data.CorrelationId,
                     customerId: data.CustomerId,
                     items: data.ReturnedItems,
+                    carrier: data.ShippingCarrier,
                     cancellationToken
                 );
 
@@ -60,9 +61,8 @@ public sealed class AwaitReturnShipmentStep(
                 callbackUrl: "should be updated ",
                 events: ["return.delivered"],
                 cancellationToken);
-            
-            
-            return new WaitForEvent();
+
+            return new Completed(new Dictionary<string, object> { ["ReturnShipmentId"] = returnShipmentId });
         }
         catch (Exception ex)
         {
