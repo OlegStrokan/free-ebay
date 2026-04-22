@@ -1,3 +1,4 @@
+using Application.Common.Enums;
 using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 
@@ -9,6 +10,7 @@ public interface IShippingGateway
         Guid orderId,
         AddressDto deliveryAddress,
         IReadOnlyCollection<OrderItemDto> items,
+        ShippingCarrier carrier,
         CancellationToken cancellationToken
         );
     
@@ -21,13 +23,6 @@ public interface IShippingGateway
         string reason,
         CancellationToken cancellationToken
     );
-    
-    // @todo: deadcode - should be deleted or used, i am aware of that
-    Task<ShipmentStatusDto> GetShipmentStatusAsync(
-        string trackingNumber,
-        CancellationToken cancellationToken
-        );
-    
 
     Task RegisterWebhookAsync(
         string shipmentId,
@@ -40,6 +35,7 @@ public interface IShippingGateway
         Guid orderId,
         Guid customerId,
         List<OrderItemDto> items,
+        ShippingCarrier carrier,
         CancellationToken cancellationToken);
 
     Task<ReturnShipmentStatusDto> GetReturnShipmentStatusAsync(
