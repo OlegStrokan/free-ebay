@@ -18,7 +18,7 @@ spec:
       containers:
         - name: gateway-api
           image: free-ebay/gateway-api:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
@@ -26,7 +26,7 @@ spec:
             - name: ASPNETCORE_URLS
               value: http://+:8080
             - name: ASPNETCORE_ENVIRONMENT
-              value: Development
+              value: Production
           envFrom:
             - configMapRef:
                 name: common-config

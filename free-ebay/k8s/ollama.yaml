@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: ollama
-          image: ollama/ollama:latest
+          image: ollama/ollama:0.3.6
           ports:
             - containerPort: 11434
               name: http
@@ -57,6 +57,7 @@ spec:
         name: data
       spec:
         accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
         resources:
           requests:
             storage: 20Gi

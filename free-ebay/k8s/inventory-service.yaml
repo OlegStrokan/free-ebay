@@ -18,7 +18,7 @@ spec:
       containers:
         - name: inventory-service
           image: free-ebay/inventory-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: grpc

@@ -18,7 +18,7 @@ spec:
       containers:
         - name: ai-search-service
           image: free-ebay/ai-search-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 50051
               name: grpc
@@ -39,7 +39,7 @@ spec:
               value: http://elasticsearch:9200
             - name: AI_SEARCH_ES_INDEX
               value: products
-            - name: AI_SEARCH_GPRC_PORT
+            - name: AI_SEARCH_GRPC_PORT
               value: "50051"
             - name: AI_SEARCH_HTTP_PORT
               value: "8003"
