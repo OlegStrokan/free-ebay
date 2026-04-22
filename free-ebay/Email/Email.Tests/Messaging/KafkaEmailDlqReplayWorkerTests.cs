@@ -136,7 +136,7 @@ public class KafkaEmailDlqReplayWorkerTests
     [Fact]
     public async Task ReplayMessageAsync_NoReplayAttemptHeader_TreatsAsFirstAttempt()
     {
-        // message with no dlq-replay-attempt header → treated as attempt 0
+        // message with no dlq-replay-attempt header -> treated as attempt 0
         var message = new Message<string, string>
         {
             Key = Guid.NewGuid().ToString(),

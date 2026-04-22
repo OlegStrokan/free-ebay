@@ -1,56 +1,27 @@
+using Email.IntegrationTests.Infrastructure;
 using Email.Services;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging.Abstractions;
-using Testcontainers.PostgreSql;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Email.IntegrationTests.Services;
 
-public sealed class PostgresProcessedMessageStoreTests : IAsyncLifetime
+[Collection("Integration")]
+public sealed class PostgresProcessedMessageStoreTests(IntegrationFixture fixture)
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithDatabase("email_integration")
-        .WithUsername("test")
-        .WithPassword("test")
-        .WithImage("postgres:16-alpine")
-        .Build();
-
-    private PostgresProcessedMessageStore _sut = null!;
-
-    public async Task InitializeAsync()
-    {
-        await _postgres.StartAsync();
-        _sut = BuildStore(_postgres.GetConnectionString());
-        await _sut.InitializeAsync(CancellationToken.None);
-    }
-
-    public Task DisposeAsync() => _postgres.DisposeAsync().AsTask();
-
-    private static PostgresProcessedMessageStore BuildStore(string connectionString)
-    {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Postgres"] = connectionString
-            })
-            .Build();
-        return new PostgresProcessedMessageStore(config, NullLogger<PostgresProcessedMessageStore>.Instance);
-    }
+    private IProcessedMessageStore Store =>
+        fixture.Services.GetRequiredService<IProcessedMessageStore>();
 
     [Fact]
     public async Task InitializeAsync_IsIdempotent()
     {
-        // calling again should not throw (CREATE TABLE IF NOT EXISTS)
-        await _sut.InitializeAsync(CancellationToken.None);
+        await Store.InitializeAsync(CancellationToken.None);
     }
 
     [Fact]
     public async Task IsProcessedAsync_ReturnsFalse_ForNewMessage()
     {
-        var messageId = Guid.NewGuid();
+        var result = await Store.IsProcessedAsync(Guid.NewGuid(), CancellationToken.None);
 
-        var result = await _sut.IsProcessedAsync(messageId, CancellationToken.None);
-
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -58,10 +29,9 @@ public sealed class PostgresProcessedMessageStoreTests : IAsyncLifetime
     {
         var messageId = Guid.NewGuid();
 
-        await _sut.MarkProcessedAsync(messageId, CancellationToken.None);
-        var result = await _sut.IsProcessedAsync(messageId, CancellationToken.None);
+        await Store.MarkProcessedAsync(messageId, CancellationToken.None);
 
-        Assert.True(result);
+        (await Store.IsProcessedAsync(messageId, CancellationToken.None)).Should().BeTrue();
     }
 
     [Fact]
@@ -69,11 +39,11 @@ public sealed class PostgresProcessedMessageStoreTests : IAsyncLifetime
     {
         var messageId = Guid.NewGuid();
 
-        await _sut.MarkProcessedAsync(messageId, CancellationToken.None);
-        // second call should not throw (ON CONFLICT DO NOTHING)
-        await _sut.MarkProcessedAsync(messageId, CancellationToken.None);
+        await Store.MarkProcessedAsync(messageId, CancellationToken.None);
+        // second call must not throw (ON CONFLICT DO NOTHING)
+        await Store.MarkProcessedAsync(messageId, CancellationToken.None);
 
-        Assert.True(await _sut.IsProcessedAsync(messageId, CancellationToken.None));
+        (await Store.IsProcessedAsync(messageId, CancellationToken.None)).Should().BeTrue();
     }
 
     [Fact]
@@ -82,9 +52,9 @@ public sealed class PostgresProcessedMessageStoreTests : IAsyncLifetime
         var processed = Guid.NewGuid();
         var unprocessed = Guid.NewGuid();
 
-        await _sut.MarkProcessedAsync(processed, CancellationToken.None);
+        await Store.MarkProcessedAsync(processed, CancellationToken.None);
 
-        Assert.True(await _sut.IsProcessedAsync(processed, CancellationToken.None));
-        Assert.False(await _sut.IsProcessedAsync(unprocessed, CancellationToken.None));
+        (await Store.IsProcessedAsync(processed, CancellationToken.None)).Should().BeTrue();
+        (await Store.IsProcessedAsync(unprocessed, CancellationToken.None)).Should().BeFalse();
     }
 }
