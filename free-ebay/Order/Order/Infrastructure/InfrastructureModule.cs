@@ -7,6 +7,7 @@ using Confluent.Kafka;
 using Domain.Interfaces;
 using Infrastructure.BackgroundServices;
 using Infrastructure.Gateways;
+using Infrastructure.Gateways.Carrier;
 using Infrastructure.Messaging;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.DbContext;
@@ -30,6 +31,8 @@ public static class InfrastructureModule
     {
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
         services.Configure<ShippingApiOptions>(configuration.GetSection("Shipping"));
+        services.Configure<DpdApiOptions>(configuration.GetSection("Shipping:Dpd"));
+        services.Configure<PplApiOptions>(configuration.GetSection("Shipping:Ppl"));
         services.Configure<WriteRoutingOptions>(configuration.GetSection("WriteRouting"));
 
         services.AddGrpcGatewayClients(configuration);
@@ -111,7 +114,9 @@ public static class InfrastructureModule
         services.AddScoped<IUserGateway, UserGateway>();
         services.AddScoped<IInventoryGateway, InventoryGateway>();
         services.AddScoped<IPaymentGateway, PaymentGateway>();
-        services.AddHttpClient<IShippingGateway, ShippingGateway>();
+        services.AddHttpClient<DpdShippingAdapter>();
+        services.AddHttpClient<PplShippingAdapter>();
+        services.AddScoped<IShippingGateway, ShippingGatewayRouter>();
         services.AddScoped<IAccountingGateway, AccountingGateway>();
         services.AddScoped<IEmailGateway, EmailGateway>();
         services.AddScoped<IIncidentReporter, HelpDeskIncidentReporter>();

@@ -1,3 +1,4 @@
+using Application.Common.Enums;
 using Application.DTOs;
 
 namespace Application.Sagas.OrderSaga;
@@ -11,4 +12,5 @@ public sealed class OrderSagaData : SagaData
     public string PaymentMethod { get; set; } = string.Empty;
     public AddressDto DeliveryAddress { get; set; } = null!;
     public string? PaymentIntentId { get; set; }
+    public ShippingCarrier ShippingCarrier { get; set; } = ShippingCarrier.Dpd;
 }

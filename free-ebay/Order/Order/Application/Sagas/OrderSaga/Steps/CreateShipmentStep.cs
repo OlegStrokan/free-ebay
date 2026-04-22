@@ -46,6 +46,7 @@ public sealed class CreateShipmentStep(
                 orderId: data.CorrelationId,
                 deliveryAddress: data.DeliveryAddress,
                 items: data.Items,
+                carrier: data.ShippingCarrier,
                 cancellationToken);
 
             context.ShipmentId = shipmentId;

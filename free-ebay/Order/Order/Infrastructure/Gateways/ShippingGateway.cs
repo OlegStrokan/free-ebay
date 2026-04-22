@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Application.Common.Enums;
 using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
@@ -46,6 +47,7 @@ public sealed class ShippingGateway : IShippingGateway
         Guid orderId,
         AddressDto address,
         IReadOnlyCollection<OrderItemDto> items,
+        ShippingCarrier carrier,
         CancellationToken cancellationToken)
     {
         var request = new CreateShipmentRequest(
