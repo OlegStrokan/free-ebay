@@ -1,4 +1,5 @@
 using Application.Sagas.Steps;
+using Application.Common.Enums;
 using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
@@ -33,7 +34,7 @@ public class CreateShipmentStepTests
         var expectedTracking = "TRACK-ABC";
 
         _shippingGateway
-            .CreateShipmentAsync(data.CorrelationId, data.DeliveryAddress, data.Items, Arg.Any<CancellationToken>())
+            .CreateShipmentAsync(data.CorrelationId, data.DeliveryAddress, data.Items, data.ShippingCarrier, Arg.Any<CancellationToken>())
             .Returns(new ShipmentResultDto(expectedShipmentId, expectedTracking));
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
@@ -44,7 +45,7 @@ public class CreateShipmentStepTests
         Assert.Equal(expectedShipmentId, ((Completed)result).Data?["ShipmentId"]);
 
         await _shippingGateway.Received(1).CreateShipmentAsync(
-            data.CorrelationId, data.DeliveryAddress, data.Items, Arg.Any<CancellationToken>());
+            data.CorrelationId, data.DeliveryAddress, data.Items, data.ShippingCarrier, Arg.Any<CancellationToken>());
 
         // order must be updated with tracking via persistence service
         await _orderPersistenceService.Received(1).UpdateOrderAsync(
@@ -63,7 +64,7 @@ public class CreateShipmentStepTests
 
         // gateway must NOT be called again
         await _shippingGateway.DidNotReceive().CreateShipmentAsync(
-            Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<CancellationToken>());
+            Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<ShippingCarrier>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class CreateShipmentStepTests
         var context = new OrderSagaContext();
 
         _shippingGateway
-            .CreateShipmentAsync(Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<CancellationToken>())
+            .CreateShipmentAsync(Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<ShippingCarrier>(), Arg.Any<CancellationToken>())
             .Throws(new InvalidAddressException("Bad address"));
 
         var result = await BuildStep().ExecuteAsync(data, context, CancellationToken.None);
@@ -93,7 +94,7 @@ public class CreateShipmentStepTests
         var context = new OrderSagaContext();
 
         _shippingGateway
-            .CreateShipmentAsync(Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<CancellationToken>())
+            .CreateShipmentAsync(Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<ShippingCarrier>(), Arg.Any<CancellationToken>())
             .Returns(new ShipmentResultDto("SHIP-1", "TRACK-1"));
 
         _orderPersistenceService
@@ -112,7 +113,7 @@ public class CreateShipmentStepTests
         var data = CreateSampleData();
 
         _shippingGateway
-            .CreateShipmentAsync(Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<CancellationToken>())
+            .CreateShipmentAsync(Arg.Any<Guid>(), Arg.Any<AddressDto>(), Arg.Any<IReadOnlyCollection<OrderItemDto>>(), Arg.Any<ShippingCarrier>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("Shipping API is on fire"));
 
         var result = await BuildStep().ExecuteAsync(data, new OrderSagaContext(), CancellationToken.None);

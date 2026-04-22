@@ -1,3 +1,4 @@
+using Application.Common.Enums;
 using Application.DTOs;
 using Application.DTOs.ShipmentGateway;
 using Application.Gateways;
@@ -446,6 +447,7 @@ public class WireMockShippingGateway : IShippingGateway
         Guid orderId,
         AddressDto deliveryAddress,
         IReadOnlyCollection<OrderItemDto> items,
+        ShippingCarrier carrier,
         CancellationToken cancellationToken)
     {
         var resp = await _http.PostAsJsonAsync(

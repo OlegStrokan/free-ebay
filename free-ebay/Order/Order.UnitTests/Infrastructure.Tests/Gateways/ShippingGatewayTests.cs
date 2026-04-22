@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Application.Common.Enums;
 using Application.DTOs;
 using Application.Gateways.Exceptions;
 using Infrastructure.Gateways;
@@ -62,6 +63,7 @@ public class ShippingGatewayTests
             Guid.NewGuid(),
             new AddressDto("Main St", "Prague", "CZ", "11000"),
             OneItem(),
+            ShippingCarrier.Dpd,
             CancellationToken.None);
 
         Assert.Equal("ship-1",  result.ShipmentId);
@@ -78,6 +80,7 @@ public class ShippingGatewayTests
                 Guid.NewGuid(),
                 new AddressDto("", "", "", ""),
                 OneItem(),
+                ShippingCarrier.Dpd,
                 CancellationToken.None));
     }
 
@@ -91,6 +94,7 @@ public class ShippingGatewayTests
                 Guid.NewGuid(),
                 new AddressDto("St", "City", "CZ", "???"),
                 OneItem(),
+                ShippingCarrier.Dpd,
                 CancellationToken.None));
     }
 
@@ -104,6 +108,7 @@ public class ShippingGatewayTests
                 Guid.NewGuid(),
                 new AddressDto("St", "City", "CZ", "11000"),
                 OneItem(),
+                ShippingCarrier.Dpd,
                 CancellationToken.None));
     }
     
