@@ -40,9 +40,8 @@ public class AwaitReturnShipmentStepTests
 
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
         
-        Assert.IsType<Completed>(result);
+        Assert.IsType<WaitForEvent>(result);
         Assert.Equal(expectedShipmentId, context.ReturnShipmentId);
-        Assert.Equal(expectedShipmentId, ((Completed)result).Data?["ReturnShipmentId"]);
 
         await _shippingGateway.Received(1).CreateReturnShipmentAsync(
             data.CorrelationId,
@@ -67,7 +66,7 @@ public class AwaitReturnShipmentStepTests
         // gateway must still register webhook and register saga wait even if shipment existed
         var result = await _step.ExecuteAsync(data, context, CancellationToken.None);
 
-        Assert.IsType<Completed>(result);
+        Assert.IsType<WaitForEvent>(result);
         Assert.Equal("EXISTING-SHIP", context.ReturnShipmentId);
 
         await _shippingGateway.DidNotReceive().CreateReturnShipmentAsync(

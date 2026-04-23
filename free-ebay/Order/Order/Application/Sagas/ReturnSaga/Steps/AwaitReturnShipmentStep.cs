@@ -58,11 +58,11 @@ public sealed class AwaitReturnShipmentStep(
             await shippingGateway.RegisterWebhookAsync(
                 shipmentId: returnShipmentId,
                 // todo: add real link 
-                callbackUrl: "should be updated ",
+                callbackUrl: "https://gateway.com ",
                 events: ["return.delivered"],
                 cancellationToken);
 
-            return new Completed(new Dictionary<string, object> { ["ReturnShipmentId"] = returnShipmentId });
+            return new WaitForEvent();
         }
         catch (Exception ex)
         {
