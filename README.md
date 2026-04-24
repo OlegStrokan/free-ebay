@@ -1,5 +1,7 @@
 # free-ebay
 
+## If you want to check HONEST description which written by human not machine - check README_NOT_AI.md 
+
 Event-driven microservices e-commerce platform built with .NET 8, gRPC, Kafka, and Python AI services. Implements distributed saga orchestration, event sourcing, CQRS, and hybrid semantic search.
 
 ---
