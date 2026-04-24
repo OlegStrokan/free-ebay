@@ -30,7 +30,6 @@ volumes:
 
 services:
 
-  # ── Redis — shared session store + Order saga state ────────────────────────
   redis:
     image: redis:7-alpine
     container_name: free-ebay-redis
@@ -47,7 +46,6 @@ services:
       timeout: 3s
       retries: 10
 
-  # ── Zookeeper (required by Kafka) ──────────────────────────────────────────
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     container_name: free-ebay-zookeeper
@@ -61,7 +59,6 @@ services:
     networks:
       - free-ebay-local
 
-  # ── Kafka — single broker, all topics auto-created ─────────────────────────
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: free-ebay-kafka
@@ -92,7 +89,6 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── Elasticsearch — keyword search, catalog browse ─────────────────────────
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     container_name: free-ebay-elasticsearch
@@ -113,7 +109,6 @@ services:
       retries: 12
       start_period: 30s
 
-  # ── Qdrant — vector store for AI search ───────────────────────────────────
   qdrant:
     image: qdrant/qdrant:v1.9.2
     container_name: free-ebay-qdrant
@@ -129,8 +124,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # ── Ollama — LLM (phi3:mini) + embeddings (nomic-embed-text) ──────────────
-  # Models are pulled on first start — takes a few minutes.
   # Monitor: docker logs free-ebay-ollama -f
   ollama:
     image: ollama/ollama:0.3.6
@@ -148,7 +141,6 @@ services:
       retries: 10
       start_period: 20s
 
-  # ── Mailhog — local SMTP trap, UI at http://localhost:8025 ────────────────
   mailhog:
     image: mailhog/mailhog:v1.0.1
     container_name: free-ebay-mailhog
@@ -158,7 +150,6 @@ services:
     networks:
       - free-ebay-local
 
-  # ── Jaeger — distributed tracing, UI at http://localhost:16686 ────────────
   jaeger:
     image: jaegertracing/all-in-one:1.56
     container_name: free-ebay-jaeger
