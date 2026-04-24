@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<RunSettings>
-  <RunConfiguration>
-    <EnvironmentVariables>
-      <!-- Force Testcontainers to use Docker Desktop, bypassing Podman's malformed npipe URI -->
-      <DOCKER_HOST>npipe://./pipe/docker_engine</DOCKER_HOST>
-    </EnvironmentVariables>
-  </RunConfiguration>
-</RunSettings>
