@@ -135,6 +135,25 @@ public sealed class Product : AggregateRoot<ProductId>
             ChangeStatus(ProductStatus.Active);
     }
 
+    public void AdjustStock(int delta)
+    {
+        if (_status == ProductStatus.Deleted)
+            throw new InvalidProductOperationException(Id.Value, "Cannot update stock of a deleted product");
+
+        var newQuantity = Math.Max(0, _stockQuantity + delta);
+        var previousQuantity = _stockQuantity;
+        _stockQuantity = newQuantity;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new ProductStockUpdatedEvent(Id, previousQuantity, newQuantity, _updatedAt.Value));
+
+        if (newQuantity == 0 && _status == ProductStatus.Active)
+            ChangeStatus(ProductStatus.OutOfStock);
+
+        else if (newQuantity > 0 && _status == ProductStatus.OutOfStock)
+            ChangeStatus(ProductStatus.Active);
+    }
+
     public void Activate()
     {
         _status.ValidateTransitionTo(ProductStatus.Active);
