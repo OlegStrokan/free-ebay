@@ -30,6 +30,7 @@ public static class InfrastructureModule
 
         services.AddHostedService<OutboxProcessor>();
         services.AddHostedService<ProcessedOutboxCleanupService>();
+        services.AddHostedService<InventoryKafkaConsumerBackgroundService>();
 
         return services;
     }

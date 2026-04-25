@@ -1,4 +1,5 @@
 ﻿using Application.Common;
+using Application.Consumers;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,10 @@ public static class ApplicationModule
         });
 
         services.AddValidatorsFromAssembly(typeof(ApplicationModule).Assembly);
+
+        services.AddScoped<IInventoryEventConsumer, InventoryConfirmedConsumer>();
+        services.AddScoped<IInventoryEventConsumer, InventoryReleasedConsumer>();
+        services.AddScoped<IInventoryEventConsumer, InventoryExpiredConsumer>();
 
         return services;
     }
