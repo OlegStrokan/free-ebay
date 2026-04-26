@@ -1,14 +1,18 @@
 ﻿import asyncio
 import structlog
-from embedding_client import EmbeddingClient
+from grpc_embedding_client import GrpcEmbeddingClient
 from qdrant_client import QdrantIndexClient
 from indexer import Indexer
 from consumer import run_consumer
+from config import settings
 
 log = structlog.get_logger()
 
 async def main() -> None:
-    embedding = EmbeddingClient()
+    embedding = GrpcEmbeddingClient(
+        grpc_url=settings.embedding_grpc_url,
+        default_model=settings.embedding_model,
+    )
     qdrant = QdrantIndexClient()
     await qdrant.ensure_collection()
 

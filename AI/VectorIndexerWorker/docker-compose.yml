@@ -12,7 +12,7 @@ services:
   #     INDEXER_KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
   #     INDEXER_KAFKA_GROUP_ID: "vector-indexer-worker"
   #     INDEXER_KAFKA_TOPICS: '["product.events"]'
-  #     INDEXER_EMBEDDING_SERVICE_URL: "http://embedding-service:8001"
+  #     INDEXER_EMBEDDING_GRPC_URL: "embedding-service:50052"
   #     INDEXER_QDRANT_URL: "http://qdrant:6333"
   #     INDEXER_QDRANT_COLLECTION: "products"
   #   networks:

@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     kafka_group_id: str = "vector-indexer-worker"
     kafka_topics: list[str] = ["product.events"]
 
-    embedding_service_url: str = "http://localhost:8001"
+    embedding_grpc_url: str = "localhost:50052"
     embedding_model: str = "nomic-embed-text"
 
     qdrant_url: str = "http://localhost:6333"

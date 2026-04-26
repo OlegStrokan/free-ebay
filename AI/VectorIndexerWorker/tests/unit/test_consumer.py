@@ -9,7 +9,7 @@ from indexer import Indexer
 
 def _make_indexer() -> Indexer:
     embedding = AsyncMock()
-    embedding.embed_batch.return_value = [[0.1] * 4]
+    embedding.embed.return_value = [0.1] * 4
     qdrant = AsyncMock()
     return Indexer(embedding, qdrant)
 

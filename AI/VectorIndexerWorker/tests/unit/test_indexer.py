@@ -64,23 +64,22 @@ def test_build_corpus_empty_attributes_omits_attribute_lines() -> None:
 @pytest.fixture
 def indexer() -> Indexer:
     embedding = AsyncMock()
-    embedding.embed_batch.return_value = [[0.1, 0.2, 0.3, 0.4]]
+    embedding.embed.return_value = [0.1, 0.2, 0.3, 0.4]
     qdrant = AsyncMock()
     return Indexer(embedding, qdrant)
 
 
-async def test_upsert_calls_embed_batch_with_corpus(indexer: Indexer) -> None:
+async def test_upsert_calls_embed_with_corpus(indexer: Indexer) -> None:
     event = _event()
     await indexer.upsert(event.model_dump())
-    indexer._embedding.embed_batch.assert_called_once()
-    texts = indexer._embedding.embed_batch.call_args.args[0]
-    assert len(texts) == 1
-    assert isinstance(texts[0], str)
-    assert "Mechanical Keyboard" in texts[0]
+    indexer._embedding.embed.assert_called_once()
+    text = indexer._embedding.embed.call_args.args[0]
+    assert isinstance(text, str)
+    assert "Mechanical Keyboard" in text
 
 
-async def test_upsert_takes_first_vector_from_batch(indexer: Indexer) -> None:
-    indexer._embedding.embed_batch.return_value = [[0.9, 0.8, 0.7, 0.6], [0.1, 0.1, 0.1, 0.1]]
+async def test_upsert_uses_returned_vector(indexer: Indexer) -> None:
+    indexer._embedding.embed.return_value = [0.9, 0.8, 0.7, 0.6]
     await indexer.upsert(_event().model_dump())
 
     _product_id, vector, _payload = indexer.qdrant.upsert.call_args.args
