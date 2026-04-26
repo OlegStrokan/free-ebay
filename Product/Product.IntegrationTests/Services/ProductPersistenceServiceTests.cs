@@ -135,4 +135,62 @@ public sealed class ProductPersistenceServiceTests : IClassFixture<IntegrationFi
 
         result.Should().BeNull();
     }
+
+    [Fact]
+    public async Task UpdateProductAsync_AfterAdjustStock_ShouldPersistNewQuantity_AndAddOutboxMessage()
+    {
+        await using var createScope = _fixture.CreateScope();
+        var createSvc = createScope.ServiceProvider.GetRequiredService<IProductPersistenceService>();
+
+        var product = BuildProduct("Stock-Adjust Product");
+        await createSvc.CreateProductAsync(product);
+        var productId = product.Id;
+
+        await using var adjustScope = _fixture.CreateScope();
+        var adjustSvc = adjustScope.ServiceProvider.GetRequiredService<IProductPersistenceService>();
+        var adjustDb  = adjustScope.ServiceProvider.GetRequiredService<ProductDbContext>();
+
+        var loaded = await adjustSvc.GetByIdAsync(productId);
+        loaded!.AdjustStock(-2);
+        await adjustSvc.UpdateProductAsync(loaded);
+
+        var saved = await adjustDb.Products
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == productId);
+
+        saved.Should().NotBeNull();
+        saved!.StockQuantity.Should().Be(1, "initial stock is 3, delta is -2 → clamped to 1");
+
+        var outbox = await adjustDb.OutboxMessages
+            .Where(m => m.AggregateId == productId.Value.ToString())
+            .ToListAsync();
+
+        outbox.Should().Contain(m => m.Type == nameof(ProductStockUpdatedEvent),
+            "AdjustStock raises ProductStockUpdatedEvent which must be written to the outbox");
+    }
+
+    [Fact]
+    public async Task UpdateProductAsync_AfterAdjustStock_WhenDeltaExceedsStock_ShouldClampToZero()
+    {
+        await using var createScope = _fixture.CreateScope();
+        var createSvc = createScope.ServiceProvider.GetRequiredService<IProductPersistenceService>();
+
+        var product = BuildProduct("Clamp-Zero Product");
+        await createSvc.CreateProductAsync(product);
+        var productId = product.Id;
+
+        await using var adjustScope = _fixture.CreateScope();
+        var adjustSvc = adjustScope.ServiceProvider.GetRequiredService<IProductPersistenceService>();
+        var adjustDb  = adjustScope.ServiceProvider.GetRequiredService<ProductDbContext>();
+
+        var loaded = await adjustSvc.GetByIdAsync(productId);
+        loaded!.AdjustStock(-1000);
+        await adjustSvc.UpdateProductAsync(loaded);
+
+        var saved = await adjustDb.Products
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == productId);
+
+        saved!.StockQuantity.Should().Be(0, "delta larger than current stock must clamp to 0, not go negative");
+    }
 }

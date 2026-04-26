@@ -457,6 +457,108 @@ public class ProductTests
 
     #endregion
 
+    #region AdjustStock
+
+    [Test]
+    public void AdjustStock_PositiveDelta_ShouldIncreaseStock()
+    {
+        var product = CreateActiveProduct(10);
+        product.ClearDomainEvents();
+
+        product.AdjustStock(5);
+
+        Assert.That(product.StockQuantity, Is.EqualTo(15));
+    }
+
+    [Test]
+    public void AdjustStock_NegativeDelta_ShouldDecreaseStock()
+    {
+        var product = CreateActiveProduct(10);
+        product.ClearDomainEvents();
+
+        product.AdjustStock(-3);
+
+        Assert.That(product.StockQuantity, Is.EqualTo(7));
+    }
+
+    [Test]
+    public void AdjustStock_NegativeDeltaExceedingStock_ShouldClampToZero()
+    {
+        var product = CreateActiveProduct(5);
+        product.ClearDomainEvents();
+
+        product.AdjustStock(-100);
+
+        Assert.That(product.StockQuantity, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void AdjustStock_ShouldRaiseProductStockUpdatedEvent()
+    {
+        var product = CreateActiveProduct(10);
+        product.ClearDomainEvents();
+
+        product.AdjustStock(-4);
+
+        var stockEvent = product.DomainEvents.OfType<ProductStockUpdatedEvent>().Single();
+        Assert.That(stockEvent.PreviousQuantity, Is.EqualTo(10));
+        Assert.That(stockEvent.NewQuantity, Is.EqualTo(6));
+    }
+
+    [Test]
+    public void AdjustStock_ActiveProduct_WhenStockReachesZero_ShouldChangeStatusToOutOfStock()
+    {
+        var product = CreateActiveProduct(5);
+
+        product.AdjustStock(-5);
+
+        Assert.That(product.Status, Is.EqualTo(ProductStatus.OutOfStock));
+    }
+
+    [Test]
+    public void AdjustStock_ActiveProduct_WhenStockReachesZero_ShouldRaiseTwoEvents()
+    {
+        var product = CreateActiveProduct(5);
+
+        product.AdjustStock(-5);
+
+        // ProductStockUpdatedEvent + ProductStatusChangedEvent
+        Assert.That(product.DomainEvents, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void AdjustStock_OutOfStockProduct_WhenPositiveDelta_ShouldChangeStatusToActive()
+    {
+        var product = CreateActiveProduct(5);
+        product.AdjustStock(-5); // becomes OutOfStock
+        product.ClearDomainEvents();
+
+        product.AdjustStock(3);
+
+        Assert.That(product.Status, Is.EqualTo(ProductStatus.Active));
+    }
+
+    [Test]
+    public void AdjustStock_DeletedProduct_ShouldThrowInvalidProductOperationException()
+    {
+        var product = CreateActiveProduct();
+        product.Delete();
+
+        Assert.Throws<InvalidProductOperationException>(() => product.AdjustStock(-1));
+    }
+
+    [Test]
+    public void AdjustStock_ShouldSetUpdatedAt()
+    {
+        var product = CreateActiveProduct(10);
+
+        product.AdjustStock(1);
+
+        Assert.That(product.UpdatedAt, Is.Not.Null);
+    }
+
+    #endregion
+
     #region DomainEvents
 
     [Test]
