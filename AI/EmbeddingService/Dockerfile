@@ -20,5 +20,6 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY . .
 
 EXPOSE 8001
+EXPOSE 50052
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

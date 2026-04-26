@@ -6,8 +6,9 @@ from fastapi import FastAPI
 
 from clients.ollama_client import OllamaClient
 from config import settings
+from grpc_server import build_grpc_server
 from routes.embed import get_ollama_client
-from routes.embed import router as embed_router;
+from routes.embed import router as embed_router
 
 log = structlog.get_logger()
 
@@ -15,10 +16,18 @@ log = structlog.get_logger()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     client = OllamaClient(base_url=settings.ollama_base_url)
 
-    # override the dependency
+    grpc_server = build_grpc_server(client, settings.default_model)
+    grpc_server.add_insecure_port(f"[::]:{settings.grpc_port}")
+    await grpc_server.start()
+
     app.dependency_overrides[get_ollama_client] = lambda: client
-    log.info("embedding_service_started", ollama_url=settings.ollama_base_url)
+    log.info(
+        "embedding_service_started",
+        ollama_url=settings.ollama_base_url,
+        grpc_port=settings.grpc_port,
+    )
     yield
+    await grpc_server.stop(grace=5)
     await client.aclose()
     log.info("embedding_service_stopped")
 

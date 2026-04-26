@@ -7,5 +7,6 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     default_model: str = "nomic-embed-text"
     port: int = 8001
+    grpc_port: int = 50052
 
 settings = Settings()
