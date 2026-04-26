@@ -15,3 +15,9 @@ class ProductEvent(BaseModel):
     stock_quantity: int = 0
     image_urls: list[str] = []
     attributes: list[ProductAttribute] = []
+
+
+class ProductStockUpdatedEvent(BaseModel):
+    product_id: str
+    previous_quantity: int
+    new_quantity: int

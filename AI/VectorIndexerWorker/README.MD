@@ -1,17 +1,18 @@
 ﻿# Vector Indexer Worker
 
-Consumes product events from Kafka → builds text corpus → calls EmbeddingService → upserts into Qdrant.
+Consumes product events from Kafka → builds text corpus → calls EmbeddingService via gRPC -> upserts into Qdrant.
 
-- no http, no grpc, just a long-running async kafka consumer
+- no http, one gRPC stream to EmbeddingService, long-running async kafka consumer
 - `auto.offset.reset: latest` - won't replay history on (re)start, only new events
 - manual commit after processing — at-least-once delivery, not exactly-once
+- stream to EmbeddingService opens on first event and stays open for the worker's lifetime. if EmbeddingService restarts, worker reconnects automatically once and retries
 
 ## Topics
 
 Explicit list, no wildcard:
-- `product.created` → upsert
-- `product.updated` → upsert (same path, just overwrites)
-- `product.deleted` → delete from Qdrant
+- `product.created` → build corpus -> embed via gRPC -> upsert vector + payload to Qdrant
+- `product.updated` → same path as created, just overwrites the existing vector
+- `product.deleted` → delete from Qdrant, no embedding needed
 
 Event type comes from the **Kafka message header** (`EventType`), not the topic name
 

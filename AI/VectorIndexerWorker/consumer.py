@@ -27,6 +27,8 @@ async def process_event(msg: Message, indexer: Indexer) -> None:
     match event_type:
         case "ProductCreateEvent" | "ProductUpdatedEvent":
             await indexer.upsert(payload)
+        case "ProductStockUpdatedEvent":
+            await indexer.update_stock(payload)
         case "ProductDeletedEvent":
             await indexer.delete(payload["product_id"])
         case _:

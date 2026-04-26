@@ -4,6 +4,9 @@ from qdrant_client.models import (
     Distance,
     VectorParams,
     PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue,
 )
 
 class QdrantIndexClient:
@@ -33,4 +36,13 @@ class QdrantIndexClient:
         await self._client.delete(
             collection_name=settings.qdrant_collection,
             points_selector=PointIdsList(points=[product_id]),
+        )
+
+    async def update_payload(self, product_id: str, patch: dict) -> None:
+        await self._client.set_payload(
+            collection_name=settings.qdrant_collection,
+            payload=patch,
+            points=Filter(
+                must=[FieldCondition(key="product_id", match=MatchValue(value=product_id))]
+            ),
         )

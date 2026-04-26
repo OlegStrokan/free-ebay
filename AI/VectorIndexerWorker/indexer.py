@@ -1,5 +1,5 @@
 ﻿import structlog
-from models import ProductEvent
+from models import ProductEvent, ProductStockUpdatedEvent
 
 log = structlog.get_logger()
 
@@ -43,3 +43,12 @@ class Indexer:
     async def delete(self, product_id: str) -> None:
         await self.qdrant.delete(product_id)
         log.info("product_deleted_from_index", product_id=product_id)
+
+    async def update_stock(self, raw: dict) -> None:
+        event = ProductStockUpdatedEvent.model_validate(raw)
+        status = "active" if event.new_quantity > 0 else "out_of_stock"
+        await self.qdrant.update_payload(
+            product_id=event.product_id,
+            patch={"stock_quantity": event.new_quantity, "status": status},
+        )
+        log.info("product_stock_updated", product_id=event.product_id, status=status)
