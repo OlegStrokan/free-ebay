@@ -22,6 +22,8 @@ spec:
           ports:
             - containerPort: 8001
               name: http
+            - containerPort: 50052
+              name: grpc
           env:
             - name: EMBEDDING_OLLAMA_BASE_URL
               value: http://ollama:11434
@@ -29,6 +31,8 @@ spec:
               value: nomic-embed-text
             - name: EMBEDDING_PORT
               value: "8001"
+            - name: EMBEDDING_GRPC_PORT
+              value: "50052"
           resources:
             requests:
               cpu: "100m"
@@ -61,4 +65,7 @@ spec:
     - name: http
       port: 8001
       targetPort: 8001
+    - name: grpc
+      port: 50052
+      targetPort: 50052
   type: ClusterIP

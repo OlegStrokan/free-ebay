@@ -26,8 +26,8 @@ spec:
               value: vector-indexer-worker
             - name: INDEXER_KAFKA_TOPICS
               value: '["product.events"]'
-            - name: INDEXER_EMBEDDING_SERVICE_URL
-              value: http://embedding-service:8001
+            - name: INDEXER_EMBEDDING_GRPC_URL
+              value: embedding-service:50052
             - name: INDEXER_QDRANT_URL
               value: http://qdrant:6333
             - name: INDEXER_QDRANT_COLLECTION
