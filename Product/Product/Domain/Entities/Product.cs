@@ -5,6 +5,7 @@ using Domain.ValueObjects;
 
 namespace Domain.Entities;
 
+// @todo: add condition field like in listing entity
 public sealed class Product : AggregateRoot<ProductId>
 {
     private string _name = null!;
