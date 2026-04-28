@@ -14,4 +14,8 @@ public sealed record ProductDetailDto(
     List<ProductAttributeDto> Attributes,
     List<string> ImageUrls,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    Guid CatalogItemId,
+    string? Gtin,
+    string Condition,
+    string? SellerNotes);
