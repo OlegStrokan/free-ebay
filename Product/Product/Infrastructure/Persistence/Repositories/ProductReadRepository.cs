@@ -10,23 +10,51 @@ internal sealed class ProductReadRepository(ProductDbContext dbContext) : IProdu
 {
     public async Task<ProductDetailDto?> GetByIdAsync(Guid productId, CancellationToken ct = default)
     {
-        var product = await dbContext.Products
+        var id      = ProductId.From(productId);
+        var product = await dbContext.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (product is null) return null;
+
+        var categoryNames = await GetCategoryNamesAsync([product.CategoryId.Value], ct);
+        return MapToDetail(product, categoryNames.GetValueOrDefault(product.CategoryId.Value, string.Empty));
+    }
+
+    public async Task<List<ProductDetailDto>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var productIds = ids.Select(ProductId.From).ToList();
+        var products   = await dbContext.Products.AsNoTracking()
+            .Where(p => productIds.Contains(p.Id))
+            .ToListAsync(ct);
+
+        var categoryNames = await GetCategoryNamesAsync(
+            products.Select(p => p.CategoryId.Value).Distinct().ToList(), ct);
+
+        return products.Select(p => MapToDetail(p, categoryNames.GetValueOrDefault(p.CategoryId.Value, string.Empty)))
+            .ToList();
+    }
+
+    public async Task<List<ProductPriceDto>> GetPricesByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var productIds = ids.Select(ProductId.From).ToList();
+
+        return await dbContext.Products.AsNoTracking()
+            .Where(p => productIds.Contains(p.Id))
+            .Select(p => new ProductPriceDto(p.Id.Value, p.Price.Amount, p.Price.Currency, default, p.SellerId.Value))
+            .ToListAsync(ct);
+    }
+
+    private Task<Dictionary<Guid, string>> GetCategoryNamesAsync(List<Guid> categoryIds, CancellationToken ct)
+        => dbContext.Categories
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == ProductId.From(productId), ct);
+            .Where(c => categoryIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
 
-        if (product is null)
-            return null;
-
-        var category = await dbContext.Categories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == product.CategoryId.Value, ct);
-
-        return new ProductDetailDto(
+    private static ProductDetailDto MapToDetail(Domain.Entities.Product product, string categoryName)
+        => new(
             product.Id.Value,
             product.Name,
             product.Description,
             product.CategoryId.Value,
-            category?.Name ?? string.Empty,
+            categoryName,
             product.Price.Amount,
             product.Price.Currency,
             product.StockQuantity,
@@ -35,88 +63,9 @@ internal sealed class ProductReadRepository(ProductDbContext dbContext) : IProdu
             product.Attributes.Select(a => new ProductAttributeDto(a.Key, a.Value)).ToList(),
             product.ImageUrls.ToList(),
             product.CreatedAt,
-            product.UpdatedAt);
-    }
-
-    public async Task<List<ProductDetailDto>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
-    {
-        var guidList = ids.ToList();
-        var productIds = guidList.Select(ProductId.From).ToList();
-
-        var products = await dbContext.Products
-            .AsNoTracking()
-            .Where(p => productIds.Contains(p.Id))
-            .ToListAsync(ct);
-
-        if (products.Count == 0)
-            return [];
-
-        var categoryIds = products.Select(p => p.CategoryId.Value).Distinct().ToList();
-        var categories = await dbContext.Categories
-            .AsNoTracking()
-            .Where(c => categoryIds.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
-
-        return products.Select(p => new ProductDetailDto(
-            p.Id.Value,
-            p.Name,
-            p.Description,
-            p.CategoryId.Value,
-            categories.GetValueOrDefault(p.CategoryId.Value, string.Empty),
-            p.Price.Amount,
-            p.Price.Currency,
-            p.StockQuantity,
-            p.Status.Name,
-            p.SellerId.Value,
-            p.Attributes.Select(a => new ProductAttributeDto(a.Key, a.Value)).ToList(),
-            p.ImageUrls.ToList(),
-            p.CreatedAt,
-            p.UpdatedAt)).ToList();
-    }
-
-    public async Task<List<ProductPriceDto>> GetPricesByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
-    {
-        var productIds = ids.Select(ProductId.From).ToList();
-
-        return await dbContext.Products
-            .AsNoTracking()
-            .Where(p => productIds.Contains(p.Id))
-            .Select(p => new ProductPriceDto(p.Id.Value, p.Price.Amount, p.Price.Currency))
-            .ToListAsync(ct);
-    }
-
-    public async Task<PagedResult<ProductSummaryDto>> GetBySellerAsync(
-        Guid sellerId, int page, int size, CancellationToken ct = default)
-    {
-        var sellerIdVo = SellerId.From(sellerId);
-
-        var query = dbContext.Products
-            .AsNoTracking()
-            .Where(p => p.SellerId == sellerIdVo);
-
-        var totalCount = await query.CountAsync(ct);
-
-        var products = await query
-            .OrderByDescending(p => p.CreatedAt)
-            .Skip((page - 1) * size)
-            .Take(size)
-            .ToListAsync(ct);
-
-        var categoryIds = products.Select(p => p.CategoryId.Value).Distinct().ToList();
-        var categories = await dbContext.Categories
-            .AsNoTracking()
-            .Where(c => categoryIds.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
-
-        var items = products.Select(p => new ProductSummaryDto(
-            p.Id.Value,
-            p.Name,
-            categories.GetValueOrDefault(p.CategoryId.Value, string.Empty),
-            p.Price.Amount,
-            p.Price.Currency,
-            p.StockQuantity,
-            p.Status.Name)).ToList();
-
-        return new PagedResult<ProductSummaryDto>(items, totalCount, page, size);
-    }
+            product.UpdatedAt,
+            Guid.Empty,
+            null,
+            "New",
+            null);
 }

@@ -24,6 +24,23 @@ internal sealed class OutboxRepository(ProductDbContext dbContext) : IOutboxRepo
             .ToListAsync(ct);
     }
 
+    public async Task<int> MarkRetryExhaustedMessagesAsProcessedAsync(int batchSize, int maxRetries, CancellationToken ct = default)
+    {
+        var messages = await dbContext.OutboxMessages
+            .Where(m => m.ProcessedOn == null && m.RetryCount >= maxRetries)
+            .OrderBy(m => m.OccurredOn)
+            .Take(batchSize)
+            .ToListAsync(ct);
+
+        foreach (var message in messages)
+            message.MarkAsProcessed();
+
+        if (messages.Count > 0)
+            await dbContext.SaveChangesAsync(ct);
+
+        return messages.Count;
+    }
+
     public async Task MarkAsProcessedAsync(Guid messageId, CancellationToken ct = default)
     {
         var message = await dbContext.OutboxMessages
