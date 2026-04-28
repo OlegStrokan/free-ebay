@@ -14,22 +14,14 @@ internal sealed class CreateProductCommandHandler(IProductPersistenceService per
     {
         try
         {
-            var sellerId = SellerId.From(request.SellerId);
+            var sellerId   = SellerId.From(request.SellerId);
             var categoryId = CategoryId.From(request.CategoryId);
-            var price = Money.Create(request.Price, request.Currency);
-            var attributes = request.Attributes
-                .Select(a => new ProductAttribute(a.Key, a.Value))
-                .ToList();
+            var price      = Money.Create(request.Price, request.Currency);
+            var attributes = request.Attributes.Select(a => new ProductAttribute(a.Key, a.Value)).ToList();
 
             var product = Product.Create(
-                sellerId,
-                request.Name,
-                request.Description,
-                categoryId,
-                price,
-                request.InitialStock,
-                attributes,
-                request.ImageUrls);
+                sellerId, request.Name, request.Description, categoryId,
+                price, request.InitialStock, attributes, request.ImageUrls);
 
             await persistence.CreateProductAsync(product, cancellationToken);
 
