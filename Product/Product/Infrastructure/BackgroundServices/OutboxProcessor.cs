@@ -48,6 +48,18 @@ public sealed class OutboxProcessor(
         using var scope = serviceProvider.CreateScope();
         var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
 
+        var exhaustedCount = await outboxRepository.MarkRetryExhaustedMessagesAsProcessedAsync(
+            _batchSize,
+            _maxRetries,
+            ct);
+
+        if (exhaustedCount > 0)
+        {
+            logger.LogError(
+                "Marked {Count} retry-exhausted outbox messages as processed to stop retry loops",
+                exhaustedCount);
+        }
+
         var messages = await outboxRepository.GetUnprocessedMessagesAsync(_batchSize, _maxRetries, ct);
         if (messages.Count == 0)
             return;

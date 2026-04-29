@@ -2,6 +2,7 @@ using Application.Commands.CreateProduct;
 using Application.DTOs;
 using Application.Interfaces;
 using Domain.Entities;
+using Domain.ValueObjects;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -40,7 +41,9 @@ public class CreateProductCommandHandlerTests
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value, Is.Not.EqualTo(Guid.Empty));
-        await _persistence.Received(1).CreateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>());
+        await _persistence.Received(1).CreateProductAsync(
+            Arg.Any<Domain.Entities.Product>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -58,7 +61,7 @@ public class CreateProductCommandHandlerTests
     public void Handle_ShouldThrow_WhenPersistenceThrows()
     {
         _persistence
-            .CreateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>())
+            .CreateProductAsync(Arg.Any<Domain.Entities.Product>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("DB error"));
 
         // Infrastructure exceptions propagate so the caller can log them with full stack trace.
@@ -74,7 +77,9 @@ public class CreateProductCommandHandlerTests
 
         Assert.That(result.IsSuccess, Is.False);
         Assert.That(result.Errors[0], Does.Contain("name"));
-        await _persistence.DidNotReceive().CreateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>());
+        await _persistence.DidNotReceive().CreateProductAsync(
+            Arg.Any<Domain.Entities.Product>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -85,7 +90,9 @@ public class CreateProductCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         Assert.That(result.IsSuccess, Is.False);
-        await _persistence.DidNotReceive().CreateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>());
+        await _persistence.DidNotReceive().CreateProductAsync(
+            Arg.Any<Domain.Entities.Product>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]

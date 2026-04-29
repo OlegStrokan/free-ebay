@@ -7,127 +7,222 @@ option csharp_namespace = "Protos.Product";
 package product;
 
 service ProductService {
+  // ─── eBay-style: standalone product (one product = one seller) ──────────
   rpc GetProductPrices (GetProductPricesRequest) returns (GetProductPricesResponse);
-  rpc GetProducts(GetProductsRequest) returns(GetProductsResponse);
-  rpc GetProduct(GetProductRequest) returns(GetProductResponse);
+  rpc GetProducts (GetProductsRequest) returns (GetProductsResponse);
+  rpc GetProduct (GetProductRequest) returns (GetProductResponse);
+  rpc CreateProduct (CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct (UpdateProductRequest) returns (UpdateProductResponse);
+  rpc DeleteProduct (DeleteProductRequest) returns (DeleteProductResponse);
+  rpc ActivateProduct (ActivateProductRequest) returns (ActivateProductResponse);
+  rpc DeactivateProduct (DeactivateProductRequest) returns (DeactivateProductResponse);
+  rpc UpdateProductStock (UpdateProductStockRequest) returns (UpdateProductStockResponse);
 
-  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
-  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
-  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
-  rpc ActivateProduct(ActivateProductRequest) returns (ActivateProductResponse);
-  rpc DeactivateProduct(DeactivateProductRequest) returns (DeactivateProductResponse);
-  rpc UpdateProductStock(UpdateProductStockRequest) returns (UpdateProductStockResponse);
+  // ─── Amazon-style: catalog items (canonical product definition) ─────────
+  rpc CreateCatalogItem (CreateCatalogItemRequest) returns (CreateCatalogItemResponse);
+  rpc UpdateCatalogItem (UpdateCatalogItemRequest) returns (UpdateCatalogItemResponse);
+
+  // ─── Amazon-style: listings (query) ─────────────────────────────────────
+  rpc GetListingPrices (GetListingPricesRequest) returns (GetListingPricesResponse);
+  rpc GetListings (GetListingsRequest) returns (GetListingsResponse);
+  rpc GetListing (GetListingRequest) returns (GetListingResponse);
+  rpc GetSellerListings (GetSellerListingsRequest) returns (GetSellerListingsResponse);
+
+  // ─── Amazon-style: listings (write) ─────────────────────────────────────
+  rpc CreateCatalogItemWithListing (CreateCatalogItemWithListingRequest) returns (CreateCatalogItemWithListingResponse);
+  rpc UpdateCatalogItemAndListing (UpdateCatalogItemAndListingRequest) returns (UpdateCatalogItemAndListingResponse);
+  rpc CreateListing (CreateListingRequest) returns (CreateListingResponse);
+  rpc ActivateListing (ActivateListingRequest) returns (ActivateListingResponse);
+  rpc DeactivateListing (DeactivateListingRequest) returns (DeactivateListingResponse);
+  rpc DeleteListing (DeleteListingRequest) returns (DeleteListingResponse);
+  rpc UpdateListingStock (UpdateListingStockRequest) returns (UpdateListingStockResponse);
+  rpc ChangeListingPrice (ChangeListingPriceRequest) returns (ChangeListingPriceResponse);
 }
 
-//------------------get-product-prices---------------------//
+// eBay-style: standalone Product messages
 
-message GetProductPricesRequest {
-  repeated string product_ids = 1;
-}
+message GetProductPricesRequest { repeated string product_ids = 1; }
+message GetProductPricesResponse { repeated ProductPrice prices = 1; repeated string not_found_ids = 2; }
 
-message GetProductPricesResponse {
-  repeated ProductPrice prices = 1;
-  repeated string not_found_ids = 2;
-}
+message GetProductsRequest { repeated string product_ids = 1; }
+message GetProductsResponse { repeated ProductDetail products = 1; repeated string not_found_ids = 2; }
 
-//-------------------get-products-----------------//
+message GetProductRequest { string product_id = 1; }
+message GetProductResponse { ProductDetail product = 1; }
 
-message GetProductsRequest {
-  repeated string product_ids = 1;
-}
-
-message GetProductsResponse {
-  repeated ProductDetail products = 1;
-  repeated string not_found_ids = 2;
-}
-
-//-------------------get-product-----------------//
-
-message GetProductRequest {
-   string product_id = 1;
-}
-
-message GetProductResponse {
-  ProductDetail product = 2;
-}
-
-//-----------------items---------------------------//
 message ProductPrice {
   string product_id = 1;
   common.DecimalValue price = 2;
-  string currency   = 3;
+  string currency = 3;
 }
 
 message ProductDetail {
-  string product_id   = 1;
-  string name         = 2;
-  string description  = 3;
-  string category_id  = 4;   // UUID - authoritative domain reference
-  string category_name = 5;  // resolved by Application layer for display; not stored in domain
-  common.DecimalValue price  = 6;
-  string currency     = 7;
-  int32  stock        = 8;
+  string product_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
+  string category_name = 5;
+  common.DecimalValue price = 6;
+  string currency = 7;
+  int32 stock = 8;
   repeated ProductAttributeProto attributes = 9;
   repeated string image_urls = 10;
+  string seller_id = 11;
+  string status = 12;
 }
 
-message ProductAttributeProto {
-  string key = 1;
-  string value = 2;
-}
-
-//-----------------write requests--------------------------//
+message ProductAttributeProto { string key = 1; string value = 2; }
 
 message CreateProductRequest {
-  string seller_id    = 1;
-  string name         = 2;
-  string description  = 3;
-  string category_id  = 4;
+  string seller_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
   common.DecimalValue price = 5;
-  string currency     = 6;
-  int32  initial_stock = 7;
+  string currency = 6;
+  int32 initial_stock = 7;
   repeated ProductAttributeProto attributes = 8;
   repeated string image_urls = 9;
 }
 
-message CreateProductResponse {
-  string product_id = 1;
-}
+message CreateProductResponse { string product_id = 1; }
 
 message UpdateProductRequest {
-  string product_id   = 1;
-  string name         = 2;
-  string description  = 3;
-  string category_id  = 4;
+  string product_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
   common.DecimalValue price = 5;
-  string currency     = 6;
+  string currency = 6;
   repeated ProductAttributeProto attributes = 7;
   repeated string image_urls = 8;
 }
 
 message UpdateProductResponse {}
-
-message DeleteProductRequest {
-  string product_id = 1;
-}
-
+message DeleteProductRequest { string product_id = 1; }
 message DeleteProductResponse {}
-
-message ActivateProductRequest {
-  string product_id = 1;
-}
-
+message ActivateProductRequest { string product_id = 1; }
 message ActivateProductResponse {}
-
-message DeactivateProductRequest {
-  string product_id = 1;
-}
-
+message DeactivateProductRequest { string product_id = 1; }
 message DeactivateProductResponse {}
+message UpdateProductStockRequest { string product_id = 1; int32 new_quantity = 2; }
+message UpdateProductStockResponse {}
 
-message UpdateProductStockRequest {
-  string product_id    = 1;
-  int32  new_quantity  = 2;
+// Amazon-style: CatalogItem messages
+
+message CreateCatalogItemRequest {
+  string name = 1;
+  string description = 2;
+  string category_id = 3;
+  string gtin = 4;
+  repeated ListingAttributeProto attributes = 5;
+  repeated string image_urls = 6;
+}
+message CreateCatalogItemResponse { string catalog_item_id = 1; }
+
+message UpdateCatalogItemRequest {
+  string catalog_item_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
+  string gtin = 5;
+  repeated ListingAttributeProto attributes = 6;
+  repeated string image_urls = 7;
+}
+message UpdateCatalogItemResponse {}
+
+// Amazon-style: Listing query messages
+
+message GetListingPricesRequest { repeated string listing_ids = 1; }
+message GetListingPricesResponse { repeated ListingPrice prices = 1; }
+
+message GetListingsRequest { repeated string listing_ids = 1; }
+message GetListingsResponse { repeated ListingDetail listings = 1; repeated string not_found_ids = 2; }
+
+message GetListingRequest { string listing_id = 1; }
+message GetListingResponse { ListingDetail listing = 1; }
+
+message GetSellerListingsRequest { string seller_id = 1; int32 page = 2; int32 size = 3; }
+message GetSellerListingsResponse { repeated ListingDetail listings = 1; int32 total_count = 2; }
+
+message ListingPrice {
+  string listing_id = 1;
+  common.DecimalValue price = 2;
+  string currency = 3;
 }
 
-message UpdateProductStockResponse {}
+message ListingDetail {
+  string listing_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
+  string category_name = 5;
+  common.DecimalValue price = 6;
+  string currency = 7;
+  int32 stock = 8;
+  repeated ListingAttributeProto attributes = 9;
+  repeated string image_urls = 10;
+  string catalog_item_id = 11;
+  string seller_id = 12;
+  string status = 13;
+  string condition = 14;
+  string gtin = 15;
+  string seller_notes = 16;
+}
+
+message ListingAttributeProto { string key = 1; string value = 2; }
+
+// Amazon-style: Listing write messages
+
+message CreateCatalogItemWithListingRequest {
+  string seller_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
+  common.DecimalValue price = 5;
+  string currency = 6;
+  int32 initial_stock = 7;
+  repeated ListingAttributeProto attributes = 8;
+  repeated string image_urls = 9;
+  string gtin = 10;
+  string condition = 11;
+  string seller_notes = 12;
+}
+message CreateCatalogItemWithListingResponse { string listing_id = 1; }
+
+message UpdateCatalogItemAndListingRequest {
+  string listing_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
+  common.DecimalValue price = 5;
+  string currency = 6;
+  repeated ListingAttributeProto attributes = 7;
+  repeated string image_urls = 8;
+  string gtin = 9;
+  string condition = 10;
+  string seller_notes = 11;
+}
+message UpdateCatalogItemAndListingResponse {}
+
+message CreateListingRequest {
+  string catalog_item_id = 1;
+  string seller_id = 2;
+  common.DecimalValue price = 3;
+  string currency = 4;
+  int32 initial_stock = 5;
+  string condition = 6;
+  string seller_notes = 7;
+}
+message CreateListingResponse { string listing_id = 1; }
+
+message ActivateListingRequest { string listing_id = 1; }
+message ActivateListingResponse {}
+message DeactivateListingRequest { string listing_id = 1; }
+message DeactivateListingResponse {}
+message DeleteListingRequest { string listing_id = 1; }
+message DeleteListingResponse {}
+message UpdateListingStockRequest { string listing_id = 1; int32 new_quantity = 2; }
+message UpdateListingStockResponse {}
+message ChangeListingPriceRequest { string listing_id = 1; common.DecimalValue price = 2; string currency = 3; }
+message ChangeListingPriceResponse {}

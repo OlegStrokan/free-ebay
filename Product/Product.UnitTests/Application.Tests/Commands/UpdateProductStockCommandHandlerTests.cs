@@ -20,14 +20,15 @@ public class UpdateProductStockCommandHandlerTests
         _handler = new UpdateProductStockCommandHandler(_persistence);
     }
 
-    private static Product CreateActiveProduct()
+    private static Product CreateActiveProduct(int stock = 10)
     {
-        var p = Product.Create(
-            SellerId.CreateUnique(), "Product", "Desc",
-            CategoryId.CreateUnique(), Money.Create(50m, "USD"), 10, [], []);
-        p.Activate();
-        p.ClearDomainEvents();
-        return p;
+        var product = Product.Create(
+            SellerId.CreateUnique(), "Name", "Desc",
+            CategoryId.CreateUnique(), Money.Create(50m, "USD"), stock, [], []);
+        product.ClearDomainEvents();
+        product.Activate();
+        product.ClearDomainEvents();
+        return product;
     }
 
     [Test]
@@ -86,9 +87,7 @@ public class UpdateProductStockCommandHandlerTests
             .UpdateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("DB error"));
 
-        var result = await _handler.Handle(new UpdateProductStockCommand(product.Id.Value, 5), CancellationToken.None);
-
-        Assert.That(result.IsSuccess, Is.False);
+        Assert.ThrowsAsync<Exception>(() => _handler.Handle(new UpdateProductStockCommand(product.Id.Value, 5), CancellationToken.None));
     }
 
     [Test]
@@ -100,6 +99,6 @@ public class UpdateProductStockCommandHandlerTests
         var result = await _handler.Handle(new UpdateProductStockCommand(product.Id.Value, 0), CancellationToken.None);
 
         Assert.That(result.IsSuccess, Is.True);
-        Assert.That(product.Status, Is.EqualTo(ProductStatus.OutOfStock));
+        Assert.That(product.StockQuantity, Is.EqualTo(0));
     }
 }

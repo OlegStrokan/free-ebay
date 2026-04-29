@@ -3,20 +3,20 @@ using Application.DTOs;
 using Application.Interfaces;
 using MediatR;
 
-namespace Application.Queries.GetSellerProducts;
+namespace Application.Queries.GetSellerListings;
 
-internal sealed class GetSellerProductsQueryHandler
-    : IRequestHandler<GetSellerProductsQuery, Result<PagedResult<ProductSummaryDto>>>
+internal sealed class GetSellerListingsQueryHandler
+    : IRequestHandler<GetSellerListingsQuery, Result<PagedResult<ProductSummaryDto>>>
 {
-    private readonly IProductReadRepository _readRepository;
+    private readonly IListingReadRepository _readRepository;
 
-    public GetSellerProductsQueryHandler(IProductReadRepository readRepository)
+    public GetSellerListingsQueryHandler(IListingReadRepository readRepository)
     {
         _readRepository = readRepository;
     }
 
     public async Task<Result<PagedResult<ProductSummaryDto>>> Handle(
-        GetSellerProductsQuery request, CancellationToken cancellationToken)
+        GetSellerListingsQuery request, CancellationToken cancellationToken)
     {
         var result = await _readRepository.GetBySellerAsync(
             request.SellerId, request.Page, request.Size, cancellationToken);

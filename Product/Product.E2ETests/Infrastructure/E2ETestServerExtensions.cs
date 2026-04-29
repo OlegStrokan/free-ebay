@@ -19,8 +19,10 @@ public static class E2ETestServerExtensions
         using var scope = server.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
 
-        // OutboxMessages and Products first; Categories last (FK order)
+        // Write-side tables first; Categories last for FK order.
         await db.OutboxMessages.ExecuteDeleteAsync();
+        await db.Listings.ExecuteDeleteAsync();
+        await db.CatalogItems.ExecuteDeleteAsync();
         await db.Products.ExecuteDeleteAsync();
         await db.Categories.ExecuteDeleteAsync();
     }
@@ -81,12 +83,19 @@ public static class E2ETestServerExtensions
         var result = await mediator.Send(new ActivateProductCommand(productId));
 
         if (!result.IsSuccess)
+        {
+            if (result.Errors.Any(e => e.Contains("Cannot transition from Active to Active")))
+                return;
+
             throw new InvalidOperationException(
                 $"ActivateProduct failed: {string.Join(", ", result.Errors)}");
+        }
     }
 
     public static async Task DeactivateProductAsync(this E2ETestServer server, Guid productId)
     {
+        await server.ActivateProductAsync(productId);
+
         using var scope = server.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
@@ -109,7 +118,7 @@ public static class E2ETestServerExtensions
                 $"UpdateStock failed: {string.Join(", ", result.Errors)}");
     }
 
-    public static async Task<bool> WaitForKafkaEventAsync(
+    public static Task<bool> WaitForKafkaEventAsync(
         this E2ETestServer server,
         Guid aggregateId,
         string eventType,
@@ -131,12 +140,19 @@ public static class E2ETestServerExtensions
         {
             while (DateTime.UtcNow < deadline)
             {
-                var msg = consumer.Consume(TimeSpan.FromSeconds(1));
-                if (msg?.Message?.Value is null) continue;
+                try
+                {
+                    var msg = consumer.Consume(TimeSpan.FromSeconds(1));
+                    if (msg?.Message?.Value is null) continue;
 
-                if (msg.Message.Value.Contains(aggregateId.ToString()) &&
-                    msg.Message.Value.Contains(eventType))
-                    return true;
+                    if (msg.Message.Value.Contains(aggregateId.ToString()) &&
+                        msg.Message.Value.Contains(eventType))
+                        return Task.FromResult(true);
+                }
+                catch (Confluent.Kafka.ConsumeException)
+                {
+                    // Topic may not exist yet - keep polling until timeout
+                }
             }
         }
         finally
@@ -144,6 +160,6 @@ public static class E2ETestServerExtensions
             consumer.Unsubscribe();
         }
 
-        return false;
+        return Task.FromResult(false);
     }
 }

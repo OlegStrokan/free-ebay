@@ -13,28 +13,14 @@ internal sealed class DeleteProductCommandHandler(IProductPersistenceService per
     {
         try
         {
-            var productId = ProductId.From(request.ProductId);
-            var product = await persistence.GetByIdAsync(productId, cancellationToken);
+            var product = await persistence.GetByIdAsync(ProductId.From(request.ProductId), cancellationToken);
             if (product is null)
                 return Result.Failure($"Product with ID {request.ProductId} was not found.");
 
             product.Delete();
-
             await persistence.UpdateProductAsync(product, cancellationToken);
-
             return Result.Success();
         }
-        catch (InvalidProductOperationException ex)
-        {
-            return Result.Failure(ex.Message);
-        }
-        catch (DomainException ex)
-        {
-            return Result.Failure(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
+        catch (DomainException ex) { return Result.Failure(ex.Message); }
     }
 }

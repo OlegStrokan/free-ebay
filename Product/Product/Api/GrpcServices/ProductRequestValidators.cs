@@ -3,54 +3,41 @@ using Protos.Product;
 
 namespace Api.GrpcServices;
 
-public class GetProductPricesRequestValidator : AbstractValidator<GetProductPricesRequest>
+public class GetListingPricesRequestValidator : AbstractValidator<GetListingPricesRequest>
 {
-    public GetProductPricesRequestValidator()
+    public GetListingPricesRequestValidator()
     {
-        RuleFor(x => x.ProductIds)
-            .NotEmpty()
-            .WithMessage("At least one product ID is required.");
-
-        RuleForEach(x => x.ProductIds)
-            .Must(BeAGuid)
-            .WithMessage("Each product ID must be a valid GUID.");
+        RuleFor(x => x.ListingIds).NotEmpty().WithMessage("At least one listing ID is required.");
+        RuleForEach(x => x.ListingIds).Must(BeAGuid).WithMessage("Each listing ID must be a valid GUID.");
     }
 
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class GetProductsRequestValidator : AbstractValidator<GetProductsRequest>
+public class GetListingsRequestValidator : AbstractValidator<GetListingsRequest>
 {
-    public GetProductsRequestValidator()
+    public GetListingsRequestValidator()
     {
-        RuleFor(x => x.ProductIds)
-            .NotEmpty()
-            .WithMessage("At least one product ID is required.");
-
-        RuleForEach(x => x.ProductIds)
-            .Must(BeAGuid)
-            .WithMessage("Each product ID must be a valid GUID.");
+        RuleFor(x => x.ListingIds).NotEmpty().WithMessage("At least one listing ID is required.");
+        RuleForEach(x => x.ListingIds).Must(BeAGuid).WithMessage("Each listing ID must be a valid GUID.");
     }
 
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class GetProductRequestValidator : AbstractValidator<GetProductRequest>
+public class GetListingRequestValidator : AbstractValidator<GetListingRequest>
 {
-    public GetProductRequestValidator()
+    public GetListingRequestValidator()
     {
-        RuleFor(x => x.ProductId)
-            .NotEmpty()
-            .Must(BeAGuid)
-            .WithMessage("ProductId must be a valid GUID.");
+        RuleFor(x => x.ListingId).NotEmpty().Must(BeAGuid).WithMessage("ListingId must be a valid GUID.");
     }
 
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class CreateProductRequestValidator : AbstractValidator<CreateProductRequest>
+public class CreateCatalogItemWithListingRequestValidator : AbstractValidator<CreateCatalogItemWithListingRequest>
 {
-    public CreateProductRequestValidator()
+    public CreateCatalogItemWithListingRequestValidator()
     {
         RuleFor(x => x.SellerId).NotEmpty().Must(BeAGuid).WithMessage("SellerId must be a valid GUID.");
         RuleFor(x => x.CategoryId).NotEmpty().Must(BeAGuid).WithMessage("CategoryId must be a valid GUID.");
@@ -62,11 +49,11 @@ public class CreateProductRequestValidator : AbstractValidator<CreateProductRequ
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class UpdateProductRequestValidator : AbstractValidator<UpdateProductRequest>
+public class UpdateCatalogItemAndListingRequestValidator : AbstractValidator<UpdateCatalogItemAndListingRequest>
 {
-    public UpdateProductRequestValidator()
+    public UpdateCatalogItemAndListingRequestValidator()
     {
-        RuleFor(x => x.ProductId).NotEmpty().Must(BeAGuid).WithMessage("ProductId must be a valid GUID.");
+        RuleFor(x => x.ListingId).NotEmpty().Must(BeAGuid).WithMessage("ListingId must be a valid GUID.");
         RuleFor(x => x.CategoryId).NotEmpty().Must(BeAGuid).WithMessage("CategoryId must be a valid GUID.");
         RuleFor(x => x.Name).NotEmpty().WithMessage("Name is required.");
         RuleFor(x => x.Currency).NotEmpty().Length(3).WithMessage("Currency must be a 3-character ISO code.");
@@ -76,42 +63,74 @@ public class UpdateProductRequestValidator : AbstractValidator<UpdateProductRequ
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class DeleteProductRequestValidator : AbstractValidator<DeleteProductRequest>
+public class DeleteListingRequestValidator : AbstractValidator<DeleteListingRequest>
 {
-    public DeleteProductRequestValidator()
+    public DeleteListingRequestValidator()
     {
-        RuleFor(x => x.ProductId).NotEmpty().Must(BeAGuid).WithMessage("ProductId must be a valid GUID.");
+        RuleFor(x => x.ListingId).NotEmpty().Must(BeAGuid).WithMessage("ListingId must be a valid GUID.");
     }
 
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class ActivateProductRequestValidator : AbstractValidator<ActivateProductRequest>
+public class ActivateListingRequestValidator : AbstractValidator<ActivateListingRequest>
 {
-    public ActivateProductRequestValidator()
+    public ActivateListingRequestValidator()
     {
-        RuleFor(x => x.ProductId).NotEmpty().Must(BeAGuid).WithMessage("ProductId must be a valid GUID.");
+        RuleFor(x => x.ListingId).NotEmpty().Must(BeAGuid).WithMessage("ListingId must be a valid GUID.");
     }
 
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class DeactivateProductRequestValidator : AbstractValidator<DeactivateProductRequest>
+public class DeactivateListingRequestValidator : AbstractValidator<DeactivateListingRequest>
 {
-    public DeactivateProductRequestValidator()
+    public DeactivateListingRequestValidator()
     {
-        RuleFor(x => x.ProductId).NotEmpty().Must(BeAGuid).WithMessage("ProductId must be a valid GUID.");
+        RuleFor(x => x.ListingId).NotEmpty().Must(BeAGuid).WithMessage("ListingId must be a valid GUID.");
     }
 
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
 }
 
-public class UpdateProductStockRequestValidator : AbstractValidator<UpdateProductStockRequest>
+public class UpdateListingStockRequestValidator : AbstractValidator<UpdateListingStockRequest>
 {
-    public UpdateProductStockRequestValidator()
+    public UpdateListingStockRequestValidator()
     {
-        RuleFor(x => x.ProductId).NotEmpty().Must(BeAGuid).WithMessage("ProductId must be a valid GUID.");
+        RuleFor(x => x.ListingId).NotEmpty().Must(BeAGuid).WithMessage("ListingId must be a valid GUID.");
         RuleFor(x => x.NewQuantity).GreaterThanOrEqualTo(0).WithMessage("Stock quantity cannot be negative.");
+    }
+
+    private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
+}
+
+public class GetProductPricesRequestValidator : AbstractValidator<GetProductPricesRequest>
+{
+    public GetProductPricesRequestValidator()
+    {
+        RuleFor(x => x.ProductIds).NotEmpty().WithMessage("At least one product ID is required.");
+        RuleForEach(x => x.ProductIds).Must(BeAGuid).WithMessage("Each product ID must be a valid GUID.");
+    }
+
+    private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
+}
+
+public class GetProductsRequestValidator : AbstractValidator<GetProductsRequest>
+{
+    public GetProductsRequestValidator()
+    {
+        RuleFor(x => x.ProductIds).NotEmpty().WithMessage("At least one product ID is required.");
+        RuleForEach(x => x.ProductIds).Must(BeAGuid).WithMessage("Each product ID must be a valid GUID.");
+    }
+
+    private static bool BeAGuid(string id) => Guid.TryParse(id, out _);
+}
+
+public class GetProductRequestValidator : AbstractValidator<GetProductRequest>
+{
+    public GetProductRequestValidator()
+    {
+        RuleFor(x => x.ProductId).NotEmpty().Must(BeAGuid).WithMessage("ProductId must be a valid GUID.");
     }
 
     private static bool BeAGuid(string id) => Guid.TryParse(id, out _);

@@ -21,7 +21,10 @@ public static class InfrastructureModule
             opt.UseNpgsql(configuration.GetConnectionString("Postgres")));
 
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICatalogItemRepository, CatalogItemRepository>();
+        services.AddScoped<IListingRepository, ListingRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IListingReadRepository, ListingReadRepository>();
         services.AddScoped<IProductReadRepository, ProductReadRepository>();
 
         services.AddScoped<IProductPersistenceService, ProductPersistenceService>();

@@ -7,4 +7,7 @@ public sealed record ProductSummaryDto(
     decimal Price,
     string Currency,
     int StockQuantity,
-    string Status);
+    string Status,
+    Guid CatalogItemId,
+    Guid SellerId,
+    string Condition);

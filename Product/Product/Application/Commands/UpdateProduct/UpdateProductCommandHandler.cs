@@ -19,24 +19,15 @@ internal sealed class UpdateProductCommandHandler(IProductPersistenceService per
                 return Result.Failure($"Product with ID {request.ProductId} was not found.");
 
             var categoryId = CategoryId.From(request.CategoryId);
-            var price = Money.Create(request.Price, request.Currency);
+            var price      = Money.Create(request.Price, request.Currency);
             var attributes = request.Attributes
-                .Select(a => new ProductAttribute(a.Key, a.Value))
-                .ToList();
+                .Select(a => new Domain.ValueObjects.ProductAttribute(a.Key, a.Value)).ToList();
 
             product.Update(request.Name, request.Description, categoryId, price, attributes, request.ImageUrls);
-
             await persistence.UpdateProductAsync(product, cancellationToken);
 
             return Result.Success();
         }
-        catch (DomainException ex)
-        {
-            return Result.Failure(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
+        catch (DomainException ex) { return Result.Failure(ex.Message); }
     }
 }

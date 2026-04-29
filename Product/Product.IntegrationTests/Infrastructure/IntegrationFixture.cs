@@ -37,8 +37,10 @@ public sealed class IntegrationFixture : IAsyncLifetime
             opt.UseNpgsql(_postgres.GetConnectionString()));
 
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICatalogItemRepository, CatalogItemRepository>();
+        services.AddScoped<IListingRepository, ListingRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
-        services.AddScoped<IProductReadRepository, ProductReadRepository>();
+        services.AddScoped<IListingReadRepository, ListingReadRepository>();
         services.AddScoped<IProductPersistenceService, ProductPersistenceService>();
 
         // FakeEventPublisher is used directly in OutboxProcessorTests

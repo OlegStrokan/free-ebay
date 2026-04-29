@@ -50,6 +50,7 @@ public class ProductOutboxE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var sellerId   = Guid.NewGuid();
 
         var productId = await _server.CreateProductAsync(sellerId, categoryId);
+        await _server.DeactivateProductAsync(productId);
 
         await _server.ActivateProductAsync(productId);
 
@@ -71,11 +72,6 @@ public class ProductOutboxE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var sellerId   = Guid.NewGuid();
 
         var productId = await _server.CreateProductAsync(sellerId, categoryId);
-        await _server.ActivateProductAsync(productId);
-
-        // Drain the activation event first so we wait for the deactivation one
-        await _server.WaitForKafkaEventAsync(
-            productId, "ProductStatusChangedEvent", timeoutSeconds: 20);
 
         await _server.DeactivateProductAsync(productId);
 
@@ -101,10 +97,10 @@ public class ProductOutboxE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         await _server.UpdateStockAsync(productId, newQuantity: 50);
 
         var received = await _server.WaitForKafkaEventAsync(
-            productId, "StockUpdatedEvent", timeoutSeconds: 20);
+            productId, "ProductStockUpdatedEvent", timeoutSeconds: 20);
 
         received.Should().BeTrue(
-            $"a StockUpdatedEvent for product {productId} must appear on Kafka");
+            $"a ProductStockUpdatedEvent for product {productId} must appear on Kafka");
 
         _output.WriteLine($"PASSED: StockUpdatedEvent received for {productId}");
     }
@@ -118,6 +114,7 @@ public class ProductOutboxE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var sellerId   = Guid.NewGuid();
 
         var productId = await _server.CreateProductAsync(sellerId, categoryId);
+        await _server.DeactivateProductAsync(productId);
         await _server.ActivateProductAsync(productId);
         await _server.UpdateStockAsync(productId, newQuantity: 10);
 
@@ -126,11 +123,11 @@ public class ProductOutboxE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetim
         var statusReceived = await _server.WaitForKafkaEventAsync(
             productId, "ProductStatusChangedEvent", timeoutSeconds: 20);
         var stockReceived = await _server.WaitForKafkaEventAsync(
-            productId, "StockUpdatedEvent", timeoutSeconds: 20);
+            productId, "ProductStockUpdatedEvent", timeoutSeconds: 20);
 
         createdReceived.Should().BeTrue("ProductCreatedEvent must be published");
         statusReceived.Should().BeTrue("ProductStatusChangedEvent must be published");
-        stockReceived.Should().BeTrue("StockUpdatedEvent must be published");
+        stockReceived.Should().BeTrue("ProductStockUpdatedEvent must be published");
 
         _output.WriteLine($"PASSED: all three events arrived for {productId}");
     }

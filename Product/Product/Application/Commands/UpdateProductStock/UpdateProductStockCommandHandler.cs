@@ -13,24 +13,14 @@ internal sealed class UpdateProductStockCommandHandler(IProductPersistenceServic
     {
         try
         {
-            var productId = ProductId.From(request.ProductId);
-            var product   = await persistence.GetByIdAsync(productId, cancellationToken);
+            var product = await persistence.GetByIdAsync(ProductId.From(request.ProductId), cancellationToken);
             if (product is null)
                 return Result.Failure($"Product with ID {request.ProductId} was not found.");
 
             product.UpdateStock(request.NewQuantity);
-
             await persistence.UpdateProductAsync(product, cancellationToken);
-
             return Result.Success();
         }
-        catch (DomainException ex)
-        {
-            return Result.Failure(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
+        catch (DomainException ex) { return Result.Failure(ex.Message); }
     }
 }

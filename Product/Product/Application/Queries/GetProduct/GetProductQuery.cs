@@ -1,4 +1,4 @@
-﻿using Application.DTOs;
+using Application.DTOs;
 using MediatR;
 
 namespace Application.Queries.GetProduct;
