@@ -22,12 +22,13 @@ public class AdjustProductStockCommandHandlerTests
 
     private static Product CreateActiveProduct(int stock = 10)
     {
-        var p = Product.Create(
-            SellerId.CreateUnique(), "Product", "Desc",
+        var product = Product.Create(
+            SellerId.CreateUnique(), "Name", "Desc",
             CategoryId.CreateUnique(), Money.Create(50m, "USD"), stock, [], []);
-        p.Activate();
-        p.ClearDomainEvents();
-        return p;
+        product.ClearDomainEvents();
+        product.Activate();
+        product.ClearDomainEvents();
+        return product;
     }
 
     [Test]
@@ -82,6 +83,7 @@ public class AdjustProductStockCommandHandlerTests
     {
         var product = CreateActiveProduct();
         product.Delete();
+        product.ClearDomainEvents();
         _persistence.GetByIdAsync(Arg.Any<ProductId>(), Arg.Any<CancellationToken>()).Returns(product);
 
         var result = await _handler.Handle(new AdjustProductStockCommand(product.Id.Value, -1), CancellationToken.None);
@@ -99,9 +101,7 @@ public class AdjustProductStockCommandHandlerTests
             .UpdateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("DB error"));
 
-        var result = await _handler.Handle(new AdjustProductStockCommand(product.Id.Value, 1), CancellationToken.None);
-
-        Assert.That(result.IsSuccess, Is.False);
+        Assert.ThrowsAsync<Exception>(() => _handler.Handle(new AdjustProductStockCommand(product.Id.Value, 1), CancellationToken.None));
     }
 
     [Test]

@@ -21,14 +21,15 @@ public class UpdateProductCommandHandlerTests
         _handler = new UpdateProductCommandHandler(_persistence);
     }
 
-    private Product CreateActiveProduct()
+    private static Product CreateActiveProduct()
     {
-        var p = Product.Create(
+        var product = Product.Create(
             SellerId.CreateUnique(), "Old Name", "Old Desc",
             CategoryId.CreateUnique(), Money.Create(10m, "USD"), 5, [], []);
-        p.Activate();
-        p.ClearDomainEvents();
-        return p;
+        product.ClearDomainEvents();
+        product.Activate();
+        product.ClearDomainEvents();
+        return product;
     }
 
     private static UpdateProductCommand ValidCommand(Guid productId) => new(
@@ -88,9 +89,7 @@ public class UpdateProductCommandHandlerTests
             .UpdateProductAsync(Arg.Any<Product>(), Arg.Any<CancellationToken>())
             .Throws(new Exception("DB error"));
 
-        var result = await _handler.Handle(ValidCommand(product.Id.Value), CancellationToken.None);
-
-        Assert.That(result.IsSuccess, Is.False);
+        Assert.ThrowsAsync<Exception>(() => _handler.Handle(ValidCommand(product.Id.Value), CancellationToken.None));
     }
 
     [Test]
@@ -104,5 +103,6 @@ public class UpdateProductCommandHandlerTests
 
         Assert.That(product.Name, Is.EqualTo("New Name"));
         Assert.That(product.Description, Is.EqualTo("New Desc"));
+        Assert.That(product.Price.Amount, Is.EqualTo(199.99m));
     }
 }

@@ -21,39 +21,47 @@ namespace Api.Tests.GrpcServices;
 public class ProductGrpcServiceTests
 {
     private IMediator _mediator = null!;
-    private ILogger<ProductGrpcService> _logger = null!;
-    private IValidator<GetProductPricesRequest> _getPricesValidator = null!;
-    private IValidator<GetProductsRequest> _getProductsValidator = null!;
-    private IValidator<GetProductRequest> _getProductValidator = null!;
-    private IValidator<CreateProductRequest> _createValidator = null!;
-    private IValidator<UpdateProductRequest> _updateValidator = null!;
-    private IValidator<DeleteProductRequest> _deleteValidator = null!;
-    private IValidator<ActivateProductRequest> _activateValidator = null!;
-    private IValidator<DeactivateProductRequest> _deactivateValidator = null!;
-    private IValidator<UpdateProductStockRequest> _updateStockValidator = null!;
+    private ILogger<ProductGrpcHandler> _productLogger = null!;
+    private ILogger<ListingGrpcHandler> _listingLogger = null!;
+    private IValidator<GetListingPricesRequest> _getListingPricesValidator = null!;
+    private IValidator<GetListingsRequest> _getListingsValidator = null!;
+    private IValidator<GetListingRequest> _getListingValidator = null!;
+    private IValidator<CreateCatalogItemWithListingRequest> _createCatalogItemWithListingValidator = null!;
+    private IValidator<UpdateCatalogItemAndListingRequest> _updateCatalogItemAndListingValidator = null!;
+    private IValidator<DeleteListingRequest> _deleteListingValidator = null!;
+    private IValidator<ActivateListingRequest> _activateListingValidator = null!;
+    private IValidator<DeactivateListingRequest> _deactivateListingValidator = null!;
+    private IValidator<UpdateListingStockRequest> _updateListingStockValidator = null!;
     private ServerCallContext _callContext = null!;
 
     [SetUp]
     public void SetUp()
     {
         _mediator = Substitute.For<IMediator>();
-        _logger = Substitute.For<ILogger<ProductGrpcService>>();
-        _getPricesValidator = Substitute.For<IValidator<GetProductPricesRequest>>();
-        _getProductsValidator = Substitute.For<IValidator<GetProductsRequest>>();
-        _getProductValidator = Substitute.For<IValidator<GetProductRequest>>();
-        _createValidator = Substitute.For<IValidator<CreateProductRequest>>();
-        _updateValidator = Substitute.For<IValidator<UpdateProductRequest>>();
-        _deleteValidator = Substitute.For<IValidator<DeleteProductRequest>>();
-        _activateValidator = Substitute.For<IValidator<ActivateProductRequest>>();
-        _deactivateValidator = Substitute.For<IValidator<DeactivateProductRequest>>();
-        _updateStockValidator = Substitute.For<IValidator<UpdateProductStockRequest>>();
+        _productLogger = Substitute.For<ILogger<ProductGrpcHandler>>();
+        _listingLogger = Substitute.For<ILogger<ListingGrpcHandler>>();
+        _getListingPricesValidator = Substitute.For<IValidator<GetListingPricesRequest>>();
+        _getListingsValidator = Substitute.For<IValidator<GetListingsRequest>>();
+        _getListingValidator = Substitute.For<IValidator<GetListingRequest>>();
+        _createCatalogItemWithListingValidator = Substitute.For<IValidator<CreateCatalogItemWithListingRequest>>();
+        _updateCatalogItemAndListingValidator = Substitute.For<IValidator<UpdateCatalogItemAndListingRequest>>();
+        _deleteListingValidator = Substitute.For<IValidator<DeleteListingRequest>>();
+        _activateListingValidator = Substitute.For<IValidator<ActivateListingRequest>>();
+        _deactivateListingValidator = Substitute.For<IValidator<DeactivateListingRequest>>();
+        _updateListingStockValidator = Substitute.For<IValidator<UpdateListingStockRequest>>();
         _callContext = Substitute.For<ServerCallContext>();
     }
 
-    private ProductGrpcService BuildService() =>
-        new(_mediator, _logger, _getPricesValidator, _getProductsValidator, _getProductValidator,
-            _createValidator, _updateValidator, _deleteValidator, _activateValidator,
-            _deactivateValidator, _updateStockValidator);
+    private ProductGrpcService BuildService()
+    {
+        var productHandler = new ProductGrpcHandler(_mediator, _productLogger);
+        var listingHandler = new ListingGrpcHandler(_mediator, _listingLogger,
+            _getListingPricesValidator, _getListingsValidator, _getListingValidator,
+            _createCatalogItemWithListingValidator, _updateCatalogItemAndListingValidator,
+            _deleteListingValidator, _activateListingValidator,
+            _deactivateListingValidator, _updateListingStockValidator);
+        return new ProductGrpcService(productHandler, listingHandler);
+    }
     
     [Test]
     public async Task GetProductPrices_ShouldReturnPrices_WhenQuerySucceeds()
@@ -62,14 +70,11 @@ public class ProductGrpcServiceTests
         var id2 = Guid.NewGuid();
         var request = new GetProductPricesRequest { ProductIds = { id1.ToString(), id2.ToString() } };
 
-        _getPricesValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         var prices = new List<ProductPriceDto>
         {
-            new(id1, 10.00m, "USD"),
-            new(id2, 20.00m, "EUR")
+            new(id1, 10.00m, "USD", Guid.NewGuid(), Guid.NewGuid()),
+            new(id2, 20.00m, "EUR", Guid.NewGuid(), Guid.NewGuid())
         };
         _mediator
             .Send(Arg.Any<GetProductPricesQuery>(), Arg.Any<CancellationToken>())
@@ -89,10 +94,6 @@ public class ProductGrpcServiceTests
         var id2 = Guid.NewGuid();
         var request = new GetProductPricesRequest { ProductIds = { id1.ToString(), id2.ToString() } };
 
-        _getPricesValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
-
         _mediator
             .Send(Arg.Any<GetProductPricesQuery>(), Arg.Any<CancellationToken>())
             .Returns(Result<List<ProductPriceDto>>.Success([]));
@@ -106,31 +107,10 @@ public class ProductGrpcServiceTests
     }
 
     [Test]
-    public async Task GetProductPrices_ShouldThrowRpcException_WhenValidationFails()
-    {
-        var request = new GetProductPricesRequest { ProductIds = { "not-a-guid" } };
-
-        _getPricesValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult(new[] { new ValidationFailure("ProductIds", "Invalid GUID") }));
-
-        var ex = Assert.ThrowsAsync<RpcException>(() =>
-            BuildService().GetProductPrices(request, _callContext));
-
-        Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.InvalidArgument));
-        Assert.That(ex.Status.Detail, Does.Contain("Invalid GUID"));
-
-        await _mediator.DidNotReceive().Send(Arg.Any<IRequest<Result<List<ProductPriceDto>>>>(), Arg.Any<CancellationToken>());
-    }
-
-    [Test]
     public void GetProductPrices_ShouldThrowRpcException_WhenQueryFails()
     {
         var request = new GetProductPricesRequest { ProductIds = { Guid.NewGuid().ToString() } };
 
-        _getPricesValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductPricesQuery>(), Arg.Any<CancellationToken>())
@@ -148,9 +128,6 @@ public class ProductGrpcServiceTests
         var request = new GetProductPricesRequest { ProductIds = { "bad-guid" } };
 
         // validation mocked to pass - FormatException thrown inside handler by Guid.Parse
-        _getPricesValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         var ex = Assert.ThrowsAsync<RpcException>(() =>
             BuildService().GetProductPrices(request, _callContext));
@@ -163,9 +140,6 @@ public class ProductGrpcServiceTests
     {
         var request = new GetProductPricesRequest { ProductIds = { Guid.NewGuid().ToString() } };
 
-        _getPricesValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductPricesQuery>(), Arg.Any<CancellationToken>())
@@ -183,9 +157,6 @@ public class ProductGrpcServiceTests
     {
         var request = new GetProductPricesRequest { ProductIds = { Guid.NewGuid().ToString() } };
 
-        _getPricesValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         var original = new RpcException(new Status(StatusCode.Unavailable, "service down"));
         _mediator
@@ -204,9 +175,6 @@ public class ProductGrpcServiceTests
         var id1 = Guid.NewGuid();
         var request = new GetProductsRequest { ProductIds = { id1.ToString() } };
 
-        _getProductsValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         var products = new List<ProductDetailDto>
         {
@@ -229,9 +197,6 @@ public class ProductGrpcServiceTests
         var id2 = Guid.NewGuid();
         var request = new GetProductsRequest { ProductIds = { id1.ToString(), id2.ToString() } };
 
-        _getProductsValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         // only id1 returned - id2 should appear in not_found_ids
         _mediator
@@ -250,9 +215,6 @@ public class ProductGrpcServiceTests
     {
         var request = new GetProductsRequest { ProductIds = { "bad" } };
 
-        _getProductsValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult(new[] { new ValidationFailure("ProductIds", "Invalid GUID") }));
 
         var ex = Assert.ThrowsAsync<RpcException>(() =>
             BuildService().GetProducts(request, _callContext));
@@ -265,9 +227,6 @@ public class ProductGrpcServiceTests
     {
         var request = new GetProductsRequest { ProductIds = { Guid.NewGuid().ToString() } };
 
-        _getProductsValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductsQuery>(), Arg.Any<CancellationToken>())
@@ -284,9 +243,6 @@ public class ProductGrpcServiceTests
     {
         var request = new GetProductsRequest { ProductIds = { Guid.NewGuid().ToString() } };
 
-        _getProductsValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductsQuery>(), Arg.Any<CancellationToken>())
@@ -305,9 +261,6 @@ public class ProductGrpcServiceTests
         var id = Guid.NewGuid();
         var request = new GetProductRequest { ProductId = id.ToString() };
 
-        _getProductValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductQuery>(), Arg.Any<CancellationToken>())
@@ -319,31 +272,10 @@ public class ProductGrpcServiceTests
     }
 
     [Test]
-    public void GetProduct_ShouldThrowRpcException_WhenValidationFails()
-    {
-        var request = new GetProductRequest { ProductId = "" };
-
-        _getProductValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult(new[] { new ValidationFailure("ProductId", "ProductId is required") }));
-
-        var ex = Assert.ThrowsAsync<RpcException>(() =>
-            BuildService().GetProduct(request, _callContext));
-
-        Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.InvalidArgument));
-        Assert.That(ex.Status.Detail, Does.Contain("ProductId is required"));
-
-        _mediator.DidNotReceive().Send(Arg.Any<GetProductQuery>(), Arg.Any<CancellationToken>());
-    }
-
-    [Test]
     public void GetProduct_ShouldThrowRpcException_WhenGuidFormatIsInvalid()
     {
         var request = new GetProductRequest { ProductId = "not-a-guid" };
         
-        _getProductValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         var ex = Assert.ThrowsAsync<RpcException>(() =>
             BuildService().GetProduct(request, _callContext));
@@ -357,9 +289,6 @@ public class ProductGrpcServiceTests
         var id = Guid.NewGuid();
         var request = new GetProductRequest { ProductId = id.ToString() };
 
-        _getProductValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductQuery>(), Arg.Any<CancellationToken>())
@@ -377,9 +306,6 @@ public class ProductGrpcServiceTests
         var id = Guid.NewGuid();
         var request = new GetProductRequest { ProductId = id.ToString() };
 
-        _getProductValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductQuery>(), Arg.Any<CancellationToken>())
@@ -398,9 +324,6 @@ public class ProductGrpcServiceTests
         var id = Guid.NewGuid();
         var request = new GetProductRequest { ProductId = id.ToString() };
 
-        _getProductValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         _mediator
             .Send(Arg.Any<GetProductQuery>(), Arg.Any<CancellationToken>())
@@ -419,9 +342,6 @@ public class ProductGrpcServiceTests
         var id = Guid.NewGuid();
         var request = new GetProductRequest { ProductId = id.ToString() };
 
-        _getProductValidator
-            .ValidateAsync(request, Arg.Any<CancellationToken>())
-            .Returns(new ValidationResult());
 
         var original = new RpcException(new Status(StatusCode.Unavailable, "service unavailable"));
         _mediator
@@ -448,7 +368,11 @@ public class ProductGrpcServiceTests
         Attributes: [],
         ImageUrls: [],
         CreatedAt: DateTime.UtcNow,
-        UpdatedAt: null);
+        UpdatedAt: null,
+        CatalogItemId: Guid.NewGuid(),
+        Gtin: null,
+        Condition: "New",
+        SellerNotes: null);
 }
 
 
