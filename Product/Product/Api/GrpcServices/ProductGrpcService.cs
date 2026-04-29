@@ -1,355 +1,102 @@
-using Api.Mappers;
-using Application.Commands.ActivateProduct;
-using Application.Commands.CreateProduct;
-using Application.Commands.DeactivateProduct;
-using Application.Commands.DeleteProduct;
-using Application.Commands.UpdateProduct;
-using Application.Commands.UpdateProductStock;
-using Application.DTOs;
-using Application.Queries.GetProduct;
-using Application.Queries.GetProductPrices;
-using Application.Queries.GetProducts;
-using Application.Queries.GetSellerProducts;
-using Domain.Exceptions;
-using FluentValidation;
 using Grpc.Core;
-using MediatR;
 using Protos.Product;
 
 namespace Api.GrpcServices;
 
-public class ProductGrpcService(
-    IMediator mediator,
-    ILogger<ProductGrpcService> logger,
-    IValidator<GetProductPricesRequest> getPricesValidator,
-    IValidator<GetProductsRequest> getProductsValidator,
-    IValidator<GetProductRequest> getProductValidator,
-    IValidator<CreateProductRequest> createValidator,
-    IValidator<UpdateProductRequest> updateValidator,
-    IValidator<DeleteProductRequest> deleteValidator,
-    IValidator<ActivateProductRequest> activateValidator,
-    IValidator<DeactivateProductRequest> deactivateValidator,
-    IValidator<UpdateProductStockRequest> updateStockValidator)
+public sealed class ProductGrpcService(
+    ProductGrpcHandler productHandler,
+    ListingGrpcHandler listingHandler)
     : ProductService.ProductServiceBase
 {
-    public override async Task<GetProductPricesResponse> GetProductPrices(
-        GetProductPricesRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await getPricesValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+    public override Task<GetProductPricesResponse> GetProductPrices(
+        GetProductPricesRequest request, ServerCallContext context)
+        => productHandler.GetProductPrices(request, context.CancellationToken);
 
-            var ids = request.ProductIds
-                .Select(Guid.Parse)
-                .ToList();
+    public override Task<GetProductsResponse> GetProducts(
+        GetProductsRequest request, ServerCallContext context)
+        => productHandler.GetProducts(request, context.CancellationToken);
 
-            var result = await mediator.Send(new GetProductPricesQuery(ids), context.CancellationToken);
+    public override Task<GetProductResponse> GetProduct(
+        GetProductRequest request, ServerCallContext context)
+        => productHandler.GetProduct(request, context.CancellationToken);
 
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.Internal, result.Errors[0]));
+    public override Task<CreateProductResponse> CreateProduct(
+        CreateProductRequest request, ServerCallContext context)
+        => productHandler.CreateProduct(request, context.CancellationToken);
 
-            var response = new GetProductPricesResponse();
-            response.Prices.AddRange(result.Value!.Select(MapToProductPrice));
-            return response;
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(GetProductPrices));
-            throw;
-        }
-    }
+    public override Task<UpdateProductResponse> UpdateProduct(
+        UpdateProductRequest request, ServerCallContext context)
+        => productHandler.UpdateProduct(request, context.CancellationToken);
 
-    public override async Task<GetProductsResponse> GetProducts(
-        GetProductsRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await getProductsValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+    public override Task<DeleteProductResponse> DeleteProduct(
+        DeleteProductRequest request, ServerCallContext context)
+        => productHandler.DeleteProduct(request, context.CancellationToken);
 
-            var ids = request.ProductIds
-                .Select(Guid.Parse)
-                .ToList();
+    public override Task<ActivateProductResponse> ActivateProduct(
+        ActivateProductRequest request, ServerCallContext context)
+        => productHandler.ActivateProduct(request, context.CancellationToken);
 
-            var result = await mediator.Send(new GetProductsQuery(ids), context.CancellationToken);
+    public override Task<DeactivateProductResponse> DeactivateProduct(
+        DeactivateProductRequest request, ServerCallContext context)
+        => productHandler.DeactivateProduct(request, context.CancellationToken);
 
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.Internal, result.Errors[0]));
+    public override Task<UpdateProductStockResponse> UpdateProductStock(
+        UpdateProductStockRequest request, ServerCallContext context)
+        => productHandler.UpdateProductStock(request, context.CancellationToken);
 
-            var foundIds = result.Value!.Select(p => p.ProductId.ToString()).ToHashSet();
-            var notFoundIds = ids
-                .Where(id => !foundIds.Contains(id.ToString()))
-                .Select(id => id.ToString())
-                .ToList();
+    public override Task<GetListingPricesResponse> GetListingPrices(
+        GetListingPricesRequest request, ServerCallContext context)
+        => listingHandler.GetListingPrices(request, context.CancellationToken);
 
-            var response = new GetProductsResponse();
-            response.Products.AddRange(result.Value!.Select(MapToProductDetail));
-            response.NotFoundIds.AddRange(notFoundIds);
-            return response;
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(GetProducts));
-            throw;
-        }
-    }
+    public override Task<GetListingsResponse> GetListings(
+        GetListingsRequest request, ServerCallContext context)
+        => listingHandler.GetListings(request, context.CancellationToken);
 
-    public override async Task<GetProductResponse> GetProduct(
-        GetProductRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await getProductValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+    public override Task<GetListingResponse> GetListing(
+        GetListingRequest request, ServerCallContext context)
+        => listingHandler.GetListing(request, context.CancellationToken);
 
-            var productId = Guid.Parse(request.ProductId);
+    public override Task<GetSellerListingsResponse> GetSellerListings(
+        GetSellerListingsRequest request, ServerCallContext context)
+        => listingHandler.GetSellerListings(request, context.CancellationToken);
 
-            var product = await mediator.Send(new GetProductQuery(productId), context.CancellationToken);
+    public override Task<CreateCatalogItemResponse> CreateCatalogItem(
+        CreateCatalogItemRequest request, ServerCallContext context)
+        => listingHandler.CreateCatalogItem(request, context.CancellationToken);
 
-            return new GetProductResponse { Product = MapToProductDetail(product) };
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(GetProduct));
-            throw;
-        }
-    }
+    public override Task<UpdateCatalogItemResponse> UpdateCatalogItem(
+        UpdateCatalogItemRequest request, ServerCallContext context)
+        => listingHandler.UpdateCatalogItem(request, context.CancellationToken);
 
-    public override async Task<CreateProductResponse> CreateProduct(
-        CreateProductRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await createValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+    public override Task<CreateCatalogItemWithListingResponse> CreateCatalogItemWithListing(
+        CreateCatalogItemWithListingRequest request, ServerCallContext context)
+        => listingHandler.CreateCatalogItemWithListing(request, context.CancellationToken);
 
-            var command = new CreateProductCommand(
-                SellerId: Guid.Parse(request.SellerId),
-                Name: request.Name,
-                Description: request.Description,
-                CategoryId: Guid.Parse(request.CategoryId),
-                Price: request.Price.ToDecimal(),
-                Currency: request.Currency,
-                InitialStock: request.InitialStock,
-                Attributes: request.Attributes.Select(a => new ProductAttributeDto(a.Key, a.Value)).ToList(),
-                ImageUrls: request.ImageUrls.ToList());
+    public override Task<UpdateCatalogItemAndListingResponse> UpdateCatalogItemAndListing(
+        UpdateCatalogItemAndListingRequest request, ServerCallContext context)
+        => listingHandler.UpdateCatalogItemAndListing(request, context.CancellationToken);
 
-            var result = await mediator.Send(command, context.CancellationToken);
+    public override Task<CreateListingResponse> CreateListing(
+        CreateListingRequest request, ServerCallContext context)
+        => listingHandler.CreateListing(request, context.CancellationToken);
 
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
+    public override Task<ActivateListingResponse> ActivateListing(
+        ActivateListingRequest request, ServerCallContext context)
+        => listingHandler.ActivateListing(request, context.CancellationToken);
 
-            return new CreateProductResponse { ProductId = result.Value!.ToString() };
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(CreateProduct));
-            throw;
-        }
-    }
+    public override Task<DeactivateListingResponse> DeactivateListing(
+        DeactivateListingRequest request, ServerCallContext context)
+        => listingHandler.DeactivateListing(request, context.CancellationToken);
 
-    public override async Task<UpdateProductResponse> UpdateProduct(
-        UpdateProductRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await updateValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
+    public override Task<DeleteListingResponse> DeleteListing(
+        DeleteListingRequest request, ServerCallContext context)
+        => listingHandler.DeleteListing(request, context.CancellationToken);
 
-            var command = new UpdateProductCommand(
-                ProductId: Guid.Parse(request.ProductId),
-                Name: request.Name,
-                Description: request.Description,
-                CategoryId: Guid.Parse(request.CategoryId),
-                Price: request.Price.ToDecimal(),
-                Currency: request.Currency,
-                Attributes: request.Attributes.Select(a => new ProductAttributeDto(a.Key, a.Value)).ToList(),
-                ImageUrls: request.ImageUrls.ToList());
+    public override Task<UpdateListingStockResponse> UpdateListingStock(
+        UpdateListingStockRequest request, ServerCallContext context)
+        => listingHandler.UpdateListingStock(request, context.CancellationToken);
 
-            var result = await mediator.Send(command, context.CancellationToken);
-
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
-
-            return new UpdateProductResponse();
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(UpdateProduct));
-            throw;
-        }
-    }
-
-    public override async Task<DeleteProductResponse> DeleteProduct(
-        DeleteProductRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await deleteValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
-
-            var result = await mediator.Send(
-                new DeleteProductCommand(Guid.Parse(request.ProductId)),
-                context.CancellationToken);
-
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
-
-            return new DeleteProductResponse();
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(DeleteProduct));
-            throw;
-        }
-    }
-
-    public override async Task<ActivateProductResponse> ActivateProduct(
-        ActivateProductRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await activateValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
-
-            var result = await mediator.Send(
-                new ActivateProductCommand(Guid.Parse(request.ProductId)),
-                context.CancellationToken);
-
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
-
-            return new ActivateProductResponse();
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(ActivateProduct));
-            throw;
-        }
-    }
-
-    public override async Task<DeactivateProductResponse> DeactivateProduct(
-        DeactivateProductRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await deactivateValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
-
-            var result = await mediator.Send(
-                new DeactivateProductCommand(Guid.Parse(request.ProductId)),
-                context.CancellationToken);
-
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
-
-            return new DeactivateProductResponse();
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(DeactivateProduct));
-            throw;
-        }
-    }
-
-    public override async Task<UpdateProductStockResponse> UpdateProductStock(
-        UpdateProductStockRequest request,
-        ServerCallContext context)
-    {
-        try
-        {
-            var validation = await updateStockValidator.ValidateAsync(request, context.CancellationToken);
-            if (!validation.IsValid)
-                throw new RpcException(new Status(StatusCode.InvalidArgument,
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage))));
-
-            var result = await mediator.Send(
-                new UpdateProductStockCommand(Guid.Parse(request.ProductId), request.NewQuantity),
-                context.CancellationToken);
-
-            if (!result.IsSuccess)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, result.Errors[0]));
-
-            return new UpdateProductStockResponse();
-        }
-        catch (Exception ex) when (ex is not RpcException)
-        {
-            HandleException(ex, nameof(UpdateProductStock));
-            throw;
-        }
-    }
-
-    private void HandleException(Exception ex, string methodName)
-    {
-        if (ex is ProductNotFoundException notFound)
-        {
-            logger.LogWarning(ex, "Product {ProductId} not found in {Method}", notFound.ProductId, methodName);
-            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
-        }
-
-        if (ex is FormatException)
-        {
-            logger.LogWarning(ex, "Invalid GUID format in {Method}", methodName);
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid ID format."));
-        }
-
-        logger.LogError(ex, "Error during {Method}", methodName);
-        throw new RpcException(new Status(StatusCode.Internal, $"Internal error in {methodName}"));
-    }
-
-    private static ProductPrice MapToProductPrice(ProductPriceDto dto) => new()
-    {
-        ProductId = dto.ProductId.ToString(),
-        Price = dto.Price.ToDecimalValue(),
-        Currency = dto.Currency
-    };
-
-    private static ProductDetail MapToProductDetail(ProductDetailDto dto)
-    {
-        var detail = new ProductDetail
-        {
-            ProductId = dto.ProductId.ToString(),
-            Name = dto.Name,
-            Description = dto.Description,
-            CategoryId = dto.CategoryId.ToString(),
-            CategoryName = dto.CategoryName,
-            Price = dto.Price.ToDecimalValue(),
-            Currency = dto.Currency,
-            Stock = dto.StockQuantity
-        };
-
-        detail.Attributes.AddRange(dto.Attributes.Select(a => new ProductAttributeProto
-        {
-            Key = a.Key,
-            Value = a.Value
-        }));
-        detail.ImageUrls.AddRange(dto.ImageUrls);
-
-        return detail;
-    }
+    public override Task<ChangeListingPriceResponse> ChangeListingPrice(
+        ChangeListingPriceRequest request, ServerCallContext context)
+        => listingHandler.ChangeListingPrice(request, context.CancellationToken);
 }

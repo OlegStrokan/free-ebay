@@ -15,6 +15,8 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddGrpc();
+builder.Services.AddScoped<ProductGrpcHandler>();
+builder.Services.AddScoped<ListingGrpcHandler>();
 
 builder.Services.AddGrpcHealthChecks()
     .AddCheck("Sample", () => HealthCheckResult.Healthy());
