@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Gateway.Api.Contracts.Search;
 using GrpcSearch = Protos.Search;
 
@@ -5,6 +6,8 @@ namespace Gateway.Api.Endpoints;
 
 public static class SearchEndpoints
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public static RouteGroupBuilder MapSearchEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/search").WithTags("Search");
@@ -38,6 +41,55 @@ public static class SearchEndpoints
                 response.Size,
                 response.WasAiSearch,
                 string.IsNullOrEmpty(response.ParsedQueryDebug) ? null : response.ParsedQueryDebug));
+        });
+
+        group.MapGet("/stream", async (
+            string q,
+            int? page,
+            int? pageSize,
+            GrpcSearch.SearchService.SearchServiceClient client,
+            HttpContext httpContext) =>
+        {
+            httpContext.Response.ContentType = "text/event-stream";
+            httpContext.Response.Headers.CacheControl = "no-cache";
+            httpContext.Response.Headers.Connection = "keep-alive";
+
+            var ct = httpContext.RequestAborted;
+            var request = new GrpcSearch.StreamSearchRequest
+            {
+                Query = q,
+                Page = page ?? 1,
+                PageSize = pageSize ?? 20
+            };
+
+            using var call = client.StreamSearch(request, cancellationToken: ct);
+
+            await foreach (var msg in call.ResponseStream.ReadAllAsync(ct))
+            {
+                var phase = msg.Phase switch
+                {
+                    GrpcSearch.SearchPhase.SearchPhaseKeyword => "keyword",
+                    GrpcSearch.SearchPhase.SearchPhaseMerged  => "merged",
+                    _ => "keyword"
+                };
+
+                var sseEvent = new StreamSearchEvent(
+                    phase,
+                    msg.Items.Select(i => new SearchResultItemResponse(
+                        i.ProductId,
+                        i.Name,
+                        i.Category,
+                        i.Price,
+                        i.Currency,
+                        i.RelevanceScore,
+                        i.ImageUrls.ToList())).ToList(),
+                    msg.TotalCount,
+                    msg.WasAiSearch);
+
+                var json = JsonSerializer.Serialize(sseEvent, JsonOptions);
+                await httpContext.Response.WriteAsync($"event: {phase}\ndata: {json}\n\n", ct);
+                await httpContext.Response.Body.FlushAsync(ct);
+            }
         });
 
         return group;
