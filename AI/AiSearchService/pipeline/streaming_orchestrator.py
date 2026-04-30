@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import structlog
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from models import (
     Filters,
@@ -10,11 +13,13 @@ from models import (
     SearchResultItem,
     ScoredResult,
 )
-from clients.embedding_client import EmbeddingClient
-from clients.llm_query_client import LLMQueryClient
-from clients.qdrant_client import QdrantSearchClient
-from clients.es_client import ElasticsearchClient
 from pipeline.rrf import rrf_merge
+
+if TYPE_CHECKING:
+    from clients.embedding_client import EmbeddingClient
+    from clients.llm_query_client import LLMQueryClient
+    from clients.qdrant_client import QdrantSearchClient
+    from clients.es_client import ElasticsearchClient
 
 log = structlog.get_logger()
 

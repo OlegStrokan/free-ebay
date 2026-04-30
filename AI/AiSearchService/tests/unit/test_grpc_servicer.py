@@ -16,6 +16,9 @@ import pytest
 # ---------- inject mock proto modules ----------------------------------------
 _pb2 = MagicMock()
 _pb2_grpc = MagicMock()
+# The servicer base class MUST be a real class (not MagicMock) so that
+# Python's MRO doesn't shadow async methods defined in subclasses.
+_pb2_grpc.AiSearchServiceServicer = type("AiSearchServiceServicer", (), {})
 _generated = MagicMock(ai_search_pb2=_pb2, ai_search_pb2_grpc=_pb2_grpc)
 sys.modules.setdefault("generated", _generated)
 sys.modules.setdefault("generated.ai_search_pb2", _pb2)
