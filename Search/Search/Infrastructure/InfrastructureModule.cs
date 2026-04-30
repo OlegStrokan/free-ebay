@@ -70,6 +70,7 @@ public static class InfrastructureModule
         });
 
         services.AddScoped<IAiSearchGateway, AiSearchGateway>();
+        services.AddScoped<IAiSearchStreamGateway, AiSearchStreamGateway>();
         return services;
     }
 }
