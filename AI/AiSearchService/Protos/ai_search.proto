@@ -6,6 +6,7 @@ package ai_search;
 
 service AiSearchService {
   rpc Search (SearchRequest) returns (SearchResponse);
+  rpc SearchStream (stream StreamSearchRequest) returns (stream StreamSearchResponse);
 }
 
 message SearchRequest {
@@ -30,4 +31,24 @@ message SearchResultItem {
   string currency = 5;
   double relevance_score = 6;
   repeated string image_urls = 7;
+}
+
+enum SearchPhase {
+  SEARCH_PHASE_KEYWORD = 0;
+  SEARCH_PHASE_MERGED = 1;
+}
+
+message StreamSearchRequest {
+  string request_id = 1;
+  string query = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message StreamSearchResponse {
+  string request_id = 1;
+  SearchPhase phase = 2;
+  repeated SearchResultItem items = 3;
+  int32 total_count = 4;
+  bool used_ai = 5;
 }
