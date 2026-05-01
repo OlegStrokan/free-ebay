@@ -1,15 +1,15 @@
-name: Order Service Pipeline
+name: User Service Pipeline
 
 on:
   push:
     branches: [main]
     paths:
-      - "Order/**"
-      - ".github/workflows/order-pipeline.yml"
+      - "User/**"
+      - ".github/workflows/user-pipeline.yml"
   pull_request:
     paths:
-      - "Order/**"
-      - ".github/workflows/order-pipeline.yml"
+      - "User/**"
+      - ".github/workflows/user-pipeline.yml"
   workflow_dispatch:
 
 concurrency:
@@ -18,9 +18,9 @@ concurrency:
 
 env:
   DOTNET_VERSION: "8.0.x"
-  SOLUTION: Order/Order.sln
+  SOLUTION: User/User.sln
   BUILD_CONFIG: Release
-  IMAGE_NAME: order-service
+  IMAGE_NAME: user-service
 
 jobs:
   build:
@@ -31,18 +31,17 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('User/**/packages.lock.json', 'User/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - run: dotnet restore ${{ env.SOLUTION }}
       - run: dotnet build ${{ env.SOLUTION }} --no-restore -c ${{ env.BUILD_CONFIG }} /property:GenerateFullPaths=true
       - uses: actions/upload-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: user-build-output
+          path: User/
           retention-days: 1
 
   test-unit:
@@ -58,25 +57,24 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('User/**/packages.lock.json', 'User/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - uses: actions/download-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: user-build-output
+          path: User/
       - run: |
-          dotnet test Order/Order.UnitTests/${{ matrix.project }} \
+          dotnet test User/User.UnitTests/${{ matrix.project }} \
             --no-build -c ${{ env.BUILD_CONFIG }} \
             --logger "trx;LogFileName=${{ matrix.project }}.trx" \
             --results-directory ./test-results
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Order Unit – ${{ matrix.project }}
+          name: User Unit – ${{ matrix.project }}
           path: ./test-results/${{ matrix.project }}.trx
           reporter: dotnet-trx
 
@@ -89,28 +87,25 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('User/**/packages.lock.json', 'User/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - uses: actions/download-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: user-build-output
+          path: User/
       - run: |
-          dotnet test Order/Order.IntegrationTests \
+          dotnet test User/User.IntegrationTests \
             --no-build -c ${{ env.BUILD_CONFIG }} \
             --logger "trx;LogFileName=integration.trx" \
             --results-directory ./test-results \
             -- xunit.parallelizeTestCollections=false
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: "false"
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Order Integration
+          name: User Integration
           path: ./test-results/integration.trx
           reporter: dotnet-trx
 
@@ -124,28 +119,25 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('User/**/packages.lock.json', 'User/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - uses: actions/download-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: user-build-output
+          path: User/
       - run: |
-          dotnet test Order/Order.E2ETests \
+          dotnet test User/User.E2ETests \
             --no-build -c ${{ env.BUILD_CONFIG }} \
             --logger "trx;LogFileName=e2e.trx" \
             --results-directory ./test-results \
             -- xunit.parallelizeTestCollections=false
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: "false"
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Order E2E
+          name: User E2E
           path: ./test-results/e2e.trx
           reporter: dotnet-trx
 
@@ -174,8 +166,8 @@ jobs:
             type=raw,value=latest
       - uses: docker/build-push-action@v5
         with:
-          context: ./Order
-          file: ./Order/Dockerfile
+          context: ./User
+          file: ./User/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -1,0 +1,46 @@
+name: Gateway Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Gateway/**"
+      - ".github/workflows/gateway-pipeline.yml"
+  pull_request:
+    paths:
+      - "Gateway/**"
+      - ".github/workflows/gateway-pipeline.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  SOLUTION: Gateway/Gateway.sln
+  BUILD_CONFIG: Release
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Gateway/**/packages.lock.json', 'Gateway/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - run: dotnet restore ${{ env.SOLUTION }}
+      - run: dotnet build ${{ env.SOLUTION }} --no-restore -c ${{ env.BUILD_CONFIG }} /property:GenerateFullPaths=true
+      - name: Publish
+        run: dotnet publish Gateway/Gateway.Api --no-build -c ${{ env.BUILD_CONFIG }} -o ./publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gateway-publish
+          path: ./publish
+          retention-days: 3

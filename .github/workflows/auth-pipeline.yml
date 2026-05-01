@@ -1,15 +1,15 @@
-name: Order Service Pipeline
+name: Auth Service Pipeline
 
 on:
   push:
     branches: [main]
     paths:
-      - "Order/**"
-      - ".github/workflows/order-pipeline.yml"
+      - "Auth/**"
+      - ".github/workflows/auth-pipeline.yml"
   pull_request:
     paths:
-      - "Order/**"
-      - ".github/workflows/order-pipeline.yml"
+      - "Auth/**"
+      - ".github/workflows/auth-pipeline.yml"
   workflow_dispatch:
 
 concurrency:
@@ -18,9 +18,10 @@ concurrency:
 
 env:
   DOTNET_VERSION: "8.0.x"
-  SOLUTION: Order/Order.sln
+  SERVICE_DIR: Auth
+  SOLUTION: Auth/Auth.sln
   BUILD_CONFIG: Release
-  IMAGE_NAME: order-service
+  IMAGE_NAME: auth-service
 
 jobs:
   build:
@@ -31,18 +32,17 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('Auth/**/packages.lock.json', 'Auth/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - run: dotnet restore ${{ env.SOLUTION }}
       - run: dotnet build ${{ env.SOLUTION }} --no-restore -c ${{ env.BUILD_CONFIG }} /property:GenerateFullPaths=true
       - uses: actions/upload-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: ${{ env.IMAGE_NAME }}-build-output
+          path: Auth/
           retention-days: 1
 
   test-unit:
@@ -58,27 +58,31 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('Auth/**/packages.lock.json', 'Auth/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - uses: actions/download-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: ${{ env.IMAGE_NAME }}-build-output
+          path: Auth/
       - run: |
-          dotnet test Order/Order.UnitTests/${{ matrix.project }} \
+          dotnet test Auth/Auth.UnitTests/${{ matrix.project }} \
             --no-build -c ${{ env.BUILD_CONFIG }} \
             --logger "trx;LogFileName=${{ matrix.project }}.trx" \
             --results-directory ./test-results
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Order Unit – ${{ matrix.project }}
+          name: Auth Unit – ${{ matrix.project }}
           path: ./test-results/${{ matrix.project }}.trx
           reporter: dotnet-trx
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-unit-${{ matrix.project }}-results
+          path: ./test-results
 
   test-integration:
     name: Integration Tests
@@ -89,28 +93,25 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('Auth/**/packages.lock.json', 'Auth/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - uses: actions/download-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: ${{ env.IMAGE_NAME }}-build-output
+          path: Auth/
       - run: |
-          dotnet test Order/Order.IntegrationTests \
+          dotnet test Auth/Auth.IntegrationTests \
             --no-build -c ${{ env.BUILD_CONFIG }} \
             --logger "trx;LogFileName=integration.trx" \
             --results-directory ./test-results \
             -- xunit.parallelizeTestCollections=false
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: "false"
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Order Integration
+          name: Auth Integration
           path: ./test-results/integration.trx
           reporter: dotnet-trx
 
@@ -124,28 +125,25 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          global-json-file: Order/global.json
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Order/**/packages.lock.json', 'Order/**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('Auth/**/packages.lock.json', 'Auth/**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
       - uses: actions/download-artifact@v4
         with:
-          name: order-build-output
-          path: Order/
+          name: ${{ env.IMAGE_NAME }}-build-output
+          path: Auth/
       - run: |
-          dotnet test Order/Order.E2ETests \
+          dotnet test Auth/Auth.E2ETests \
             --no-build -c ${{ env.BUILD_CONFIG }} \
             --logger "trx;LogFileName=e2e.trx" \
             --results-directory ./test-results \
             -- xunit.parallelizeTestCollections=false
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: "false"
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Order E2E
+          name: Auth E2E
           path: ./test-results/e2e.trx
           reporter: dotnet-trx
 
@@ -174,8 +172,8 @@ jobs:
             type=raw,value=latest
       - uses: docker/build-push-action@v5
         with:
-          context: ./Order
-          file: ./Order/Dockerfile
+          context: ./Auth
+          file: ./Auth/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
