@@ -1,4 +1,5 @@
 using Api.GrpcServices;
+using Application.Gateways;
 using Application.Queries.SearchProducts;
 using Domain.Common.Interfaces;
 using Grpc.Core;
@@ -12,6 +13,7 @@ namespace Api.Tests.GrpcServices;
 public sealed class SearchGrpcServiceTests
 {
     private IQueryHandler<SearchProductsQuery, SearchProductsResult> _handler = null!;
+    private IAiSearchStreamGateway _streamGateway = null!;
     private ILogger<SearchGrpcService> _logger = null!;
     private ServerCallContext _callContext = null!;
 
@@ -19,11 +21,12 @@ public sealed class SearchGrpcServiceTests
     public void SetUp()
     {
         _handler = Substitute.For<IQueryHandler<SearchProductsQuery, SearchProductsResult>>();
+        _streamGateway = Substitute.For<IAiSearchStreamGateway>();
         _logger = Substitute.For<ILogger<SearchGrpcService>>();
         _callContext = Substitute.For<ServerCallContext>();
     }
 
-    private SearchGrpcService BuildService() => new(_handler, _logger);
+    private SearchGrpcService BuildService() => new(_handler, _streamGateway, _logger);
 
     [Test]
     public async Task Search_ShouldMapRequestAndResponse_WhenQuerySucceeds()
@@ -147,4 +150,119 @@ public sealed class SearchGrpcServiceTests
         Page = 1,
         PageSize = 10
     };
+}
+
+[TestFixture]
+public sealed class SearchGrpcServiceStreamTests
+{
+    private IQueryHandler<SearchProductsQuery, SearchProductsResult> _handler = null!;
+    private IAiSearchStreamGateway _streamGateway = null!;
+    private ILogger<SearchGrpcService> _logger = null!;
+    private ServerCallContext _callContext = null!;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _handler = Substitute.For<IQueryHandler<SearchProductsQuery, SearchProductsResult>>();
+        _streamGateway = Substitute.For<IAiSearchStreamGateway>();
+        _logger = Substitute.For<ILogger<SearchGrpcService>>();
+        _callContext = Substitute.For<ServerCallContext>();
+        _callContext.CancellationToken.Returns(CancellationToken.None);
+    }
+
+    private SearchGrpcService BuildService() => new(_handler, _streamGateway, _logger);
+
+    [Test]
+    public void StreamSearch_WhenQueryIsEmpty_ShouldThrowInvalidArgument()
+    {
+        var request = new StreamSearchRequest { Query = "   ", Page = 1, PageSize = 20 };
+        var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
+
+        var ex = Assert.ThrowsAsync<RpcException>(() =>
+            BuildService().StreamSearch(request, writer, _callContext));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.InvalidArgument));
+    }
+
+    [Test]
+    public void StreamSearch_WhenQueryExceeds500Chars_ShouldThrowInvalidArgument()
+    {
+        var request = new StreamSearchRequest { Query = new string('a', 501), Page = 1, PageSize = 20 };
+        var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
+
+        var ex = Assert.ThrowsAsync<RpcException>(() =>
+            BuildService().StreamSearch(request, writer, _callContext));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.InvalidArgument));
+    }
+
+    [Test]
+    public async Task StreamSearch_ShouldWriteTwoPhases_WhenGatewayYieldsBoth()
+    {
+        var request = new StreamSearchRequest { Query = "laptop", Page = 1, PageSize = 10 };
+        var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
+
+        var productId = Guid.NewGuid();
+        var streamResults = new List<StreamSearchResult>
+        {
+            new(
+                Items: [new ProductSearchItem(productId, "Laptop", "Electronics", 999m, "USD", 0.9, [])],
+                TotalCount: 1,
+                WasAiSearch: true,
+                Phase: SearchResultPhase.Keyword),
+            new(
+                Items: [new ProductSearchItem(productId, "Laptop", "Electronics", 999m, "USD", 0.95, [])],
+                TotalCount: 1,
+                WasAiSearch: true,
+                Phase: SearchResultPhase.Merged),
+        };
+
+        _streamGateway
+            .SearchStreamAsync("laptop", 1, 10, Arg.Any<CancellationToken>())
+            .Returns(streamResults.ToAsyncEnumerable());
+
+        await BuildService().StreamSearch(request, writer, _callContext);
+
+        await writer.Received(2).WriteAsync(Arg.Any<StreamSearchResponse>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task StreamSearch_ShouldMapPhaseCorrectly()
+    {
+        var request = new StreamSearchRequest { Query = "phone", Page = 1, PageSize = 20 };
+        var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
+
+        var streamResults = new List<StreamSearchResult>
+        {
+            new(Items: [], TotalCount: 0, WasAiSearch: false, Phase: SearchResultPhase.Keyword),
+            new(Items: [], TotalCount: 0, WasAiSearch: false, Phase: SearchResultPhase.Merged),
+        };
+
+        _streamGateway
+            .SearchStreamAsync("phone", 1, 20, Arg.Any<CancellationToken>())
+            .Returns(streamResults.ToAsyncEnumerable());
+
+        var written = new List<StreamSearchResponse>();
+        await writer.WriteAsync(Arg.Do<StreamSearchResponse>(r => written.Add(r)), Arg.Any<CancellationToken>());
+
+        await BuildService().StreamSearch(request, writer, _callContext);
+
+        Assert.That(written[0].Phase, Is.EqualTo(SearchPhase.Keyword));
+        Assert.That(written[1].Phase, Is.EqualTo(SearchPhase.Merged));
+    }
+
+    [Test]
+    public async Task StreamSearch_ShouldDefaultPageAndSize_WhenInvalid()
+    {
+        var request = new StreamSearchRequest { Query = "test", Page = 0, PageSize = 0 };
+        var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
+
+        _streamGateway
+            .SearchStreamAsync("test", 1, 20, Arg.Any<CancellationToken>())
+            .Returns(AsyncEnumerable.Empty<StreamSearchResult>());
+
+        await BuildService().StreamSearch(request, writer, _callContext);
+
+        _streamGateway.Received(1).SearchStreamAsync("test", 1, 20, Arg.Any<CancellationToken>());
+    }
 }

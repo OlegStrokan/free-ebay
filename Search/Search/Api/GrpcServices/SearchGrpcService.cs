@@ -1,3 +1,4 @@
+using Application.Gateways;
 using Application.Queries.SearchProducts;
 using Domain.Common.Interfaces;
 using Grpc.Core;
@@ -7,6 +8,7 @@ namespace Api.GrpcServices;
 
 public sealed class SearchGrpcService(
     IQueryHandler<SearchProductsQuery, SearchProductsResult> handler,
+    IAiSearchStreamGateway streamGateway,
     ILogger<SearchGrpcService> logger)
     : SearchService.SearchServiceBase
 {
@@ -80,5 +82,61 @@ public sealed class SearchGrpcService(
             result.Items.Count);
 
         return response;
+    }
+
+    public override async Task StreamSearch(
+        StreamSearchRequest request,
+        IServerStreamWriter<StreamSearchResponse> responseStream,
+        ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.Query))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Query cannot be empty."));
+
+        if (request.Query.Length > 500)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Query cannot exceed 500 characters."));
+
+        var page = request.Page < 1 ? 1 : request.Page;
+        var pageSize = request.PageSize is < 1 or > 100 ? 20 : request.PageSize;
+        var ct = context.CancellationToken;
+
+        await foreach (var partial in streamGateway
+                           .SearchStreamAsync(request.Query, page, pageSize, ct)
+                           .WithCancellation(ct))
+        {
+            var phase = partial.Phase switch
+            {
+                SearchResultPhase.Keyword => SearchPhase.Keyword,
+                SearchResultPhase.Merged  => SearchPhase.Merged,
+                _ => SearchPhase.Keyword
+            };
+
+            var msg = new StreamSearchResponse
+            {
+                Phase = phase,
+                TotalCount = partial.TotalCount,
+                WasAiSearch = partial.WasAiSearch
+            };
+
+            msg.Items.AddRange(partial.Items.Select(i =>
+            {
+                var item = new SearchResultItem
+                {
+                    ProductId = i.ProductId.ToString(),
+                    Name = i.Name,
+                    Category = i.Category,
+                    Price = (double)i.Price,
+                    Currency = i.Currency,
+                    RelevanceScore = i.RelevanceScore
+                };
+                item.ImageUrls.AddRange(i.ImageUrls);
+                return item;
+            }));
+
+            await responseStream.WriteAsync(msg, ct);
+
+            logger.LogDebug(
+                "Streamed {Phase} results for query [{Query}]: {Count} items.",
+                partial.Phase, request.Query, partial.Items.Count);
+        }
     }
 }

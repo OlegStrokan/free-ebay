@@ -6,6 +6,7 @@ package search;
 
 service SearchService {
   rpc Search (SearchRequest) returns (SearchResponse);
+  rpc StreamSearch (StreamSearchRequest) returns (stream StreamSearchResponse);
 }
 
 message SearchRequest {
@@ -32,4 +33,22 @@ message SearchResultItem {
   string currency = 5;
   double relevance_score = 6;
   repeated string image_urls = 7;
+}
+
+enum SearchPhase {
+  SEARCH_PHASE_KEYWORD = 0;
+  SEARCH_PHASE_MERGED = 1;
+}
+
+message StreamSearchRequest {
+  string query = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message StreamSearchResponse {
+  SearchPhase phase = 1;
+  repeated SearchResultItem items = 2;
+  int32 total_count = 3;
+  bool was_ai_search = 4;
 }

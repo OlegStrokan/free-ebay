@@ -16,3 +16,9 @@ public sealed record SearchResultItemResponse(
     string Currency,
     double RelevanceScore,
     IReadOnlyList<string> ImageUrls);
+
+public sealed record StreamSearchEvent(
+    string Phase,
+    IReadOnlyList<SearchResultItemResponse> Items,
+    int TotalCount,
+    bool WasAiSearch);
