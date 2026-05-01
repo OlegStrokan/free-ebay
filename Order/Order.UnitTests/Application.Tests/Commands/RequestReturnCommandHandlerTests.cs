@@ -83,6 +83,10 @@ public class RequestReturnCommandHandlerTest
         SetupUserGateway(order.CustomerId.Value);
 
         _returnRequestPersistenceService
+            .LoadByOrderIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((RequestReturn?)null);
+
+        _returnRequestPersistenceService
             .CreateReturnRequestAsync(
                 Arg.Any<RequestReturn>(),
                 Arg.Any<string?>(),
@@ -192,6 +196,10 @@ public class RequestReturnCommandHandlerTest
         SetupUserGateway(order.CustomerId.Value);
 
         _returnRequestPersistenceService
+            .LoadByOrderIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((RequestReturn?)null);
+
+        _returnRequestPersistenceService
             .CreateReturnRequestAsync(
                 Arg.Any<RequestReturn>(),
                 Arg.Any<string?>(),
@@ -215,4 +223,116 @@ public class RequestReturnCommandHandlerTest
             "Item arrived broken",
             new List<OrderItemDto> { new(productId, 1, 100, "USD") },
             "idempotency-key");
+
+    [Fact]
+    public async Task Handle_ShouldUseOriginalPrice_WhenClientSendsInflatedPrice()
+    {
+        var order = CreateCompletedOrder();
+        var originalItem = order.Items.First();
+
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        SetupUserGateway(order.CustomerId.Value);
+
+        _returnRequestPersistenceService
+            .LoadByOrderIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((RequestReturn?)null);
+
+        _returnRequestPersistenceService
+            .CreateReturnRequestAsync(
+                Arg.Any<RequestReturn>(),
+                Arg.Any<string?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Guid.NewGuid());
+
+        // Client sends inflated price of 99999.99
+        var fraudCommand = new RequestReturnCommand(
+            order.Id.Value,
+            "Return",
+            new List<OrderItemDto> { new(originalItem.ProductId.Value, 1, 99999.99m, "USD") },
+            "idempotency-key");
+
+        var result = await BuildHandler().Handle(fraudCommand, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+
+        // Verify the return request was created with the original price, not the inflated one
+        await _returnRequestPersistenceService.Received(1).CreateReturnRequestAsync(
+            Arg.Is<RequestReturn>(rr =>
+                rr.RefundAmount.Amount == originalItem.PriceAtPurchase.Amount),
+            Arg.Any<string?>(),
+            Arg.Any<Guid?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReject_WhenQuantityExceedsOriginalOrder()
+    {
+        var order = CreateCompletedOrder(); // has 1 item with quantity 1
+        var originalItem = order.Items.First();
+
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        SetupUserGateway(order.CustomerId.Value);
+
+        _returnRequestPersistenceService
+            .LoadByOrderIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((RequestReturn?)null);
+
+        var fraudCommand = new RequestReturnCommand(
+            order.Id.Value,
+            "Return",
+            new List<OrderItemDto> { new(originalItem.ProductId.Value, 1000, 100, "USD") },
+            "idempotency-key");
+
+        var result = await BuildHandler().Handle(fraudCommand, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Maximum returnable quantity", result.Error);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReject_WhenProductNotInOriginalOrder()
+    {
+        var order = CreateCompletedOrder();
+        var fakeProductId = Guid.NewGuid();
+
+        _idempotencyRepository
+            .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((IdempotencyRecord?)null);
+
+        _orderPersistenceService
+            .LoadOrderAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        SetupUserGateway(order.CustomerId.Value);
+
+        _returnRequestPersistenceService
+            .LoadByOrderIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((RequestReturn?)null);
+
+        var fraudCommand = new RequestReturnCommand(
+            order.Id.Value,
+            "Return",
+            new List<OrderItemDto> { new(fakeProductId, 1, 100, "USD") },
+            "idempotency-key");
+
+        var result = await BuildHandler().Handle(fraudCommand, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("is not part of order", result.Error);
+    }
 }
