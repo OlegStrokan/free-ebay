@@ -28,7 +28,8 @@ public class OrderCreatedEventHandler
             Items = eventDto.Items,
             TotalAmount = eventDto.TotalAmount,
             Currency = eventDto.Currency,
-            PaymentMethod = eventDto.PaymentMethod ?? "stripe",
+            PaymentMethod = eventDto.PaymentMethod ?? throw new InvalidOperationException(
+                $"PaymentMethod is required but was null for order {eventDto.OrderId}"),
             DeliveryAddress = eventDto.DeliveryAddress,
             PaymentIntentId = eventDto.PaymentIntentId,
         };

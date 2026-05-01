@@ -187,6 +187,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
                     i.PriceAtPurchase.Currency
                 )).ToList(),
                 PaymentIntentId = e.ProviderPaymentIntentId,
+                PaymentMethod = e.PaymentMethod,
                 CreatedAt = e.CreatedAt
             }),
 
