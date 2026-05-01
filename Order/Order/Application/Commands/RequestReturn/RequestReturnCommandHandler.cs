@@ -63,12 +63,32 @@ public class RequestReturnCommandHandler(
                         $"Order {request.OrderId} must be completed to request return. " +
                         $"Current status: {order.Status}");
 
-                var itemsToReturn = request.ItemsToReturn.Select(dto =>
-                    OrderItem.Create(
-                        ProductId.From(dto.ProductId),
+                var existingReturn = await returnRequestPersistenceService.LoadByOrderIdAsync(
+                    request.OrderId, cancellationToken);
+
+                var itemsToReturn = new List<OrderItem>();
+                foreach (var dto in request.ItemsToReturn)
+                {
+                    var originalItem = order.Items.FirstOrDefault(i => i.ProductId.Value == dto.ProductId);
+                    if (originalItem == null)
+                        return Result<Guid>.Failure(
+                            $"Product {dto.ProductId} is not part of order {request.OrderId}");
+
+                    var alreadyReturnedQty = existingReturn?.ItemsToReturn
+                        .Where(i => i.ProductId.Value == dto.ProductId)
+                        .Sum(i => i.Quantity) ?? 0;
+
+                    var maxReturnableQty = originalItem.Quantity - alreadyReturnedQty;
+                    if (dto.Quantity <= 0 || dto.Quantity > maxReturnableQty)
+                        return Result<Guid>.Failure(
+                            $"Cannot return {dto.Quantity} of product {dto.ProductId}. " +
+                            $"Maximum returnable quantity is {maxReturnableQty}");
+
+                    itemsToReturn.Add(OrderItem.Create(
+                        originalItem.ProductId,
                         dto.Quantity,
-                        Money.Create(dto.Price, dto.Currency)
-                    )).ToList();
+                        originalItem.PriceAtPurchase));
+                }
 
                 var refundAmount = Order.CalculateTotalPrice(itemsToReturn);
 
