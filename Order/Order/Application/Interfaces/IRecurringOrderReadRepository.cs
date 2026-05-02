@@ -7,6 +7,7 @@ public interface IRecurringOrderReadRepository
     Task<RecurringOrderDetail?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<RecurringOrderSummary>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct = default);
     Task<List<RecurringOrderSummary>> GetDueAsync(DateTime asOf, int limit, CancellationToken ct = default);
+    Task<List<RecurringOrderSummary>> ClaimDueAsync(DateTime asOf, int limit, CancellationToken ct = default);
     Task<List<RecurringOrderSummary>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default);
 }
 

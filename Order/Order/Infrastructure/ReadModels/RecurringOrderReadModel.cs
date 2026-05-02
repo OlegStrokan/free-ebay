@@ -23,4 +23,5 @@ public class RecurringOrderReadModel
     public DateTime? UpdatedAt { get; set; }
     public int Version { get; set; }
     public DateTime LastSyncedAt { get; set; }
+    public DateTime? ClaimedAtUtc { get; set; }
 }

@@ -34,6 +34,7 @@ public class RecurringOrderReadModelConfiguration : IEntityTypeConfiguration<Rec
         builder.Property(r => r.UpdatedAt);
         builder.Property(r => r.Version).IsRequired();
         builder.Property(r => r.LastSyncedAt).IsRequired();
+        builder.Property(r => r.ClaimedAtUtc);
 
         builder.HasIndex(r => new { r.Status, r.NextRunAt })
             .HasDatabaseName("IX_RecurringOrders_Status_NextRunAt");

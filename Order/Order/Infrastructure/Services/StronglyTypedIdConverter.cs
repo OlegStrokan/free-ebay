@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 // detects strongly-typed ID records that expose a single  property
 // of type Guid, long, string
+// @todo: just do something with this, it's looks like shitty claude 4.6 bastard
 public sealed class StronglyTypedIdConverterFactory : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert)
@@ -32,9 +33,9 @@ public sealed class StronglyTypedIdConverterFactory : JsonConverterFactory
 
         var converterType = valueType switch
         {
-            _ when valueType == typeof(Guid)   => typeof(GuidStronglyTypedIdConverter<>),
+            _ when valueType == typeof(Guid) => typeof(GuidStronglyTypedIdConverter<>),
             _ when valueType == typeof(string) => typeof(StringStronglyTypedIdConverter<>),
-            _ when valueType == typeof(long)   => typeof(LongStronglyTypedIdConverter<>),
+            _ when valueType == typeof(long) => typeof(LongStronglyTypedIdConverter<>),
             _ => throw new NotSupportedException($"Unsupported strongly-typed ID value type: {valueType}")
         };
 

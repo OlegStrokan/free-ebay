@@ -78,6 +78,43 @@ public class RecurringOrderReadRepository(ReadDbContext dbContext) : IRecurringO
             Version:   m.Version);
     }
 
+    public async Task<List<RecurringOrderSummary>> ClaimDueAsync(
+        DateTime asOf, int limit, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var staleThreshold = now.AddMinutes(-5);
+
+        // replicas never schedule the same recurring order twice
+        var claimedIds = await dbContext.Database
+            .SqlQueryRaw<Guid>(
+                """
+                UPDATE "RecurringOrderReadModels"
+                SET "ClaimedAtUtc" = {0}
+                WHERE "Id" IN (
+                    SELECT "Id" FROM "RecurringOrderReadModels"
+                    WHERE "Status" = 'Active' AND "NextRunAt" <= {1}
+                      AND ("ClaimedAtUtc" IS NULL OR "ClaimedAtUtc" < {2})
+                    ORDER BY "NextRunAt"
+                    LIMIT {3}
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING "Id"
+                """,
+                now, asOf, staleThreshold, limit)
+            .ToListAsync(ct);
+
+        if (claimedIds.Count == 0)
+            return [];
+
+        var models = await dbContext.RecurringOrderReadModels
+            .AsNoTracking()
+            .Where(r => claimedIds.Contains(r.Id))
+            .OrderBy(r => r.NextRunAt)
+            .ToListAsync(ct);
+
+        return models.Select(MapToSummary).ToList();
+    }
+
     private static RecurringOrderSummary MapToSummary(RecurringOrderReadModel m) =>
         new(m.Id, m.CustomerId, m.Frequency, m.Status, m.NextRunAt, m.TotalExecutions, m.CreatedAt);
 }

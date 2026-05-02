@@ -50,7 +50,7 @@ public sealed class RecurringOrderSchedulerService(
         var readRepository = scope.ServiceProvider.GetRequiredService<IRecurringOrderReadRepository>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        var dueOrders = await readRepository.GetDueAsync(DateTime.UtcNow, _batchSize, ct);
+        var dueOrders = await readRepository.ClaimDueAsync(DateTime.UtcNow, _batchSize, ct);
 
         if (!dueOrders.Any())
             return;

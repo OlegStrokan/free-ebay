@@ -3,10 +3,10 @@ using Application.Sagas.Handlers;
 
 namespace Infrastructure.Services;
 
-// EventType → handler .NET Type mapping built at startup, NOT per-scope.
+// EventType -> handler .NET Type mapping built at startup, NOT per-scope.
 // Previously the factory took IEnumerable<ISagaEventHandler> which forced the ENTIRE
 // dependency graph of every saga handler (steps, gateways, repos) to be instantiated
-// just to read a string property — causing DI resolution failures on every Kafka message
+// just to read a string property - causing DI resolution failures on every Kafka message
 // when any leaf gateway/client was missing from the DI container.
 //
 // The descriptor-based constructor (used in production DI) avoids all of that.
