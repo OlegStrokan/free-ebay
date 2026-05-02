@@ -29,7 +29,7 @@ public sealed class ProductGateway(
 
             var prices = response.Prices.Select(p => new ProductPriceDto(
                 Guid.Parse(p.ProductId),
-                (decimal)p.Price,
+                p.Price.Units + p.Price.Nanos / 1_000_000_000m,
                 p.Currency)).ToList();
 
             logger.LogInformation(

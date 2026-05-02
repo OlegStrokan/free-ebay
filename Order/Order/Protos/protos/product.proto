@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "common.proto";
+
 option csharp_namespace = "Protos.Product";
 
 package product;
@@ -14,7 +16,7 @@ message GetProductPricesRequest {
 
 message ProductPrice {
   string product_id = 1;
-  double price      = 2;
+  common.DecimalValue price = 2;
   string currency   = 3;
 }
 

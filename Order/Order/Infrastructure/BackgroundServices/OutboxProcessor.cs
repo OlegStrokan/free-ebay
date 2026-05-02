@@ -79,12 +79,14 @@ public sealed class OutboxProcessor(
 
             foreach (var message in group)
             {
-                await ProcessMessageAsync(message, groupOutboxRepository, groupDeadLetterRepository, ct);
+                var success = await ProcessMessageAsync(message, groupOutboxRepository, groupDeadLetterRepository, ct);
+                if (!success)
+                    break;
             }
         });
     }
 
-    private async Task ProcessMessageAsync(
+    private async Task<bool> ProcessMessageAsync(
         OutboxMessage message,
         IOutboxRepository outboxRepository,
         IDeadLetterRepository deadLetterRepository,
@@ -107,7 +109,7 @@ public sealed class OutboxProcessor(
                     deadLetterRepository,
                     outboxRepository,
                     ct);
-                return;
+                return true;
             }
 
             if (message.RetryCount >= _maxRetries)
@@ -123,7 +125,7 @@ public sealed class OutboxProcessor(
                     deadLetterRepository,
                     outboxRepository,
                     ct);
-                return;
+                return true;
             }
 
             await eventPublisher.PublishRawAsync(
@@ -140,6 +142,8 @@ public sealed class OutboxProcessor(
                 "Successfully published message {MessageId} of type {Type}",
                 message.Id,
                 message.Type);
+
+            return true;
         }
         catch (Exception ex)
         {
@@ -151,6 +155,7 @@ public sealed class OutboxProcessor(
                 _maxRetries);
 
             await outboxRepository.IncrementRetryCountAsync(message.Id, ct);
+            return false;
         }
     }
 

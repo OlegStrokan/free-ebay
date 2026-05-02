@@ -123,7 +123,8 @@ public class RecurringOrderPersistenceService(
                 var childOrder = Order.Create(
                     recurring.CustomerId,
                     recurring.DeliveryAddress,
-                    orderItems);
+                    orderItems,
+                    recurring.PaymentMethod);
 
                 createdOrderId = childOrder.Id.Value;
 

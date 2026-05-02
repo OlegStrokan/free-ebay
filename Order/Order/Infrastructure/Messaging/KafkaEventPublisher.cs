@@ -187,7 +187,9 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
                     i.PriceAtPurchase.Currency
                 )).ToList(),
                 PaymentIntentId = e.ProviderPaymentIntentId,
-                PaymentMethod = e.PaymentMethod,
+                PaymentMethod = Enum.TryParse<Application.Common.Enums.PaymentMethod>(e.PaymentMethod, ignoreCase: true, out var pm)
+                    ? pm
+                    : throw new InvalidOperationException($"Unknown PaymentMethod '{e.PaymentMethod}' for order {e.OrderId.Value}"),
                 CreatedAt = e.CreatedAt
             }),
 
