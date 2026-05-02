@@ -221,7 +221,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var orderItems = b2bOrder.ActiveItems
             .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
             .ToList();
-        var order = Domain.Entities.Order.Order.Create(customerId, b2bOrder.DeliveryAddress, orderItems);
+        var order = Domain.Entities.Order.Order.Create(customerId, b2bOrder.DeliveryAddress, orderItems, "CreditCard");
         var idempotencyKey = Guid.NewGuid().ToString();
 
         await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, idempotencyKey, CancellationToken.None);
@@ -258,7 +258,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var orderItems = b2bOrder.ActiveItems
             .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
             .ToList();
-        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems, "CreditCard");
 
         await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, Guid.NewGuid().ToString(), CancellationToken.None);
 
@@ -282,7 +282,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var orderItems = b2bOrder.ActiveItems
             .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
             .ToList();
-        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems, "CreditCard");
 
         await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, Guid.NewGuid().ToString(), CancellationToken.None);
 
@@ -311,7 +311,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var orderItems = b2bOrder.ActiveItems
             .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
             .ToList();
-        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+        var order = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems, "CreditCard");
         var idempotencyKey = $"finalize-{Guid.NewGuid()}";
 
         await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order, idempotencyKey, CancellationToken.None);
@@ -337,7 +337,8 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var order = Domain.Entities.Order.Order.Create(
             CustomerId.CreateUnique(),
             TestAddress,
-            orderItems);
+            orderItems,
+            "CreditCard");
 
         var act = async () => await b2bSvc.FinalizeB2BOrderAsync(
             fakeBb2OrderId,
@@ -365,7 +366,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var orderItems = b2bOrder.ActiveItems
             .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
             .ToList();
-        var order1 = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+        var order1 = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems, "CreditCard");
         var orderId1 = order1.Id.Value;
 
         await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order1, idempotencyKey, CancellationToken.None);
@@ -378,7 +379,7 @@ public sealed class B2BOrderPersistenceServiceTests : IClassFixture<IntegrationF
         var orderItems2 = b2bOrder.ActiveItems
             .Select(i => OrderItem.Create(i.ProductId, i.Quantity, i.EffectiveUnitPrice))
             .ToList();
-        var order2 = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems2);
+        var order2 = Domain.Entities.Order.Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems2, "CreditCard");
 
         await b2bSvc.FinalizeB2BOrderAsync(b2bOrderId, order2, idempotencyKey, CancellationToken.None);
 

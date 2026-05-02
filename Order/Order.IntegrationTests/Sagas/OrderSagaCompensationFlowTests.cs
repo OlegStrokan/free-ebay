@@ -195,7 +195,8 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
             new List<OrderItem>
             {
                 OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(25m, "USD"))
-            });
+            },
+            "CreditCard");
 
         var data = new OrderSagaData
         {
@@ -203,7 +204,7 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
             CustomerId = customerId.Value,
             TotalAmount = 25m,
             Currency = "USD",
-            PaymentMethod = "CreditCard",
+            PaymentMethod = Application.Common.Enums.PaymentMethod.CreditCard,
             DeliveryAddress = new AddressDto("Baker St", "London", "UK", "NW1"),
             Items =
             [

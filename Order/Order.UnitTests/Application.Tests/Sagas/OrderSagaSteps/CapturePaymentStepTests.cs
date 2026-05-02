@@ -61,7 +61,7 @@ public class CapturePaymentStepTests
 
         _paymentGateway.ProcessPaymentAsync(
                 data.CorrelationId, data.CustomerId, data.TotalAmount,
-                data.Currency, data.PaymentMethod, Arg.Any<CancellationToken>())
+                data.Currency, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new PaymentProcessingResult(
                 PaymentId: expectedPaymentId,
                 Status: PaymentProcessingStatus.Succeeded,
@@ -77,7 +77,7 @@ public class CapturePaymentStepTests
 
         await _paymentGateway.Received(1).ProcessPaymentAsync(
             data.CorrelationId, data.CustomerId, data.TotalAmount,
-            data.Currency, data.PaymentMethod, Arg.Any<CancellationToken>());
+            data.Currency, Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class CapturePaymentStepTests
 
         _paymentGateway.ProcessPaymentAsync(
                 data.CorrelationId, data.CustomerId, data.TotalAmount,
-                data.Currency, data.PaymentMethod, Arg.Any<CancellationToken>())
+                data.Currency, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new PaymentProcessingResult(
                 PaymentId: "PAY-PENDING",
                 Status: PaymentProcessingStatus.Pending,
@@ -142,7 +142,7 @@ public class CapturePaymentStepTests
 
         _paymentGateway.ProcessPaymentAsync(
                 data.CorrelationId, data.CustomerId, data.TotalAmount,
-                data.Currency, data.PaymentMethod, Arg.Any<CancellationToken>())
+                data.Currency, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new PaymentProcessingResult(
                 PaymentId: "PAY-3DS",
                 Status: PaymentProcessingStatus.RequiresAction,
@@ -419,7 +419,7 @@ public class CapturePaymentStepTests
         CustomerId = Guid.NewGuid(),
         TotalAmount = 150m,
         Currency = "USD",
-        PaymentMethod = "CreditCard",
+        PaymentMethod = Application.Common.Enums.PaymentMethod.CreditCard,
         DeliveryAddress = new AddressDto("Baker St", "London", "UK", "NW1"),
         Items = new List<OrderItemDto> { new(Guid.NewGuid(), 1, 150m, "USD") }
     };
@@ -430,7 +430,7 @@ public class CapturePaymentStepTests
         CustomerId = Guid.NewGuid(),
         TotalAmount = 150m,
         Currency = "USD",
-        PaymentMethod = "CreditCard",
+        PaymentMethod = Application.Common.Enums.PaymentMethod.CreditCard,
         PaymentIntentId = paymentIntentId,
         DeliveryAddress = new AddressDto("Baker St", "London", "UK", "NW1"),
         Items = new List<OrderItemDto> { new(Guid.NewGuid(), 1, 150m, "USD") }

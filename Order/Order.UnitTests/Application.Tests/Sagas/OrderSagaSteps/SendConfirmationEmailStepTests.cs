@@ -160,6 +160,6 @@ public class SendConfirmationEmailStepTests
         Currency = "USD",
         DeliveryAddress = new AddressDto("Baker St", "London", "UK", "NW1"),
         Items = new List<OrderItemDto> { new(Guid.NewGuid(), 2, 99.99m, "USD") },
-        PaymentMethod = "CreditCard"
+        PaymentMethod = Application.Common.Enums.PaymentMethod.CreditCard
     };
 }

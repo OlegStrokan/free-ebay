@@ -103,7 +103,8 @@ public class ProcessRefundStepTests
         var unpaidOrder = Order.Create(
             CustomerId.CreateUnique(),
             Address.Create("A", "B", "C", "D"),
-            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) });
+            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) },
+            "CreditCard");
         // order.Pay() is NOT called
 
         var data = CreateSampleData();
@@ -234,7 +235,8 @@ public class ProcessRefundStepTests
         var order = Order.Create(
             CustomerId.CreateUnique(),
             Address.Create("Street", "City", "Country", "12345"),
-            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) });
+            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) },
+            "CreditCard");
 
         order.Pay(PaymentId.From("PAY-1"));
         order.Approve();

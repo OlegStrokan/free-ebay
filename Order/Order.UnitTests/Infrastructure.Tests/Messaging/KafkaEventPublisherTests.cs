@@ -77,7 +77,7 @@ public class KafkaEventPublisherTests
         Assert.Equal(orderId, payloadDto.OrderId);
         Assert.Equal("Street", payloadDto.DeliveryAddress.Street);
         Assert.Equal("EUR", payloadDto.Currency);
-        Assert.Equal("stripe", payloadDto.PaymentMethod);
+        Assert.Equal(Application.Common.Enums.PaymentMethod.Stripe, payloadDto.PaymentMethod);
     }
 
     [Fact]
@@ -177,6 +177,6 @@ public class KafkaEventPublisherTests
             Address.Create("Street", "City", "Country", "180000"),
             new List<OrderItem>(),
             DateTime.UtcNow,
-            PaymentMethod: "stripe");
+            "Stripe");
     }
 }

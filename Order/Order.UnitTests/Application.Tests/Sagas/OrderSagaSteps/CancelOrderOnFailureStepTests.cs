@@ -217,7 +217,8 @@ public class CancelOrderOnFailureStepTests
             new List<OrderItem>
             {
                 OrderItem.Create(ProductId.From(Guid.NewGuid()), 1, Money.Create(100m, "USD"))
-            });
+            },
+            "CreditCard");
 
         if (status == OrderStatus.Paid || status == OrderStatus.Approved || status == OrderStatus.Completed)
         {
@@ -248,7 +249,7 @@ public class CancelOrderOnFailureStepTests
         {
             CorrelationId = orderId,
             CustomerId = customerId,
-            PaymentMethod = "CreditCard",
+            PaymentMethod = Application.Common.Enums.PaymentMethod.CreditCard,
             TotalAmount = 100m,
             Currency = "USD",
             DeliveryAddress = new AddressDto("Baker St", "London", "UK", "NW1"),

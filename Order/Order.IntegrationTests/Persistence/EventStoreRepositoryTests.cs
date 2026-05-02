@@ -42,7 +42,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         var aggregateId = Guid.NewGuid().ToString();
 
         // 3 events: Created (v0), Paid (v1), Approved (v2)
-        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
         order.Pay(PaymentId.From("PAY-1"));
         order.Approve();
 
@@ -72,7 +72,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         var repo = scope.ServiceProvider.GetRequiredService<IEventStoreRepository>();
 
         var aggregateId = Guid.NewGuid().ToString();
-        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
 
         // first writer succeeds - stream is now at version 0
         await repo.SaveEventsAsync(
@@ -100,7 +100,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         var aggregateId = Guid.NewGuid().ToString();
 
         // serialize real events so deserialization succeeds when GetEventsAsync reads them back
-        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
         order.Pay(PaymentId.From("PAY-2"));
 
         var createdJson = JsonSerializer.Serialize(
@@ -135,7 +135,7 @@ public sealed class EventStoreRepositoryTests : IClassFixture<IntegrationFixture
         var aggregateId = Guid.NewGuid().ToString();
 
         // 3 events (v0 Created, v1 Paid, v2 Approved)
-        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
         order.Pay(PaymentId.From("PAY-3"));
         order.Approve();
 

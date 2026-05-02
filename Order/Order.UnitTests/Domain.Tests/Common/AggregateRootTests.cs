@@ -40,7 +40,7 @@ public class AggregateRootTests
         var orderId = OrderId.CreateUnique();
         var history = new List<IDomainEvent>
         {
-            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, DateTime.UtcNow)
+            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, DateTime.UtcNow, "CreditCard")
         };
 
         var order = Order.FromHistory(history);
@@ -52,7 +52,7 @@ public class AggregateRootTests
     [Fact]
     public void RaiseEvent_ShouldIncrementVersion()
     {
-        var order = Order.Create(_customerId, _address, _items);
+        var order = Order.Create(_customerId, _address, _items, "CreditCard");
 
         // create raises one event => version goes from 0 to 1
         Assert.Equal(1, order.Version);
@@ -61,7 +61,7 @@ public class AggregateRootTests
     [Fact]
     public void RaiseEvent_ShouldAddToUncommittedEvents()
     {
-        var order = Order.Create(_customerId, _address, _items);
+        var order = Order.Create(_customerId, _address, _items, "CreditCard");
 
         Assert.Single(order.UncommitedEvents);
         Assert.IsType<OrderCreatedEvent>(order.UncommitedEvents[0]);
@@ -70,7 +70,7 @@ public class AggregateRootTests
     [Fact]
     public void RaiseEvent_ShouldBothApplyAndTrackEvent()
     {
-        var order = Order.Create(_customerId, _address, _items);
+        var order = Order.Create(_customerId, _address, _items, "CreditCard");
         order.ClearUncommittedEvents();
 
         order.Pay(PaymentId.From("PAY-1"));
@@ -85,7 +85,7 @@ public class AggregateRootTests
     [Fact]
     public void ClearUncommittedEvents_ShouldEmptyList_WithoutAffectingVersion()
     {
-        var order = Order.Create(_customerId, _address, _items);
+        var order = Order.Create(_customerId, _address, _items, "CreditCard");
         var versionBefore = order.Version;
 
         order.ClearUncommittedEvents();
@@ -103,7 +103,7 @@ public class AggregateRootTests
 
         var history = new List<IDomainEvent>
         {
-            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, now),
+            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, now, "CreditCard"),
             new OrderPaidEvent(orderId, _customerId, paymentId, Money.Create(100, "USD"), now.AddMinutes(1)),
             new OrderApprovedEvent(orderId, _customerId, now.AddMinutes(2))
         };
@@ -119,7 +119,7 @@ public class AggregateRootTests
         var orderId = OrderId.CreateUnique();
         var history = new List<IDomainEvent>
         {
-            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, DateTime.UtcNow)
+            new OrderCreatedEvent(orderId, _customerId, Money.Create(100, "USD"), _address, _items, DateTime.UtcNow, "CreditCard")
         };
 
         var order = Order.FromHistory(history);
@@ -130,7 +130,7 @@ public class AggregateRootTests
     [Fact]
     public void MultipleRaisedEvents_ShouldAllAppearInUncommittedList()
     {
-        var order = Order.Create(_customerId, _address, _items);
+        var order = Order.Create(_customerId, _address, _items, "CreditCard");
         order.Pay(PaymentId.From("PAY-2"));
         order.Approve();
 
@@ -140,7 +140,7 @@ public class AggregateRootTests
     [Fact]
     public void UncommittedEvents_ShouldBeReadOnly_CannotBeModifiedExternally()
     {
-        var order = Order.Create(_customerId, _address, _items);
+        var order = Order.Create(_customerId, _address, _items, "CreditCard");
 
         // cast to prove it's a read-only wrapper, not a mutable list
         var events = order.UncommitedEvents;

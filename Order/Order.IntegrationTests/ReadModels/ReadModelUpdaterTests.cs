@@ -28,7 +28,8 @@ public sealed class ReadModelUpdaterTests : IClassFixture<IntegrationFixture>
         Money.Create(100, "USD"),
         TestAddress,
         new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) },
-        DateTime.UtcNow);
+        DateTime.UtcNow,
+        "CreditCard");
 
     [Fact]
     public async Task OrderReadModelUpdater_ShouldCreateReadModel_OnOrderCreatedEvent()

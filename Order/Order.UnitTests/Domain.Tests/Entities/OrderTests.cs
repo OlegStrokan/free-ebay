@@ -30,7 +30,7 @@ public class OrderTests
         var history = new List<IDomainEvent>
         {
             new OrderCreatedEvent(orderId, _customerId, _price.Multiply(2), _address, CreateDefaultItems(),
-                completionTime.AddHours(-2)),
+                completionTime.AddHours(-2), "CreditCard"),
             new OrderPaidEvent(orderId, _customerId, _paymentId, _price.Multiply(2), completionTime.AddHours(-1)),
             new OrderApprovedEvent(orderId, _customerId, completionTime.AddMinutes(-30)),
             new OrderCompletedEvent(orderId, _customerId, completionTime)
@@ -42,7 +42,7 @@ public class OrderTests
     [Fact]
     public void Create_ShouldCreateOrderSuccessfully()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
 
         var evt = Assert.Single(order.UncommitedEvents) as OrderCreatedEvent;
         Assert.NotNull(evt);
@@ -58,13 +58,13 @@ public class OrderTests
     public void Create_ShouldThrowException_WhenOrderItemsIsEmptyOrZero()
     {
         Assert.Throws<DomainException>(() =>
-            Order.Create(_customerId, _address, new List<OrderItem>()));
+            Order.Create(_customerId, _address, new List<OrderItem>(), "CreditCard"));
     }
 
     [Fact]
     public void Pay_WhenPending_ShouldTransitionToPaid()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         order.ClearUncommittedEvents();
 
         order.Pay(_paymentId);
@@ -78,7 +78,7 @@ public class OrderTests
     [Fact]
     public void Pay_WhenAlreadyPaid_ShouldThrowException()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
 
         order.Pay(_paymentId);
 
@@ -89,14 +89,14 @@ public class OrderTests
     [Fact]
     public void Pay_ShouldThrowException_WhenPaymentIdNull()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         Assert.Throws<DomainException>(() => order.Pay(null!));
     }
 
     [Fact]
     public void AssignTracking_ShouldUpdateStatus_WhenPaid()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         order.Pay(_paymentId);
         
         order.AssignTracking(_trackingId);
@@ -109,7 +109,7 @@ public class OrderTests
     [Fact]
     public void AssignTracking_ShouldThrow_WhenPending()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
 
         var ex = Assert.Throws<DomainException>(() => order.AssignTracking(_trackingId));
         Assert.Contains("Cannot assign tracking", ex.Message);
@@ -118,7 +118,7 @@ public class OrderTests
     [Fact]
     public void Approve_WhenPaid_ShouldTransitionToApproved()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         
         order.Pay(_paymentId);
         order.ClearUncommittedEvents();
@@ -132,7 +132,7 @@ public class OrderTests
     [Fact]
     public void Approve_WhenAlreadyApproved_ShouldThrowException()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
 
         order.Pay(_paymentId);
         order.Approve();
@@ -144,7 +144,7 @@ public class OrderTests
     [Fact]
     public void Complete_WhenApproved_ShouldTransitionToCompleted()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         
         order.Pay(_paymentId);
         order.Approve();
@@ -158,7 +158,7 @@ public class OrderTests
     [Fact]
     public void Complete_WhenAlreadyCompleted_ShouldThrowException()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
 
         order.Pay(_paymentId);
         order.Approve();
@@ -172,7 +172,7 @@ public class OrderTests
     [Fact]
     public void Cancel_WhenPending_ShouldTransitionToCancelled()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
 
         var cancelReason = "Racism";
         
@@ -187,7 +187,7 @@ public class OrderTests
     [Fact]
     public void Cancel_WithMultiplyMessages_ShouldStoreAllMessages()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         var reason = new List<string> { "Inventory shortage", "Payment gateway timeout" };
         
         order.Cancel(reason);
@@ -215,7 +215,7 @@ public class OrderTests
     [Fact]
     public void Cancel_WhenAlreadyCancelled_ShouldThrowException()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         order.Cancel(new List<string> { "First Reason" }); 
 
          Assert.Throws<InvalidOperationException>(() => 
@@ -230,7 +230,7 @@ public class OrderTests
     [Fact]
     public void RevertTrackingAssignment_ShouldClearTrackingId()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         order.Pay(_paymentId);
         order.AssignTracking(_trackingId);
         
@@ -261,7 +261,7 @@ public class OrderTests
     [Fact]
     public void IsEligibleForReturn_ShouldReturnFalse_WhenNotCompleted()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         order.Pay(_paymentId);
 
         Assert.False(order.IsEligibleForReturn());
@@ -279,7 +279,7 @@ public class OrderTests
 
         var history = new List<IDomainEvent>
         {
-            new OrderCreatedEvent(orderId, _customerId, totalPrice, _address, items, now),
+            new OrderCreatedEvent(orderId, _customerId, totalPrice, _address, items, now, "CreditCard"),
             new OrderPaidEvent(orderId, _customerId, _paymentId, totalPrice, now.AddMinutes(5)),
             new OrderTrackingAssignedEvent(orderId, _trackingId, now.AddMinutes(10)),
             new OrderApprovedEvent(orderId, _customerId, now.AddMinutes(30)),
@@ -298,7 +298,7 @@ public class OrderTests
     [Fact]
     public void ClearUncommittedEvents_ShouldEmptyTheList()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         Assert.Single(order.UncommitedEvents);
         
         order.ClearUncommittedEvents();
@@ -309,7 +309,7 @@ public class OrderTests
     [Fact]
     public void Version_ShouldIncrementEveryTimeAnEventIsRaised()
     {
-        var order = Order.Create(_customerId, _address, CreateDefaultItems());
+        var order = Order.Create(_customerId, _address, CreateDefaultItems(), "CreditCard");
         order.Pay(_paymentId);
         order.Approve();
         

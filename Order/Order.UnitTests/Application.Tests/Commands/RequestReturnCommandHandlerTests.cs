@@ -58,7 +58,8 @@ public class RequestReturnCommandHandlerTest
         var order = Order.Create(
             CustomerId.CreateUnique(),
             Address.Create("Baker St", "London", "UK", "NW1"),
-            items);
+            items,
+            "CreditCard");
         order.Pay(PaymentId.From("pay_123"));
         order.Approve();
         order.Complete();
@@ -160,7 +161,8 @@ public class RequestReturnCommandHandlerTest
         var pendingOrder = Order.Create(
             CustomerId.CreateUnique(),
             Address.Create("S", "C", "C", "P"),
-            items);
+            items,
+            "CreditCard");
 
         _idempotencyRepository
             .GetByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())

@@ -2,6 +2,7 @@ using System.Net;
 using Grpc.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Protos.Accounting;
+using Protos.Common;
 using Protos.Inventory;
 using Protos.Payment;
 using Protos.Product;
@@ -328,7 +329,7 @@ public class FakeProductGrpcServer : FakeGrpcServerBase
 {
     // price returned for every requested product id
     public bool ShouldSucceed { get; set; } = true;
-    public double PriceToReturn { get; set; } = 29.99;
+    public decimal PriceToReturn { get; set; } = 29.99m;
     public string CurrencyToReturn { get; set; } = "USD";
     public string ErrorMessage { get; set; } = string.Empty;
 
@@ -337,7 +338,7 @@ public class FakeProductGrpcServer : FakeGrpcServerBase
     public void Reset()
     {
         ShouldSucceed = true;
-        PriceToReturn = 29.99;
+        PriceToReturn = 29.99m;
         CurrencyToReturn = "USD";
         ErrorMessage = string.Empty;
         GetPricesCalls.Clear();
@@ -379,12 +380,19 @@ public class FakeProductServiceImpl : ProductService.ProductServiceBase
             response.Prices.Add(new ProductPrice
             {
                 ProductId = productId,
-                Price     = _cfg.PriceToReturn,
+                Price     = ToDecimalValue(_cfg.PriceToReturn),
                 Currency  = _cfg.CurrencyToReturn
             });
         }
 
         return Task.FromResult(response);
+    }
+
+    private static DecimalValue ToDecimalValue(decimal value)
+    {
+        var units = decimal.Truncate(value);
+        var nanos = (int)((value - units) * 1_000_000_000m);
+        return new DecimalValue { Units = (long)units, Nanos = nanos };
     }
 }
 

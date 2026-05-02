@@ -197,7 +197,7 @@ public class ValidateReturnRequestStepTests
         var customerId = CustomerId.CreateUnique();
         var address = Address.Create("Baker St", "London", "UK", "NW1");
         var items = new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(100, "USD")) };
-        return Order.Create(customerId, address, items);
+        return Order.Create(customerId, address, items, "CreditCard");
     }
 
     private static Order CreateCompleteOrder(DateTime? completedAt = null)

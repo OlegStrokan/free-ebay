@@ -58,7 +58,7 @@ public class CreateOrderE2ETests : IClassFixture<E2ETestServer>, IAsyncLifetime
         _server.InventoryService.ReservationIdToReturn = reservationId;
         _server.AccountingServer.ShouldSucceed = true;
         _server.ProductService.ShouldSucceed = true;
-        _server.ProductService.PriceToReturn = 29.99; // 2 units × 29.99 = 59.98
+        _server.ProductService.PriceToReturn = 29.99m; // 2 units × 29.99 = 59.98
 
         // shipping wire mock - rest
         var shipmentId = "shipmentId";

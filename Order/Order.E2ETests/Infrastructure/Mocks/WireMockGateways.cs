@@ -560,7 +560,7 @@ public class FakeGrpcProductGateway : IProductGateway
             throw new ProductNotFoundException(response.NotFoundIds);
 
         return response.Prices
-            .Select(p => new ProductPriceDto(Guid.Parse(p.ProductId), (decimal)p.Price, p.Currency))
+            .Select(p => new ProductPriceDto(Guid.Parse(p.ProductId), p.Price.Units + p.Price.Nanos / 1_000_000_000m, p.Currency))
             .ToList();
     }
 }

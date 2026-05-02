@@ -3,6 +3,7 @@ using Grpc.Core;
 using Infrastructure.Gateways;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Protos.Common;
 using Protos.Product;
 
 namespace Infrastructure.Tests.Gateways;
@@ -40,8 +41,8 @@ public class ProductGatewayTests
     public async Task GetCurrentPricesAsync_ShouldReturnPrices_WhenSucceeds()
     {
         var response = new GetProductPricesResponse();
-        response.Prices.Add(new ProductPrice { ProductId = ProductId1.ToString(), Price = 29.99, Currency = "USD" });
-        response.Prices.Add(new ProductPrice { ProductId = ProductId2.ToString(), Price = 9.50,  Currency = "USD" });
+        response.Prices.Add(new ProductPrice { ProductId = ProductId1.ToString(), Price = new DecimalValue { Units = 29, Nanos = 990000000 }, Currency = "USD" });
+        response.Prices.Add(new ProductPrice { ProductId = ProductId2.ToString(), Price = new DecimalValue { Units = 9, Nanos = 500000000 },  Currency = "USD" });
 
         _client
             .GetProductPricesAsync(Arg.Any<GetProductPricesRequest>(),

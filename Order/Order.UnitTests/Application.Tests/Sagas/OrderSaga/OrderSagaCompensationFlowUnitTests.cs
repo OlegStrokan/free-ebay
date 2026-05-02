@@ -34,7 +34,7 @@ public class OrderSagaCompensationFlowUnitTests
             CustomerId = Guid.NewGuid(),
             TotalAmount = 50m,
             Currency = "USD",
-            PaymentMethod = "CreditCard",
+            PaymentMethod = Application.Common.Enums.PaymentMethod.CreditCard,
             DeliveryAddress = new AddressDto("Baker St", "London", "UK", "NW1"),
             Items =
             [

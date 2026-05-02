@@ -34,7 +34,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
         var svc = scope.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
         var db  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
         var aggregateId = order.Id.Value.ToString();
 
         await svc.CreateOrderAsync(order, Guid.NewGuid().ToString(), CancellationToken.None);
@@ -60,8 +60,8 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
 
         var idempotencyKey = $"idem-{Guid.NewGuid()}";
 
-        var order1 = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
-        var order2 = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+        var order1 = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
+        var order2 = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
 
         await svc.CreateOrderAsync(order1, idempotencyKey, CancellationToken.None);
 
@@ -87,7 +87,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
         var svcA = scopeA.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
         var svcB = scopeB.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
 
-        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+        var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
         await svcA.CreateOrderAsync(order, Guid.NewGuid().ToString(), CancellationToken.None);
         var orderId = order.Id.Value;
 
@@ -145,7 +145,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
             var svc          = scope.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
             var snapshotRepo = scope.ServiceProvider.GetRequiredService<ISnapshotRepository>();
 
-            var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+            var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
             await svc.CreateOrderAsync(order, Guid.NewGuid().ToString(), CancellationToken.None);
             orderId = order.Id.Value;
 
@@ -186,7 +186,7 @@ public sealed class OrderPersistenceServiceTests : IClassFixture<IntegrationFixt
             var svc          = scope.ServiceProvider.GetRequiredService<IOrderPersistenceService>();
             var snapshotRepo = scope.ServiceProvider.GetRequiredService<ISnapshotRepository>();
 
-            var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems());
+            var order = OrderAggregate.Create(CustomerId.CreateUnique(), TestAddress, TestItems(), "CreditCard");
             await svc.CreateOrderAsync(order, Guid.NewGuid().ToString(), CancellationToken.None);
             orderId = order.Id.Value;
 

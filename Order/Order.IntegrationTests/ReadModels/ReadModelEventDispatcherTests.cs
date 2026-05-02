@@ -53,7 +53,8 @@ public sealed class ReadModelEventDispatcherTests : IClassFixture<IntegrationFix
 
         var order = OrderAggregate.Create(
             CustomerId.CreateUnique(), TestAddress,
-            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD")) });
+            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD")) },
+            "CreditCard");
 
         var createdEvt = order.UncommitedEvents.OfType<OrderCreatedEvent>().Single();
         var aggregateId = await PersistEventsAsync(sp, order.UncommitedEvents);
@@ -79,7 +80,8 @@ public sealed class ReadModelEventDispatcherTests : IClassFixture<IntegrationFix
 
         var order = OrderAggregate.Create(
             CustomerId.CreateUnique(), TestAddress,
-            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD")) });
+            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD")) },
+            "CreditCard");
 
         var createdEvt = order.UncommitedEvents.OfType<OrderCreatedEvent>().Single();
         var aggregateId = await PersistEventsAsync(sp, order.UncommitedEvents);
@@ -101,7 +103,8 @@ public sealed class ReadModelEventDispatcherTests : IClassFixture<IntegrationFix
 
         var order = OrderAggregate.Create(
             CustomerId.CreateUnique(), TestAddress,
-            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD")) });
+            new List<OrderItem> { OrderItem.Create(ProductId.CreateUnique(), 1, Money.Create(50, "USD")) },
+            "CreditCard");
 
         var createdEvt = order.UncommitedEvents.OfType<OrderCreatedEvent>().Single();
         var aggregateId = await PersistEventsAsync(sp, order.UncommitedEvents);
