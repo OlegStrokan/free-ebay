@@ -190,7 +190,7 @@ public sealed class CapturePaymentStep(
             customerId: data.CustomerId,
             amount: data.TotalAmount,
             currency: data.Currency,
-            paymentMethod: data.PaymentMethod,
+            paymentMethod: data.PaymentMethod.ToString(),
             cancellationToken);
 
         context.PaymentId = paymentResult.PaymentId;

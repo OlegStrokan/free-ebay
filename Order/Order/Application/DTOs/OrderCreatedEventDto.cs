@@ -1,3 +1,5 @@
+using Application.Common.Enums;
+
 namespace Application.DTOs;
 
 public sealed record OrderCreatedEventDto
@@ -8,8 +10,7 @@ public sealed record OrderCreatedEventDto
     public string Currency { get; set; } = "USD";
     public AddressDto DeliveryAddress { get; set; } = null!;
     public List<OrderItemDto> Items { get; set; } = new();
-    // todo: add enum
-    public string? PaymentMethod { get; set; }
+    public PaymentMethod PaymentMethod { get; set; }
     public string? PaymentIntentId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

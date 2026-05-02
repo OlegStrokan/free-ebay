@@ -9,7 +9,7 @@ public sealed class OrderSagaData : SagaData
     public List<OrderItemDto> Items { get; set; } = new();
     public decimal TotalAmount { get; set; }
     public string Currency { get; set; } = "USD";
-    public string PaymentMethod { get; set; } = string.Empty;
+    public PaymentMethod PaymentMethod { get; set; }
     public AddressDto DeliveryAddress { get; set; } = null!;
     public string? PaymentIntentId { get; set; }
     public ShippingCarrier ShippingCarrier { get; set; } = ShippingCarrier.Dpd;

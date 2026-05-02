@@ -32,7 +32,7 @@ public class FinalizeQuoteCommandHandler(
                     i.EffectiveUnitPrice))
                 .ToList();
 
-            var order = Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems);
+            var order = Order.Create(b2bOrder.CustomerId, b2bOrder.DeliveryAddress, orderItems, request.PaymentMethod);
 
          await b2bPersistenceService.FinalizeB2BOrderAsync(
                 request.B2BOrderId,

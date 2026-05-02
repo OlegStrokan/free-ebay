@@ -12,8 +12,8 @@ public sealed record OrderCreatedEvent(
     Address DeliveryAddress,
     List<OrderItem> Items,
     DateTime CreatedAt,
-    string? ProviderPaymentIntentId = null,
-    string? PaymentMethod = null) : IDomainEvent
+    string PaymentMethod,
+    string? ProviderPaymentIntentId = null) : IDomainEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();
     public DateTime OccurredOn => CreatedAt;
