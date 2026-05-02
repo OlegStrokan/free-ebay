@@ -81,6 +81,14 @@ public abstract class SagaEventHandler<TEvent, TData, TContext> : ISagaEventHand
                     SagaType, sagaData.CorrelationId, result.ErrorMessage);
             }
         }
+        catch (Exception ex) when (IsDuplicateKeyException(ex))
+        {
+            // The unique index on (CorrelationId, SagaType) rejected a concurrent duplicate
+            // This is the expected idempotent-duplicate scenario, treat as success
+            _logger.LogInformation(
+                "{SagaType} saga already created for correlation {CorrelationId} (concurrent duplicate detected). Skipping.",
+                SagaType, sagaData.CorrelationId);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex,
@@ -88,6 +96,21 @@ public abstract class SagaEventHandler<TEvent, TData, TContext> : ISagaEventHand
                 SagaType, sagaData.CorrelationId);
         }
 
+    }
+
+    private static bool IsDuplicateKeyException(Exception ex)
+    {
+      for (var current = ex; current != null; current = current.InnerException)
+        {
+            var msg = current.Message;
+            if (msg.Contains("duplicate key", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("unique constraint", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("23505", StringComparison.Ordinal)) 
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // will be implemented by specific handlers
