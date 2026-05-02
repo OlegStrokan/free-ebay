@@ -12,7 +12,7 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
         RuleFor(x => x.PaymentMethod).NotEmpty();
 
         RuleFor(x => x.DeliveryAddress).NotNull();
-        RuleSet("Address", () =>
+        When(x => x.DeliveryAddress != null, () =>
         {
             RuleFor(x => x.DeliveryAddress.Street).NotEmpty();
             RuleFor(x => x.DeliveryAddress.City).NotEmpty();
