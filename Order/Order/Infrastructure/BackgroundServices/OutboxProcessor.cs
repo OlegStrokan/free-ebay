@@ -50,12 +50,12 @@ public sealed class OutboxProcessor(
         using var scope = serviceProvider.CreateScope();
         var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
 
-        var messages = await outboxRepository.GetUnprocessedMessagesAsync(_batchSize, stoppingToken);
+        var messages = await outboxRepository.ClaimUnprocessedMessagesAsync(_batchSize, stoppingToken);
 
-        if (!messages.Any())
+        if (messages.Count == 0)
             return;
         
-        logger.LogDebug("Processing {Count} outbox messages", messages.Count());
+        logger.LogDebug("Processing {Count} outbox messages", messages.Count);
 
         // Group by AggregateId so messages for the same aggregate are processed in
         // OccurredOnUtc order (causal ordering). Different aggregates still run in parallel.

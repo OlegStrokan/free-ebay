@@ -19,6 +19,7 @@ public class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage
         builder.Property(x => x.AggregateId).IsRequired().HasMaxLength(255);
         builder.Property(x => x.OccurredOnUtc).IsRequired();
         builder.Property(x => x.ProcessedOnUtc);
+        builder.Property(x => x.ClaimedAtUtc);
         
         builder.HasIndex(x => x.ProcessedOnUtc).HasFilter("\"ProcessedOnUtc\" IS NULL");
 

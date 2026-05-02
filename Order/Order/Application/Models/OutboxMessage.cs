@@ -9,6 +9,7 @@ public class OutboxMessage
     public DateTime OccurredOnUtc { get; private set; }
     
     public DateTime? ProcessedOnUtc { get; private set; }
+    public DateTime? ClaimedAtUtc { get; private set; }
     public int RetryCount { get; private set; }
     public DateTime? LastRetryAtUtc { get; set; }
     public string? Error { get; private set; }

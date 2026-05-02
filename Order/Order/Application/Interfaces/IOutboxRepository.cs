@@ -13,7 +13,7 @@ public interface IOutboxRepository
         string aggregateId,
         CancellationToken ct
         );
-    Task<IEnumerable<OutboxMessage>> GetUnprocessedMessagesAsync(int batchSize, CancellationToken ct);
+    Task<IReadOnlyList<OutboxMessage>> ClaimUnprocessedMessagesAsync(int batchSize, CancellationToken ct);
     
     Task MarkAsProcessedAsync(Guid messageId, CancellationToken ct);
 
