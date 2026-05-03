@@ -29,6 +29,41 @@ public sealed class KafkaRetryRepository(
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<KafkaRetryRecord>> ClaimDueRecordsAsync(
+        int batchSize, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+
+        // concurrent replicas never claim the same records.
+        var claimedIds = await dbContext.Database
+            .SqlQueryRaw<Guid>(
+                """
+                UPDATE "KafkaRetryRecords"
+                SET "Status" = {0}
+                WHERE "Id" IN (
+                    SELECT "Id" FROM "KafkaRetryRecords"
+                    WHERE "Status" = {1} AND "NextRetryAt" <= {2}
+                    ORDER BY "NextRetryAt"
+                    LIMIT {3}
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING "Id"
+                """,
+                (int)KafkaRetryRecordStatus.InProgress,
+                (int)KafkaRetryRecordStatus.Pending,
+                now,
+                batchSize)
+            .ToListAsync(ct);
+
+        if (claimedIds.Count == 0)
+            return [];
+
+        return await dbContext.KafkaRetryRecords
+            .Where(r => claimedIds.Contains(r.Id))
+            .OrderBy(r => r.NextRetryAt)
+            .ToListAsync(ct);
+    }
+
     public async Task MarkInProgressAsync(Guid id, CancellationToken ct = default)
     {
         var record = await GetRequiredAsync(id, ct);

@@ -25,12 +25,24 @@ public sealed class ReadModelEventDispatcher(
     {
         var eventId = ExtractEventId(eventData);
 
+        // Fast pre-check: skip if already processed (avoids the heavier SERIALIZABLE transaction)
         if (await idempotencyChecker.HasBeenProcessedAsync(eventId, ct))
         {
             logger.LogInformation(
                 "Event {EventId} ({EventType}) already processed. Skipping duplicate.",
                 eventId, eventType);
-            return true; // treated as success — already applied
+            return true;
+        }
+
+        // Atomically claim the event. Returns false if another consumer won the race.
+        // By marking BEFORE applying the read-model update, we eliminate the window
+        // where a crash between apply and mark causes double-application on redelivery.
+        if (!await idempotencyChecker.MarkAsProcessedAsync(eventId, eventType, ct))
+        {
+            logger.LogInformation(
+                "Event {EventId} ({EventType}) was claimed by another consumer. Skipping.",
+                eventId, eventType);
+            return true;
         }
 
         if (!eventTypeRegistry.TryGetType(eventType, out var domainEventType))
@@ -48,18 +60,17 @@ public sealed class ReadModelEventDispatcher(
             logger.LogError(
                 "Event {EventId} ({EventType}) not found in event store for aggregate {AggregateId}",
                 eventId, eventType, aggregateId);
-            return true; // skip - the event exists in Kafka but not in the event store; committing is safer
+            return true;
         }
 
         var updater = updaters.FirstOrDefault(u => u.CanHandle(domainEvent.GetType()));
         if (updater == null)
         {
             logger.LogWarning("No updater found for event type {EventType}", domainEvent.GetType().Name);
-            return true; // skip - no handler registered
+            return true;
         }
 
         await handlerRegistry.HandleAsync(domainEvent, updater, ct);
-        await idempotencyChecker.MarkAsProcessedAsync(eventId, eventType, ct);
 
         logger.LogDebug(
             "Event {EventType} dispatched to {Updater}",

@@ -50,7 +50,7 @@ public sealed class KafkaReadModelRetryWorker(
         using var scope = serviceProvider.CreateScope();
         var retryRepo = scope.ServiceProvider.GetRequiredService<IKafkaRetryRepository>();
 
-        var dueRecords = await retryRepo.GetDueRecordsAsync(_batchSize, ct);
+        var dueRecords = await retryRepo.ClaimDueRecordsAsync(_batchSize, ct);
         if (dueRecords.Count == 0) return;
 
         logger.LogInformation("KafkaReadModelRetryWorker processing {Count} due records", dueRecords.Count);
@@ -70,7 +70,7 @@ public sealed class KafkaReadModelRetryWorker(
 
         try
         {
-            await retryRepo.MarkInProgressAsync(record.Id, ct);
+            // Records are already InProgress from the atomic claim - no separate MarkInProgressAsync needed
 
             var dispatcher = scope.ServiceProvider.GetRequiredService<IReadModelEventDispatcher>();
             var aggregateId = record.MessageKey ?? string.Empty;
