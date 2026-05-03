@@ -205,7 +205,7 @@ public class CompensationRefundRetryWorkerTests
     private void ConfigureSingleDueRetry(CompensationRefundRetry retry)
     {
         var callCount = 0;
-        _retryRepository.GetDuePendingAsync(Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _retryRepository.ClaimDuePendingAsync(Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 callCount++;

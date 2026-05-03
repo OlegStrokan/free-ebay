@@ -49,7 +49,7 @@ public class OutboxProcessorTests
     {
         var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", DateTime.UtcNow, Guid.NewGuid().ToString());
 
-        _outboxRepository.GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _outboxRepository.ClaimUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         var signal = new TaskCompletionSource<bool>();
@@ -77,7 +77,7 @@ public class OutboxProcessorTests
     {
         var message = new OutboxMessage(Guid.NewGuid(), "BrokenEvent", "{}", DateTime.UtcNow, Guid.NewGuid().ToString());
 
-        _outboxRepository.GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _outboxRepository.ClaimUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         _eventPublisher.PublishRawAsync(Arg.Any<Guid>(), Arg.Any<string>(),
@@ -111,7 +111,7 @@ public class OutboxProcessorTests
         typeof(OutboxMessage).GetProperty(nameof(OutboxMessage.RetryCount))!
             .SetValue(message, 5);
 
-        _outboxRepository.GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _outboxRepository.ClaimUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         var signal = new TaskCompletionSource<bool>();
@@ -142,7 +142,7 @@ public class OutboxProcessorTests
         var oldDate = DateTime.UtcNow.AddDays(-8); // 8 days old vs 7-day threshold
         var message = new OutboxMessage(Guid.NewGuid(), nameof(OrderCreatedEvent), "{}", oldDate, Guid.NewGuid().ToString());
 
-        _outboxRepository.GetUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _outboxRepository.ClaimUnprocessedMessagesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<OutboxMessage> { message });
 
         var signal = new TaskCompletionSource<bool>();

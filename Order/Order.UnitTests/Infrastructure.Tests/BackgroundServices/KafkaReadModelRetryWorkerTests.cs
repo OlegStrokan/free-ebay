@@ -12,14 +12,12 @@ namespace Infrastructure.Tests.BackgroundServices;
 
 public class KafkaReadModelRetryWorkerTests
 {
-    // ── fakes ─────────────────────────────────────────────────────────────
     private readonly IKafkaRetryRepository _retryRepo = Substitute.For<IKafkaRetryRepository>();
     private readonly IDeadLetterRepository _dlqRepo = Substitute.For<IDeadLetterRepository>();
     private readonly IReadModelEventDispatcher _dispatcher = Substitute.For<IReadModelEventDispatcher>();
     private readonly ILogger<KafkaReadModelRetryWorker> _logger =
         Substitute.For<ILogger<KafkaReadModelRetryWorker>>();
 
-    // ── scopes ────────────────────────────────────────────────────────────
     private readonly IServiceProvider _rootProvider = Substitute.For<IServiceProvider>();
     private readonly IServiceScopeFactory _scopeFactory = Substitute.For<IServiceScopeFactory>();
     private readonly IServiceScope _scope = Substitute.For<IServiceScope>();
@@ -93,14 +91,12 @@ public class KafkaReadModelRetryWorkerTests
             await worker.StopAsync(CancellationToken.None);
         }
     }
-
-    // ── tests ─────────────────────────────────────────────────────────────
-
+    
     [Fact]
-    public async Task ProcessDueRecords_ShouldMarkInProgressThenSucceeded_WhenDispatchSucceeds()
+    public async Task ProcessDueRecords_ShouldMarkSucceeded_WhenDispatchSucceeds()
     {
         var record = MakeRecord();
-        _retryRepo.GetDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _retryRepo.ClaimDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<KafkaRetryRecord> { record }, new List<KafkaRetryRecord>());
 
         _dispatcher.DispatchAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -112,7 +108,6 @@ public class KafkaReadModelRetryWorkerTests
 
         await RunUntilSignalAsync(Build(), signal, "MarkSucceededAsync was not called");
 
-        await _retryRepo.Received(1).MarkInProgressAsync(record.Id, Arg.Any<CancellationToken>());
         await _retryRepo.Received(1).MarkSucceededAsync(record.Id, Arg.Any<CancellationToken>());
     }
 
@@ -120,7 +115,7 @@ public class KafkaReadModelRetryWorkerTests
     public async Task ProcessDueRecords_ShouldRescheduleRecord_WhenDispatchFailsBeforeLimit()
     {
         var record = MakeRecord(); // RetryCount starts at 0
-        _retryRepo.GetDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _retryRepo.ClaimDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<KafkaRetryRecord> { record }, new List<KafkaRetryRecord>());
 
         _dispatcher.DispatchAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -145,7 +140,7 @@ public class KafkaReadModelRetryWorkerTests
     {
         // RetryCount = 4 so next attempt = 5 which equals limit
         var record = MakeRecordWithRetries(retryCount: 4);
-        _retryRepo.GetDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _retryRepo.ClaimDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<KafkaRetryRecord> { record }, new List<KafkaRetryRecord>());
 
         _dispatcher.DispatchAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -169,7 +164,7 @@ public class KafkaReadModelRetryWorkerTests
     public async Task ProcessDueRecords_ShouldWriteToDeadLetterRepository_WhenRetryLimitReached()
     {
         var record = MakeRecordWithRetries(retryCount: 4);
-        _retryRepo.GetDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _retryRepo.ClaimDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<KafkaRetryRecord> { record }, new List<KafkaRetryRecord>());
 
         _dispatcher.DispatchAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -198,7 +193,7 @@ public class KafkaReadModelRetryWorkerTests
     [Fact]
     public async Task ProcessDueRecords_ShouldDoNothing_WhenNoDueRecords()
     {
-        _retryRepo.GetDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _retryRepo.ClaimDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<KafkaRetryRecord>());
 
         using var cts = new CancellationTokenSource(500);
@@ -219,7 +214,7 @@ public class KafkaReadModelRetryWorkerTests
         var failing = MakeRecord(eventType: "OrderCreated");
         var succeeding = MakeRecord(eventType: "OrderPaid");
 
-        _retryRepo.GetDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _retryRepo.ClaimDueRecordsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new List<KafkaRetryRecord> { failing, succeeding }, new List<KafkaRetryRecord>());
 
         var dispatchCount = 0;

@@ -394,6 +394,12 @@ public sealed class OrderSagaCompensationFlowTests : IClassFixture<IntegrationFi
             CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<CompensationRefundRetry>>(new List<CompensationRefundRetry>());
 
+        public Task<IReadOnlyList<CompensationRefundRetry>> ClaimDuePendingAsync(
+            DateTime nowUtc,
+            int batchSize,
+            CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<CompensationRefundRetry>>(new List<CompensationRefundRetry>());
+
         public Task SaveAsync(CompensationRefundRetry retry, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
