@@ -17,5 +17,10 @@ public interface ICompensationRefundRetryRepository
         int batchSize,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<CompensationRefundRetry>> ClaimDuePendingAsync(
+        DateTime nowUtc,
+        int batchSize,
+        CancellationToken cancellationToken);
+
     Task SaveAsync(CompensationRefundRetry retry, CancellationToken cancellationToken);
 }

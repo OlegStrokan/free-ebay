@@ -5,6 +5,7 @@ public enum CompensationRefundRetryStatus
     Pending = 0,
     Completed = 1,
     Exhausted = 2,
+    InProgress = 3,
 }
 
 public sealed class CompensationRefundRetry
@@ -86,9 +87,17 @@ public sealed class CompensationRefundRetry
 
     public bool IsPending => Status == CompensationRefundRetryStatus.Pending;
 
+    public void MarkInProgress(DateTime? claimedAtUtc = null)
+    {
+        if (Status != CompensationRefundRetryStatus.Pending) return;
+        Status = CompensationRefundRetryStatus.InProgress;
+        UpdatedAtUtc = claimedAtUtc ?? DateTime.UtcNow;
+    }
+
     public void MarkAttemptFailed(string error, DateTime nextAttemptAtUtc, DateTime? attemptedAtUtc = null)
     {
-        if (Status != CompensationRefundRetryStatus.Pending)
+        if (Status != CompensationRefundRetryStatus.Pending
+            && Status != CompensationRefundRetryStatus.InProgress)
         {
             return;
         }
@@ -97,12 +106,14 @@ public sealed class CompensationRefundRetry
         RetryCount++;
         LastError = string.IsNullOrWhiteSpace(error) ? "Unknown compensation refund error" : error.Trim();
         NextAttemptAtUtc = nextAttemptAtUtc;
+        Status = CompensationRefundRetryStatus.Pending;
         UpdatedAtUtc = now;
     }
 
     public void MarkCompleted(DateTime? completedAtUtc = null)
     {
-        if (Status != CompensationRefundRetryStatus.Pending)
+        if (Status != CompensationRefundRetryStatus.Pending
+            && Status != CompensationRefundRetryStatus.InProgress)
         {
             return;
         }
@@ -116,7 +127,8 @@ public sealed class CompensationRefundRetry
 
     public void MarkExhausted(string error, DateTime? exhaustedAtUtc = null)
     {
-        if (Status != CompensationRefundRetryStatus.Pending)
+        if (Status != CompensationRefundRetryStatus.Pending
+            && Status != CompensationRefundRetryStatus.InProgress)
         {
             return;
         }

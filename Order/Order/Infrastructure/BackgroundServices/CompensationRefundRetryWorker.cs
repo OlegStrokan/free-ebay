@@ -57,7 +57,7 @@ public sealed class CompensationRefundRetryWorker(
         var incidentReporter = scope.ServiceProvider.GetRequiredService<IIncidentReporter>();
 
         var now = DateTime.UtcNow;
-        var dueRetries = await retryRepository.GetDuePendingAsync(now, _batchSize, cancellationToken);
+        var dueRetries = await retryRepository.ClaimDuePendingAsync(now, _batchSize, cancellationToken);
 
         if (dueRetries.Count == 0)
         {

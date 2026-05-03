@@ -87,6 +87,43 @@ public sealed class CompensationRefundRetryRepository(
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<CompensationRefundRetry>> ClaimDuePendingAsync(
+        DateTime nowUtc,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        // concurrent replicas never claim the same refund retry
+        var claimedIds = await dbContext.Database
+            .SqlQueryRaw<Guid>(
+                """
+                UPDATE "CompensationRefundRetries"
+                SET "Status" = {0}, "UpdatedAtUtc" = {1}
+                WHERE "Id" IN (
+                    SELECT "Id" FROM "CompensationRefundRetries"
+                    WHERE "Status" = {2} AND "NextAttemptAtUtc" <= {3}
+                    ORDER BY "NextAttemptAtUtc", "CreatedAtUtc"
+                    LIMIT {4}
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING "Id"
+                """,
+                (int)CompensationRefundRetryStatus.InProgress,
+                nowUtc,
+                (int)CompensationRefundRetryStatus.Pending,
+                nowUtc,
+                batchSize)
+            .ToListAsync(cancellationToken);
+
+        if (claimedIds.Count == 0)
+            return [];
+
+        return await dbContext.CompensationRefundRetries
+            .Where(x => claimedIds.Contains(x.Id))
+            .OrderBy(x => x.NextAttemptAtUtc)
+            .ThenBy(x => x.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task SaveAsync(CompensationRefundRetry retry, CancellationToken cancellationToken)
     {
         var entry = dbContext.Entry(retry);
