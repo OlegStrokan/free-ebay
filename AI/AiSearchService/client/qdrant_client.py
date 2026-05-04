@@ -26,22 +26,28 @@ class QdrantSearchClient:
             top_k: int,
     ) -> list[ScoredResult]:
         must_conditions = [
-            FieldCondition(key="status", match=MatchValue(value="active"))
+            FieldCondition(key="status", match=MatchValue(value="active")),
+            FieldCondition(key="has_active_listings", match=MatchValue(value=True)),
         ]
 
         if filters.price_max is not None:
             must_conditions.append(
-                FieldCondition(key="price", range=Range(lte=filters.price_max))
+                FieldCondition(key="min_price", range=Range(lte=filters.price_max))
             )
 
         if filters.price_min is not None:
             must_conditions.append(
-                FieldCondition(key="price", range=Range(gte=filters.price_min))
+                FieldCondition(key="max_price", range=Range(gte=filters.price_min))
             )
 
         if filters.color:
             must_conditions.append(
                 FieldCondition(key="color", match=MatchValue(value=filters.color.lower()))
+            )
+
+        if filters.condition:
+            must_conditions.append(
+                FieldCondition(key="best_condition", match=MatchValue(value=filters.condition))
             )
 
         for excluded in filters.attributes_excluded:
