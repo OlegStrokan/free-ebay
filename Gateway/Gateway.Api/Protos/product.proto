@@ -10,6 +10,7 @@ service ProductService {
   rpc GetProductPrices (GetProductPricesRequest) returns (GetProductPricesResponse);
   rpc GetProducts(GetProductsRequest) returns(GetProductsResponse);
   rpc GetProduct(GetProductRequest) returns(GetProductResponse);
+  rpc GetListingsForCatalogItem (GetListingsForCatalogItemRequest) returns (GetListingsForCatalogItemResponse);
 }
 
 message GetProductPricesRequest {
@@ -60,4 +61,38 @@ message ProductDetail {
 message ProductAttributeProto {
   string key = 1;
   string value = 2;
+}
+
+// Listing messages for GetListingsForCatalogItem
+
+message GetListingsForCatalogItemRequest {
+  string catalog_item_id = 1;
+  int32 page = 2;
+  int32 size = 3;
+  string sort_by = 4;
+  string condition_filter = 5;
+}
+
+message GetListingsForCatalogItemResponse {
+  repeated ListingDetail listings = 1;
+  int32 total_count = 2;
+}
+
+message ListingDetail {
+  string listing_id = 1;
+  string name = 2;
+  string description = 3;
+  string category_id = 4;
+  string category_name = 5;
+  common.DecimalValue price = 6;
+  string currency = 7;
+  int32 stock = 8;
+  repeated ProductAttributeProto attributes = 9;
+  repeated string image_urls = 10;
+  string catalog_item_id = 11;
+  string seller_id = 12;
+  string status = 13;
+  string condition = 14;
+  string gtin = 15;
+  string seller_notes = 16;
 }

@@ -64,6 +64,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapRoleEndpoints();
 app.MapProductEndpoints();
+app.MapListingEndpoints();
 app.MapOrderEndpoints();
 app.MapB2BOrderEndpoints();
 app.MapRecurringOrderEndpoints();
