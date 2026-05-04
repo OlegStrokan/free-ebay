@@ -1,5 +1,5 @@
 ﻿import structlog
-from models import ProductEvent, ProductStockUpdatedEvent
+from models import ProductEvent, ProductStockUpdatedEvent, CatalogItemEvent, CatalogItemListingSummaryEvent
 
 log = structlog.get_logger()
 
@@ -10,6 +10,15 @@ def build_product_corpus(event: ProductEvent) -> str:
         event.category
     ]
     for attr in event.attributes:
+        parts.append(f"{attr.key}: {attr.value}")
+    return " | ".join(filter(None, parts))
+
+def build_catalog_item_corpus(event: CatalogItemEvent) -> str:
+    parts = [
+        event.Name,
+        event.Description,
+    ]
+    for attr in event.Attributes:
         parts.append(f"{attr.key}: {attr.value}")
     return " | ".join(filter(None, parts))
 
@@ -25,6 +34,7 @@ class Indexer:
 
         payload = {
             "product_id": event.product_id,
+            "product_type": "product",
             "name": event.name,
             "category": event.category,
             "price": float(event.price),
@@ -52,3 +62,54 @@ class Indexer:
             patch={"stock_quantity": event.new_quantity, "status": status},
         )
         log.info("product_stock_updated", product_id=event.product_id, status=status)
+
+    async def upsert_catalog_item(self, raw: dict) -> None:
+        event = CatalogItemEvent.model_validate(raw)
+        catalog_item_id = event.CatalogItemId.Value
+        corpus = build_catalog_item_corpus(event)
+        vector = await self._embedding.embed(corpus)
+
+        payload = {
+            "product_id": catalog_item_id,
+            "product_type": "catalog_item",
+            "name": event.Name,
+            "category": event.CategoryId.Value,
+            "color": next((a.value for a in event.Attributes if a.key == "color"), None),
+            "layout": next((a.value for a in event.Attributes if a.key == "layout"), None),
+            "brand": next((a.value for a in event.Attributes if a.key == "brand"), None),
+            "image_urls": event.ImageUrls,
+            # Listing-aggregate fields - updated by update_listing_summary when listings change
+            "min_price": None,
+            "min_price_currency": None,
+            "seller_count": 0,
+            "has_active_listings": False,
+            "best_condition": None,
+            "total_stock": 0,
+            "status": "out_of_stock",
+        }
+
+        await self.qdrant.upsert(catalog_item_id, vector, payload)
+        log.info("catalog_item_indexed", catalog_item_id=catalog_item_id)
+
+    async def update_listing_summary(self, raw: dict) -> None:
+        event = CatalogItemListingSummaryEvent.model_validate(raw)
+        catalog_item_id = event.CatalogItemId.Value
+
+        patch = {
+            "min_price": event.MinPrice,
+            "min_price_currency": event.MinPriceCurrency,
+            "seller_count": event.SellerCount,
+            "has_active_listings": event.HasActiveListings,
+            "best_condition": event.BestCondition,
+            "total_stock": event.TotalStock,
+            "status": "active" if event.HasActiveListings else "out_of_stock",
+        }
+
+        await self.qdrant.update_payload(product_id=catalog_item_id, patch=patch)
+        log.info(
+            "listing_summary_updated",
+            catalog_item_id=catalog_item_id,
+            seller_count=event.SellerCount,
+            min_price=event.MinPrice,
+            has_active=event.HasActiveListings,
+        )
