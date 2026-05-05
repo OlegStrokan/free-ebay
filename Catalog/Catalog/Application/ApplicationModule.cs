@@ -12,6 +12,9 @@ public static class ApplicationModule
         services.AddScoped<IProductEventConsumer, ProductDeletedConsumer>();
         services.AddScoped<IProductEventConsumer, ProductStockUpdatedConsumer>();
         services.AddScoped<IProductEventConsumer, ProductStatusChangedConsumer>();
+        services.AddScoped<IProductEventConsumer, CatalogItemCreatedConsumer>();
+        services.AddScoped<IProductEventConsumer, CatalogItemUpdatedConsumer>();
+        services.AddScoped<IProductEventConsumer, CatalogItemListingSummaryUpdatedConsumer>();
 
         return services;
     }
