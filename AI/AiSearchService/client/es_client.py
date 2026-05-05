@@ -18,7 +18,9 @@ class ElasticsearchClient:
                         }
                     }
                 ],
-                "filter": [],
+                "filter": [
+                    {"term": {"productType": "catalog_item"}},
+                ],
             }
         }
 
