@@ -65,3 +65,45 @@ async def test_unknown_event_type_does_not_raise_or_call_indexer() -> None:
     await process_event(msg, indexer)
     indexer.qdrant.upsert.assert_not_called()
     indexer.qdrant.delete.assert_not_called()
+
+
+_CATALOG_ITEM_PAYLOAD = {
+    "CatalogItemId": {"Value": "ci-1"},
+    "Name": "iPhone 16 Pro Max",
+    "Description": "Apple flagship",
+    "CategoryId": {"Value": "smartphones"},
+    "Gtin": None,
+    "Attributes": [],
+    "ImageUrls": [],
+}
+
+_LISTING_SUMMARY_PAYLOAD = {
+    "CatalogItemId": {"Value": "ci-1"},
+    "MinPrice": 899.99,
+    "MinPriceCurrency": "USD",
+    "SellerCount": 3,
+    "HasActiveListings": True,
+    "BestCondition": "New",
+    "TotalStock": 47,
+}
+
+
+async def test_catalog_item_created_event_calls_upsert_catalog_item() -> None:
+    indexer = _make_indexer()
+    msg = _make_msg("CatalogItemCreatedEvent", _CATALOG_ITEM_PAYLOAD)
+    await process_event(msg, indexer)
+    indexer.qdrant.upsert.assert_called_once()
+
+
+async def test_catalog_item_updated_event_calls_upsert_catalog_item() -> None:
+    indexer = _make_indexer()
+    msg = _make_msg("CatalogItemUpdatedEvent", _CATALOG_ITEM_PAYLOAD)
+    await process_event(msg, indexer)
+    indexer.qdrant.upsert.assert_called_once()
+
+
+async def test_listing_summary_updated_event_calls_update_payload() -> None:
+    indexer = _make_indexer()
+    msg = _make_msg("CatalogItemListingSummaryUpdatedEvent", _LISTING_SUMMARY_PAYLOAD)
+    await process_event(msg, indexer)
+    indexer.qdrant.update_payload.assert_called_once()
