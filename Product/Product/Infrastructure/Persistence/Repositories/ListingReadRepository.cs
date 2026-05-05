@@ -75,6 +75,42 @@ internal sealed class ListingReadRepository(ProductDbContext dbContext) : IListi
         return new PagedResult<ProductSummaryDto>(items, totalCount, page, size);
     }
 
+    public async Task<PagedResult<ProductDetailDto>> GetByCatalogItemAsync(
+        Guid catalogItemId, int page, int size, string? conditionFilter, string sortBy, CancellationToken ct = default)
+    {
+        var catalogItemIdVo = CatalogItemId.From(catalogItemId);
+        var baseListings = dbContext.Listings.AsNoTracking()
+            .Where(l => l.CatalogItemId == catalogItemIdVo)
+            .Where(l => l.Status == ListingStatus.Active || l.Status == ListingStatus.OutOfStock);
+
+        if (!string.IsNullOrWhiteSpace(conditionFilter))
+        {
+            var condition = ListingCondition.FromName(conditionFilter);
+            baseListings = baseListings.Where(l => l.Condition == condition);
+        }
+
+        var totalCount = await baseListings.CountAsync(ct);
+
+        var ordered = sortBy switch
+        {
+            "condition" => baseListings.OrderBy(l => l.Condition.Value),
+            "stock" => baseListings.OrderByDescending(l => l.StockQuantity),
+            _ => baseListings.OrderBy(l => l.Price.Amount),
+        };
+
+        var paged = ordered.Skip((page - 1) * size).Take(size);
+        var products = await WithCatalogItem(paged).ToListAsync(ct);
+
+        var categoryNames = await GetCategoryNamesAsync(
+            products.Select(p => p.CatalogItem.CategoryId.Value).Distinct().ToList(), ct);
+
+        var items = products
+            .Select(p => MapToDetail(p, categoryNames.GetValueOrDefault(p.CatalogItem.CategoryId.Value, string.Empty)))
+            .ToList();
+
+        return new PagedResult<ProductDetailDto>(items, totalCount, page, size);
+    }
+
     // Join pre-filtered listings with their catalog item. All WHERE/ORDER/SKIP/TAKE
     // must be applied to the listings source BEFORE calling this - EF cannot translate
     // predicates against the projected ListingProjection record type.
