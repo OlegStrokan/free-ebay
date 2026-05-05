@@ -26,6 +26,7 @@ class QdrantSearchClient:
             top_k: int,
     ) -> list[ScoredResult]:
         must_conditions = [
+            FieldCondition(key="product_type", match=MatchValue(value="catalog_item")),
             FieldCondition(key="status", match=MatchValue(value="active")),
             FieldCondition(key="has_active_listings", match=MatchValue(value=True)),
         ]
@@ -37,7 +38,7 @@ class QdrantSearchClient:
 
         if filters.price_min is not None:
             must_conditions.append(
-                FieldCondition(key="max_price", range=Range(gte=filters.price_min))
+                FieldCondition(key="min_price", range=Range(gte=filters.price_min))
             )
 
         if filters.color:

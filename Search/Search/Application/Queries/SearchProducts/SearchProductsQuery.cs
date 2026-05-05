@@ -6,5 +6,6 @@ public record SearchProductsQuery(
     string QueryText,
     bool UseAi,
     int Page,
-    int Size
+    int Size,
+    string ProductType = "catalog_item"
     ) : IQuery<SearchProductsResult>;

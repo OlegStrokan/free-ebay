@@ -33,16 +33,23 @@ public sealed class ElasticsearchSearcher : IElasticsearchSearcher
                 .From(from)
                 .Size(query.Size)
                 .Query(q => q
-                    .MultiMatch(mm => mm
-                        .Query(query.QueryText)
-                        .Fields(new Field[]
-                        {
-                            new("name", 3.0),
-                            new("description"),
-                            new("categoryId", 2.0),
-                            new("attributes")
-                        })
-                        .Type(TextQueryType.BestFields)
+                    .Bool(b => b
+                        .Filter(f => f
+                            .Term(t => t.Field("productType").Value(query.ProductType))
+                        )
+                        .Must(m => m
+                            .MultiMatch(mm => mm
+                                .Query(query.QueryText)
+                                .Fields(new Field[]
+                                {
+                                    new("name", 3.0),
+                                    new("description"),
+                                    new("categoryId", 2.0),
+                                    new("attributes")
+                                })
+                                .Type(TextQueryType.BestFields)
+                            )
+                        )
                     )
                 ), ct);
 
