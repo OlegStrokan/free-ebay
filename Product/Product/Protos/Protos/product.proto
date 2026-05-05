@@ -27,6 +27,7 @@ service ProductService {
   rpc GetListings (GetListingsRequest) returns (GetListingsResponse);
   rpc GetListing (GetListingRequest) returns (GetListingResponse);
   rpc GetSellerListings (GetSellerListingsRequest) returns (GetSellerListingsResponse);
+  rpc GetListingsForCatalogItem (GetListingsForCatalogItemRequest) returns (GetListingsForCatalogItemResponse);
 
   // ─── Amazon-style: listings (write) ─────────────────────────────────────
   rpc CreateCatalogItemWithListing (CreateCatalogItemWithListingRequest) returns (CreateCatalogItemWithListingResponse);
@@ -226,3 +227,17 @@ message UpdateListingStockRequest { string listing_id = 1; int32 new_quantity = 
 message UpdateListingStockResponse {}
 message ChangeListingPriceRequest { string listing_id = 1; common.DecimalValue price = 2; string currency = 3; }
 message ChangeListingPriceResponse {}
+
+// Amazon-style: Listings for a CatalogItem (buy-box / all offers page)
+
+message GetListingsForCatalogItemRequest {
+  string catalog_item_id = 1;
+  int32 page = 2;
+  int32 size = 3;
+  string sort_by = 4;           // "price" (default) | "condition" | "stock"
+  string condition_filter = 5;  // "" = all, "New", "Used", "Refurbished"
+}
+message GetListingsForCatalogItemResponse {
+  repeated ListingDetail listings = 1;
+  int32 total_count = 2;
+}
