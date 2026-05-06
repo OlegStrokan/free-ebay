@@ -22,3 +22,10 @@ public sealed record StreamSearchEvent(
     IReadOnlyList<SearchResultItemResponse> Items,
     int TotalCount,
     bool WasAiSearch);
+
+public sealed record SimilarItemResponse(
+    string CatalogItemId,
+    double Score);
+
+public sealed record SimilarItemsResponse(
+    IReadOnlyList<SimilarItemResponse> Items);
