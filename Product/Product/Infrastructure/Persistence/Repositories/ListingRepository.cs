@@ -28,6 +28,16 @@ internal sealed class ListingRepository(ProductDbContext dbContext) : IListingRe
         return query.AnyAsync(cancellationToken);
     }
 
+    public async Task<List<Listing>> GetActiveListingsForCatalogItemAsync(
+        CatalogItemId catalogItemId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Listings
+            .Where(l => l.CatalogItemId == catalogItemId)
+            .Where(l => l.Status == ListingStatus.Active || l.Status == ListingStatus.OutOfStock)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Listing listing, CancellationToken cancellationToken = default)
     {
         await dbContext.Listings.AddAsync(listing, cancellationToken);

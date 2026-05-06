@@ -18,15 +18,20 @@ class ElasticsearchClient:
                         }
                     }
                 ],
-                "filter": [],
+                "filter": [
+                    {"term": {"productType": "catalog_item"}},
+                ],
             }
         }
 
         if parsed.filters.price_max:
-            query["bool"]["filter"].append({ "range": { "price": { "lte": parsed.filters.price_max}}})
+            query["bool"]["filter"].append({ "range": { "minPrice": { "lte": parsed.filters.price_max}}})
 
         if parsed.filters.price_min:
-            query["bool"]["filter"].append({"range": {"price": {"gte": parsed.filters.price_min}}})
+            query["bool"]["filter"].append({"range": {"minPrice": {"gte": parsed.filters.price_min}}})
+
+        if parsed.filters.condition:
+            query["bool"]["filter"].append({"term": {"bestCondition": parsed.filters.condition}})
 
         result = await self._es.search(index=self._index, query=query, size=top_k)
         return [

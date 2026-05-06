@@ -8,6 +8,10 @@ public interface IElasticsearchIndexer
 
     Task UpdateFieldsAsync(string productId, ProductFieldsUpdateDocument update, CancellationToken ct = default);
 
+    Task UpdateCatalogItemFieldsAsync(string catalogItemId, CatalogItemFieldsUpdateDocument update, CancellationToken ct = default);
+
+    Task UpdateListingSummaryAsync(string catalogItemId, ListingSummaryUpdateDocument update, CancellationToken ct = default);
+
     Task UpdateStockAsync(string productId, StockUpdateDocument update, CancellationToken ct = default);
 
     Task UpdateStatusAsync(string productId, StatusUpdateDocument update, CancellationToken ct = default);

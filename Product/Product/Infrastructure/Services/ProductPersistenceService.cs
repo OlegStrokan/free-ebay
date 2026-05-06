@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Application.Interfaces;
 using Domain.Common;
 using Domain.Entities;
+using Domain.Events;
 using Domain.Interfaces;
 using Domain.ValueObjects;
 using Infrastructure.Persistence.DbContext;
@@ -157,6 +158,7 @@ internal sealed class ProductPersistenceService(
                 listing.ClearDomainEvents();
 
                 await dbContext.SaveChangesAsync(ct);
+                await PublishListingSummaryAsync(listing.CatalogItemId, ct);
                 await tx.CommitAsync(ct);
 
                 logger.LogInformation("Created listing {ListingId}", listing.Id.Value);
@@ -183,6 +185,7 @@ internal sealed class ProductPersistenceService(
                 listing.ClearDomainEvents();
 
                 await dbContext.SaveChangesAsync(ct);
+                await PublishListingSummaryAsync(listing.CatalogItemId, ct);
                 await tx.CommitAsync(ct);
 
                 logger.LogDebug("Updated listing {ListingId}", listing.Id.Value);
@@ -213,6 +216,7 @@ internal sealed class ProductPersistenceService(
                 listing.ClearDomainEvents();
 
                 await dbContext.SaveChangesAsync(ct);
+                await PublishListingSummaryAsync(catalogItem.Id, ct);
                 await tx.CommitAsync(ct);
 
                 logger.LogInformation(
@@ -250,6 +254,7 @@ internal sealed class ProductPersistenceService(
                 listing.ClearDomainEvents();
 
                 await dbContext.SaveChangesAsync(ct);
+                await PublishListingSummaryAsync(catalogItem.Id, ct);
                 await tx.CommitAsync(ct);
 
                 logger.LogDebug(
@@ -268,6 +273,41 @@ internal sealed class ProductPersistenceService(
                 throw;
             }
         });
+    }
+
+    private async Task PublishListingSummaryAsync(CatalogItemId catalogItemId, CancellationToken ct)
+    {
+        var activeListings = await listingRepository.GetActiveListingsForCatalogItemAsync(catalogItemId, ct);
+
+        var nonDeleted = activeListings
+            .Where(l => l.Status == ListingStatus.Active)
+            .ToList();
+
+        var hasActive = nonDeleted.Count > 0;
+        var minPrice = hasActive ? nonDeleted.Min(l => l.Price.Amount) : 0m;
+        var minPriceCurrency = hasActive ? nonDeleted.MinBy(l => l.Price.Amount)!.Price.Currency : "USD";
+        var sellerCount = hasActive ? nonDeleted.Select(l => l.SellerId).Distinct().Count() : 0;
+        var totalStock = activeListings.Sum(l => l.StockQuantity);
+
+        string? bestCondition = null;
+        if (hasActive)
+        {
+            if (nonDeleted.Any(l => Equals(l.Condition, ListingCondition.New)))
+                bestCondition = "New";
+            else if (nonDeleted.Any(l => Equals(l.Condition, ListingCondition.Refurbished)))
+                bestCondition = "Refurbished";
+            else if (nonDeleted.Any(l => Equals(l.Condition, ListingCondition.Used)))
+                bestCondition = "Used";
+        }
+
+        var summaryEvent = new CatalogItemListingSummaryUpdatedEvent(
+            catalogItemId, minPrice, minPriceCurrency, sellerCount,
+            hasActive, bestCondition, totalStock, DateTime.UtcNow);
+
+        await AddOutboxMessagesAsync(
+            [summaryEvent], catalogItemId.Value.ToString(), ct);
+
+        await dbContext.SaveChangesAsync(ct);
     }
 
     private static readonly JsonSerializerOptions _outboxSerializerOptions = new()

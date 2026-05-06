@@ -11,6 +11,9 @@ public interface IListingRepository
         SellerId sellerId,
         ListingId? excludedListingId = null,
         CancellationToken cancellationToken = default);
+    Task<List<Listing>> GetActiveListingsForCatalogItemAsync(
+        CatalogItemId catalogItemId,
+        CancellationToken cancellationToken = default);
     Task AddAsync(Listing listing, CancellationToken cancellationToken = default);
     Task UpdateAsync(Listing listing, CancellationToken cancellationToken = default);
 }

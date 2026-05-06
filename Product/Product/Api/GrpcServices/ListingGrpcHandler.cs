@@ -13,6 +13,7 @@ using Application.DTOs;
 using Application.Queries.GetListing;
 using Application.Queries.GetListingPrices;
 using Application.Queries.GetListings;
+using Application.Queries.GetListingsForCatalogItem;
 using Application.Queries.GetSellerListings;
 using FluentValidation;
 using Grpc.Core;
@@ -131,6 +132,31 @@ public sealed class ListingGrpcHandler(
             return response;
         }
         catch (Exception ex) when (ex is not RpcException) { HandleException(ex, nameof(GetSellerListings)); throw; }
+    }
+
+    public async Task<GetListingsForCatalogItemResponse> GetListingsForCatalogItem(
+        GetListingsForCatalogItemRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var page = request.Page > 0 ? request.Page : 1;
+            var size = request.Size > 0 ? request.Size : 20;
+            var sortBy = string.IsNullOrWhiteSpace(request.SortBy) ? "price" : request.SortBy;
+            var conditionFilter = string.IsNullOrWhiteSpace(request.ConditionFilter) ? null : request.ConditionFilter;
+
+            var result = await mediator.Send(
+                new GetListingsForCatalogItemQuery(
+                    Guid.Parse(request.CatalogItemId), page, size, sortBy, conditionFilter), ct);
+
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.Internal, result.Errors[0]));
+
+            var paged = result.Value!;
+            var response = new GetListingsForCatalogItemResponse { TotalCount = paged.TotalCount };
+            response.Listings.AddRange(paged.Items.Select(MapToListingDetail));
+            return response;
+        }
+        catch (Exception ex) when (ex is not RpcException) { HandleException(ex, nameof(GetListingsForCatalogItem)); throw; }
     }
 
     public async Task<CreateCatalogItemResponse> CreateCatalogItem(

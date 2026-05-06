@@ -58,6 +58,18 @@ async def test_search_uses_self_index_not_self_index_attribute(client: Elasticse
     assert mock_es.search.call_args.kwargs["index"] == "products"
 
 
+async def test_search_always_includes_product_type_catalog_item_filter(client: ElasticsearchClient) -> None:
+    mock_es = AsyncMock()
+    mock_es.search.return_value = _es_response([])
+    client._es = mock_es
+
+    await client.search(_make_parsed(), top_k=5)
+
+    filters = mock_es.search.call_args.kwargs["query"]["bool"]["filter"]
+    term_filters = [f for f in filters if "term" in f]
+    assert any(f["term"].get("productType") == "catalog_item" for f in term_filters)
+
+
 async def test_price_max_filter_appended_as_range_lte(client: ElasticsearchClient) -> None:
     mock_es = AsyncMock()
     mock_es.search.return_value = _es_response([])
@@ -67,7 +79,7 @@ async def test_price_max_filter_appended_as_range_lte(client: ElasticsearchClien
 
     filters = mock_es.search.call_args.kwargs["query"]["bool"]["filter"]
     range_filters = [f for f in filters if "range" in f]
-    assert any(f["range"]["price"].get("lte") == 100.0 for f in range_filters)
+    assert any(f["range"]["minPrice"].get("lte") == 100.0 for f in range_filters)
 
 
 async def test_price_min_filter_is_range_gte_not_term_color(client: ElasticsearchClient) -> None:
@@ -82,9 +94,9 @@ async def test_price_min_filter_is_range_gte_not_term_color(client: Elasticsearc
     # Must not contain a term.color condition
     term_color_filters = [f for f in filters if "term" in f and "color" in f.get("term", {})]
     assert len(term_color_filters) == 0
-    # Must contain a range.price.gte condition
+    # Must contain a range.minPrice.gte condition
     range_filters = [f for f in filters if "range" in f]
-    assert any(f["range"]["price"].get("gte") == 20.0 for f in range_filters)
+    assert any(f["range"]["minPrice"].get("gte") == 20.0 for f in range_filters)
 
 
 async def test_hits_mapped_to_scored_results(client: ElasticsearchClient) -> None:

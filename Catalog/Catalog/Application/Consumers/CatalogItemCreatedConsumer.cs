@@ -6,15 +6,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Consumers;
 
-public sealed class ProductCreatedConsumer(
+public sealed class CatalogItemCreatedConsumer(
     IElasticsearchIndexer indexer,
-    ILogger<ProductCreatedConsumer> logger) : IProductEventConsumer
+    ILogger<CatalogItemCreatedConsumer> logger) : IProductEventConsumer
 {
-    public string EventType => "ProductCreatedEvent";
+    public string EventType => "CatalogItemCreatedEvent";
 
     public async Task ConsumeAsync(JsonElement payload, CancellationToken ct)
     {
-        var @event = JsonSerializer.Deserialize<ProductCreatedEventPayload>(payload);
+        var @event = JsonSerializer.Deserialize<CatalogItemCreatedEventPayload>(payload);
         if (@event is null)
         {
             logger.LogWarning("Failed to deserialize {EventType} payload", EventType);
@@ -23,25 +23,31 @@ public sealed class ProductCreatedConsumer(
 
         var document = new ProductSearchDocument
         {
-            Id = @event.ProductId.Value.ToString(),
+            Id = @event.CatalogItemId.Value.ToString(),
             Name = @event.Name,
             Description = @event.Description,
             CategoryId = @event.CategoryId.Value.ToString(),
-            Price = @event.Price.Amount,
-            Currency = @event.Price.Currency,
-            Stock = @event.InitialStock,
+            Price = 0m,
+            Currency = "USD",
+            Stock = 0,
             Attributes = @event.Attributes.ToDictionary(a => a.Key, a => a.Value),
             ImageUrls = @event.ImageUrls,
-            Status = "Draft",
-            SellerId = @event.SellerId.Value.ToString(),
+            Status = "OutOfStock",
+            SellerId = string.Empty,
             CreatedAt = @event.CreatedAt,
-            ProductType = "product",
+            ProductType = "catalog_item",
+            HasActiveListings = false,
+            MinPrice = null,
+            MinPriceCurrency = null,
+            SellerCount = 0,
+            BestCondition = null,
+            TotalStock = 0,
         };
 
         await indexer.UpsertAsync(document, ct);
 
         logger.LogInformation(
-            "Indexed new product {ProductId} ('{Name}') into Elasticsearch",
+            "Indexed new catalog item {CatalogItemId} ('{Name}') into Elasticsearch",
             document.Id, document.Name);
     }
 }

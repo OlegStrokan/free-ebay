@@ -43,6 +43,42 @@ public sealed class ElasticsearchIndexer(
             response.ElasticsearchServerError?.ToString());
     }
 
+    public async Task UpdateCatalogItemFieldsAsync(
+        string catalogItemId,
+        CatalogItemFieldsUpdateDocument update,
+        CancellationToken ct = default)
+    {
+        var response = await client
+            .UpdateAsync<ProductSearchDocument, CatalogItemFieldsUpdateDocument>(
+                catalogItemId,
+                u => u.Index(IndexName).Doc(update),
+                ct);
+
+        EnsureSucceeded(
+            response.IsValidResponse,
+            "update catalog item fields for",
+            catalogItemId,
+            response.ElasticsearchServerError?.ToString());
+    }
+
+    public async Task UpdateListingSummaryAsync(
+        string catalogItemId,
+        ListingSummaryUpdateDocument update,
+        CancellationToken ct = default)
+    {
+        var response = await client
+            .UpdateAsync<ProductSearchDocument, ListingSummaryUpdateDocument>(
+                catalogItemId,
+                u => u.Index(IndexName).Doc(update),
+                ct);
+
+        EnsureSucceeded(
+            response.IsValidResponse,
+            "update listing summary for",
+            catalogItemId,
+            response.ElasticsearchServerError?.ToString());
+    }
+
     public async Task UpdateStockAsync(
         string productId,
         StockUpdateDocument update,

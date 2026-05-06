@@ -15,6 +15,7 @@ class Filters:
     color: str | None = None
     category: str | None = None
     brand: str | None = None
+    condition: str | None = None  # "New", "Used", "Refurbished"
     attributes_required: list[str] = field(default_factory=list)
     attributes_excluded: list[str] = field(default_factory=list)
 

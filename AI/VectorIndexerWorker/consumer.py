@@ -31,6 +31,10 @@ async def process_event(msg: Message, indexer: Indexer) -> None:
             await indexer.update_stock(payload)
         case "ProductDeletedEvent":
             await indexer.delete(payload["product_id"])
+        case "CatalogItemCreatedEvent" | "CatalogItemUpdatedEvent":
+            await indexer.upsert_catalog_item(payload)
+        case "CatalogItemListingSummaryUpdatedEvent":
+            await indexer.update_listing_summary(payload)
         case _:
             log.warning("unknown_event_type", event_type=event_type)
 

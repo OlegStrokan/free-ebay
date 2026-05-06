@@ -43,6 +43,7 @@ public sealed class ElasticsearchIndexInitializer(
                         ["currency"] = new KeywordProperty(),
                         ["status"] = new KeywordProperty(),
                         ["sellerId"] = new KeywordProperty(),
+                        ["productType"] = new KeywordProperty(),
 
                         // Numeric fields for range filters (price < 50, stock > 0)
                         ["price"] = new FloatNumberProperty(),
@@ -58,6 +59,14 @@ public sealed class ElasticsearchIndexInitializer(
 
                         // Image URLs are stored but never searched
                         ["imageUrls"] = new KeywordProperty { Index = false },
+
+                        // CatalogItem listing summary fields
+                        ["minPrice"] = new FloatNumberProperty(),
+                        ["minPriceCurrency"] = new KeywordProperty(),
+                        ["sellerCount"] = new IntegerNumberProperty(),
+                        ["hasActiveListings"] = new BooleanProperty(),
+                        ["bestCondition"] = new KeywordProperty(),
+                        ["totalStock"] = new IntegerNumberProperty(),
                     }
                 }
             };

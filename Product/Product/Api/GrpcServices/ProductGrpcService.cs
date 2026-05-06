@@ -60,6 +60,10 @@ public sealed class ProductGrpcService(
         GetSellerListingsRequest request, ServerCallContext context)
         => listingHandler.GetSellerListings(request, context.CancellationToken);
 
+    public override Task<GetListingsForCatalogItemResponse> GetListingsForCatalogItem(
+        GetListingsForCatalogItemRequest request, ServerCallContext context)
+        => listingHandler.GetListingsForCatalogItem(request, context.CancellationToken);
+
     public override Task<CreateCatalogItemResponse> CreateCatalogItem(
         CreateCatalogItemRequest request, ServerCallContext context)
         => listingHandler.CreateCatalogItem(request, context.CancellationToken);

@@ -40,7 +40,8 @@ public sealed class ElasticsearchSearcherTests
                 ["layout"] = "qwerty",
                 ["brand"] = "Contoso"
             },
-            ImageUrls = ["https://img.test/laptop-1.png"]
+            ImageUrls = ["https://img.test/laptop-1.png"],
+            ProductType = "catalog_item",
         };
 
         var indexResponse = await _fixture.Client.IndexAsync(
@@ -110,7 +111,8 @@ public sealed class ElasticsearchSearcherTests
                 { "attributes",  new FlattenedProperty() },
                 { "imageUrls",   new KeywordProperty { Index = false } },
                 { "createdAt",   new DateProperty() },
-                { "updatedAt",   new DateProperty() }
+                { "updatedAt",   new DateProperty() },
+                { "productType", new KeywordProperty() }
             })));
     }
 

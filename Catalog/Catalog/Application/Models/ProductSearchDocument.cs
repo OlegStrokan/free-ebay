@@ -15,4 +15,13 @@ public sealed class ProductSearchDocument
     public required string SellerId { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public string? ProductType { get; set; }
+
+    // CatalogItem + Listing summary fields (populated for marketplace catalog items)
+    public decimal? MinPrice { get; set; }
+    public string? MinPriceCurrency { get; set; }
+    public int? SellerCount { get; set; }
+    public bool? HasActiveListings { get; set; }
+    public string? BestCondition { get; set; }
+    public int? TotalStock { get; set; }
 }
