@@ -2,6 +2,7 @@ using Api.GrpcServices;
 using Api.Mappers;
 using Application.Common;
 using Application.DTOs;
+using Application.Queries.GetListingsForCatalogItem;
 using Application.Queries.GetProduct;
 using Application.Queries.GetProductPrices;
 using Application.Queries.GetProducts;
@@ -373,6 +374,116 @@ public class ProductGrpcServiceTests
         Gtin: null,
         Condition: "New",
         SellerNotes: null);
+
+    [Test]
+    public async Task GetListingsForCatalogItem_ShouldReturnListings_WhenQuerySucceeds()
+    {
+        var catalogItemId = Guid.NewGuid();  
+        var listingId = Guid.NewGuid();
+        var request = new GetListingsForCatalogItemRequest
+        {
+            CatalogItemId = catalogItemId.ToString(),
+            Page = 1,
+            Size = 20,
+            SortBy = "price",
+        };
+
+        var paged = new PagedResult<ProductDetailDto>(
+            Items: [SampleDetail(listingId)],
+            TotalCount: 1,
+            Page: 1,
+            Size: 20);
+
+        _mediator
+            .Send(Arg.Any<GetListingsForCatalogItemQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Result<PagedResult<ProductDetailDto>>.Success(paged));
+
+        var response = await BuildService().GetListingsForCatalogItem(request, _callContext);
+
+        Assert.That(response.Listings, Has.Count.EqualTo(1));
+        Assert.That(response.TotalCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task GetListingsForCatalogItem_ShouldSendCorrectCatalogItemId_ToQuery()
+    {
+        var catalogItemId = Guid.NewGuid();
+        var request = new GetListingsForCatalogItemRequest
+        {
+            CatalogItemId = catalogItemId.ToString(),
+            Page = 2,
+            Size = 10,
+            SortBy = "price",
+            ConditionFilter = "New",
+        };
+
+        var paged = new PagedResult<ProductDetailDto>([], 0, 2, 10);
+        _mediator
+            .Send(Arg.Any<GetListingsForCatalogItemQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Result<PagedResult<ProductDetailDto>>.Success(paged));
+
+        await BuildService().GetListingsForCatalogItem(request, _callContext);
+
+        await _mediator.Received(1).Send(
+            Arg.Is<GetListingsForCatalogItemQuery>(q =>
+                q.CatalogItemId == catalogItemId &&
+                q.Page == 2 &&
+                q.Size == 10 &&
+                q.SortBy == "price" &&
+                q.ConditionFilter == "New"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetListingsForCatalogItem_ShouldDefaultToPage1Size20_WhenZeroProvided()
+    {
+        var request = new GetListingsForCatalogItemRequest
+        {
+            CatalogItemId = Guid.NewGuid().ToString(),
+            Page = 0,
+            Size = 0,
+        };
+
+        var paged = new PagedResult<ProductDetailDto>([], 0, 1, 20);
+        _mediator
+            .Send(Arg.Any<GetListingsForCatalogItemQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Result<PagedResult<ProductDetailDto>>.Success(paged));
+
+        await BuildService().GetListingsForCatalogItem(request, _callContext);
+
+        await _mediator.Received(1).Send(
+            Arg.Is<GetListingsForCatalogItemQuery>(q => q.Page == 1 && q.Size == 20),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void GetListingsForCatalogItem_ShouldThrowRpcException_WhenGuidFormatIsInvalid()
+    {
+        var request = new GetListingsForCatalogItemRequest { CatalogItemId = "not-a-guid" };
+
+        var ex = Assert.ThrowsAsync<RpcException>(() =>
+            BuildService().GetListingsForCatalogItem(request, _callContext));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.InvalidArgument));
+    }
+
+    [Test]
+    public void GetListingsForCatalogItem_ShouldThrowRpcException_WhenQueryFails()
+    {
+        var request = new GetListingsForCatalogItemRequest
+        {
+            CatalogItemId = Guid.NewGuid().ToString(),
+            Page = 1,
+            Size = 10,
+        };
+
+        _mediator
+            .Send(Arg.Any<GetListingsForCatalogItemQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Result<PagedResult<ProductDetailDto>>.Failure("repository error"));
+
+        var ex = Assert.ThrowsAsync<RpcException>(() =>
+            BuildService().GetListingsForCatalogItem(request, _callContext));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.Internal));
+    }
 }
-
-
