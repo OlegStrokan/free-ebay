@@ -18,3 +18,12 @@ LLM timeout is hard at 1.5s. If it times out, falls back to raw query, no filter
 - **HTTP** port 8003 — health/ready only, no search endpoint over HTTP
 
 Needs all of these running: EmbeddingService, LLMQueryService, Qdrant, Elasticsearch.
+
+
+we also have cool "similar products" feature which essentially is:
+
+1. fetch the source vector
+2. build filters, some mathing type shit
+3. exclude self from similar list
+4. run similarity search
+5. map and return
