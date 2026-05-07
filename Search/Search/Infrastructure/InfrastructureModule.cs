@@ -36,21 +36,15 @@ public static class InfrastructureModule
     }
 
     // -------------------------------------------------------------------------
-    // Phase 0: AiSearch:Enabled => false => NullAiSearchGateway (stub)
-    // Phase 3: AiSearch:Enabled =>true => AiSearchGateway  (real gRPC)
+    // AiSearch:GrpcUrl is always required - GetSimilarItems is AI-only (no ES fallback).
+    // AiSearch:Enabled controls only the text search path (Search / StreamSearch):
+    //   false => NullAiSearchGateway (falls back to Elasticsearch)
+    //   true  => AiSearchGateway + AiSearchStreamGateway (full AI pipeline)
     // -------------------------------------------------------------------------
     private static IServiceCollection AddAiSearch(
         this IServiceCollection services,
         IConfiguration          configuration)
     {
-        var enabled = configuration.GetValue<bool>("AiSearch:Enabled");
-
-        if (!enabled)
-        {
-            services.AddScoped<IAiSearchGateway, NullAiSearchGateway>();
-            return services;
-        }
-
         var grpcUrl = configuration["AiSearch:GrpcUrl"]
             ?? throw new InvalidOperationException(
                 "AiSearch:GrpcUrl is not configured.");
@@ -68,6 +62,17 @@ public static class InfrastructureModule
                 EnableMultipleHttp2Connections = true
             };
         });
+
+        // GetSimilarItems is always AI-backed — no Elasticsearch equivalent exists.
+        services.AddScoped<IAiSimilarItemsGateway, AiSimilarItemsGateway>();
+
+        var enabled = configuration.GetValue<bool>("AiSearch:Enabled");
+
+        if (!enabled)
+        {
+            services.AddScoped<IAiSearchGateway, NullAiSearchGateway>();
+            return services;
+        }
 
         services.AddScoped<IAiSearchGateway, AiSearchGateway>();
         services.AddScoped<IAiSearchStreamGateway, AiSearchStreamGateway>();
