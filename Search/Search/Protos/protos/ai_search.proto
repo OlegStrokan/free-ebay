@@ -7,6 +7,7 @@ package ai_search;
 service AiSearchService {
   rpc Search(AiSearchRequest) returns (AiSearchResponse);
   rpc SearchStream(stream AiStreamSearchRequest) returns (stream AiStreamSearchResponse);
+  rpc GetSimilarItems(AiGetSimilarItemsRequest) returns (AiGetSimilarItemsResponse);
 }
 
 message AiSearchRequest {
@@ -53,5 +54,18 @@ message AiStreamSearchResponse {
   bool used_ai = 5;
 }
 
+message AiGetSimilarItemsRequest {
+  string catalog_item_id = 1;
+  int32 limit = 2;
+  string category = 3;
+  string condition = 4;
+}
 
+message AiSimilarItem {
+  string catalog_item_id = 1;
+  double score = 2;
+}
 
+message AiGetSimilarItemsResponse {
+  repeated AiSimilarItem items = 1;
+}

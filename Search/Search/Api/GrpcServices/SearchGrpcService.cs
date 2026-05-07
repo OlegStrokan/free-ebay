@@ -1,4 +1,5 @@
 using Application.Gateways;
+using Application.Queries.GetSimilarItems;
 using Application.Queries.SearchProducts;
 using Domain.Common.Interfaces;
 using Grpc.Core;
@@ -8,6 +9,7 @@ namespace Api.GrpcServices;
 
 public sealed class SearchGrpcService(
     IQueryHandler<SearchProductsQuery, SearchProductsResult> handler,
+    IQueryHandler<GetSimilarItemsQuery, GetSimilarItemsResult> similarItemsHandler,
     IAiSearchStreamGateway streamGateway,
     ILogger<SearchGrpcService> logger)
     : SearchService.SearchServiceBase
@@ -138,5 +140,41 @@ public sealed class SearchGrpcService(
                 "Streamed {Phase} results for query [{Query}]: {Count} items.",
                 partial.Phase, request.Query, partial.Items.Count);
         }
+    }
+
+    public override async Task<GetSimilarItemsResponse> GetSimilarItems(
+        GetSimilarItemsRequest request,
+        ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.CatalogItemId))
+        {
+            throw new RpcException(new Status(
+                StatusCode.InvalidArgument,
+                "catalog_item_id is required."));
+        }
+
+        var limit = request.Limit is < 1 or > 50 ? 10 : request.Limit;
+
+        var query = new GetSimilarItemsQuery(
+            CatalogItemId: request.CatalogItemId,
+            Limit: limit,
+            Category: string.IsNullOrEmpty(request.Category) ? null : request.Category,
+            Condition: string.IsNullOrEmpty(request.Condition) ? null : request.Condition);
+
+        var result = await similarItemsHandler.HandleAsync(query, context.CancellationToken);
+
+        var response = new GetSimilarItemsResponse();
+        response.Items.AddRange(result.Items.Select(i => new SimilarItem
+        {
+            CatalogItemId = i.CatalogItemId,
+            Score = i.Score
+        }));
+
+        logger.LogDebug(
+            "GetSimilarItems returned {Count} items for [{CatalogItemId}].",
+            result.Items.Count,
+            request.CatalogItemId);
+
+        return response;
     }
 }
