@@ -22,6 +22,30 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
         self._qdrant = qdrant
         self._es = es
 
+    async def GetSimilarItems(self, request, context):
+        catalog_item_id = request.catalog_item_id
+        if not catalog_item_id:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "catalog_item_id is required")
+
+        limit = request.limit or 10
+
+        results = await self._qdrant.find_similar(
+            catalog_item_id=catalog_item_id,
+            limit=limit,
+            category=request.category or None,
+            condition=request.condition or None,
+        )
+
+        items = [
+            ai_search_pb2.SimilarItem(
+                catalog_item_id=r.product_id,
+                score=r.score,
+            )
+            for r in results
+        ]
+
+        return ai_search_pb2.GetSimilarItemsResponse(items=items)
+
     async def Search(self, request, context):
         result = await run_search_pipeline(
             query=request.query,

@@ -11,9 +11,10 @@ gRPC service (port 50051) that orchestrates hybrid search: LLM parses the user q
 
 ## Architecture
 
-- **gRPC** `Search` (unary) and `SearchStream` (bidirectional streaming) — defined in `Protos/ai_search.proto`
+- **gRPC** `Search` (unary), `SearchStream` (bidirectional streaming), and `GetSimilarItems` (unary) — defined in `Protos/ai_search.proto`
 - **HTTP** port 8003 — health/ready only, no search endpoints
-- Pipeline: `LLM parse → (embed + ES keyword) in parallel → Qdrant vector → RRF merge → paginate`
+- Search pipeline: `LLM parse → (embed + ES keyword) in parallel → Qdrant vector → RRF merge → paginate`
+- Similar items pipeline: `scroll Qdrant for source vector → vector search with exclusion filter → return ranked results` (no ES, no LLM)
 - LLM has a hard 1.5s timeout; on timeout falls back to raw query with zero confidence
 
 ## Tech Stack & Conventions
@@ -30,8 +31,9 @@ gRPC service (port 50051) that orchestrates hybrid search: LLM parses the user q
 - Clients are injected via constructor (no global singletons) — `LLMQueryClient`, `EmbeddingClient`, `QdrantSearchClient`, `ElasticsearchClient`
 - `asyncio.create_task` + `asyncio.gather` for parallel I/O
 - `asyncio.wait_for` with timeout for LLM calls
-- All client methods are async and named simply: `embed()`, `search()`, `parse_query()`
+- All client methods are async and named simply: `embed()`, `search()`, `parse_query()`, `find_similar()`
 - Streaming RPC cancels previous in-flight search when new query arrives on the same stream
+- `QdrantSearchClient.find_similar()` uses scroll-by-payload to get source vector, then vector search with `HasIdCondition` must_not to exclude the source point
 
 ## Testing
 

@@ -44,6 +44,11 @@ class AiSearchServiceStub(object):
                 request_serializer=ai__search__pb2.StreamSearchRequest.SerializeToString,
                 response_deserializer=ai__search__pb2.StreamSearchResponse.FromString,
                 _registered_method=True)
+        self.GetSimilarItems = channel.unary_unary(
+                '/ai_search.AiSearchService/GetSimilarItems',
+                request_serializer=ai__search__pb2.GetSimilarItemsRequest.SerializeToString,
+                response_deserializer=ai__search__pb2.GetSimilarItemsResponse.FromString,
+                _registered_method=True)
 
 
 class AiSearchServiceServicer(object):
@@ -61,6 +66,12 @@ class AiSearchServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetSimilarItems(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AiSearchServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -73,6 +84,11 @@ def add_AiSearchServiceServicer_to_server(servicer, server):
                     servicer.SearchStream,
                     request_deserializer=ai__search__pb2.StreamSearchRequest.FromString,
                     response_serializer=ai__search__pb2.StreamSearchResponse.SerializeToString,
+            ),
+            'GetSimilarItems': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetSimilarItems,
+                    request_deserializer=ai__search__pb2.GetSimilarItemsRequest.FromString,
+                    response_serializer=ai__search__pb2.GetSimilarItemsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -129,6 +145,33 @@ class AiSearchService(object):
             '/ai_search.AiSearchService/SearchStream',
             ai__search__pb2.StreamSearchRequest.SerializeToString,
             ai__search__pb2.StreamSearchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetSimilarItems(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ai_search.AiSearchService/GetSimilarItems',
+            ai__search__pb2.GetSimilarItemsRequest.SerializeToString,
+            ai__search__pb2.GetSimilarItemsResponse.FromString,
             options,
             channel_credentials,
             insecure,

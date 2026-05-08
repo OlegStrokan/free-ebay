@@ -1,5 +1,6 @@
 using Api.GrpcServices;
 using Application.Gateways;
+using Application.Queries.GetSimilarItems;
 using Application.Queries.SearchProducts;
 using Domain.Common.Interfaces;
 using Grpc.Core;
@@ -13,6 +14,7 @@ namespace Api.Tests.GrpcServices;
 public sealed class SearchGrpcServiceTests
 {
     private IQueryHandler<SearchProductsQuery, SearchProductsResult> _handler = null!;
+    private IQueryHandler<GetSimilarItemsQuery, GetSimilarItemsResult> _similarHandler = null!;
     private IAiSearchStreamGateway _streamGateway = null!;
     private ILogger<SearchGrpcService> _logger = null!;
     private ServerCallContext _callContext = null!;
@@ -21,12 +23,13 @@ public sealed class SearchGrpcServiceTests
     public void SetUp()
     {
         _handler = Substitute.For<IQueryHandler<SearchProductsQuery, SearchProductsResult>>();
+        _similarHandler = Substitute.For<IQueryHandler<GetSimilarItemsQuery, GetSimilarItemsResult>>();
         _streamGateway = Substitute.For<IAiSearchStreamGateway>();
         _logger = Substitute.For<ILogger<SearchGrpcService>>();
         _callContext = Substitute.For<ServerCallContext>();
     }
 
-    private SearchGrpcService BuildService() => new(_handler, _streamGateway, _logger);
+    private SearchGrpcService BuildService() => new(_handler, _similarHandler, _streamGateway, _logger);
 
     [Test]
     public async Task Search_ShouldMapRequestAndResponse_WhenQuerySucceeds()
@@ -156,6 +159,7 @@ public sealed class SearchGrpcServiceTests
 public sealed class SearchGrpcServiceStreamTests
 {
     private IQueryHandler<SearchProductsQuery, SearchProductsResult> _handler = null!;
+    private IQueryHandler<GetSimilarItemsQuery, GetSimilarItemsResult> _similarHandler = null!;
     private IAiSearchStreamGateway _streamGateway = null!;
     private ILogger<SearchGrpcService> _logger = null!;
     private ServerCallContext _callContext = null!;
@@ -164,13 +168,14 @@ public sealed class SearchGrpcServiceStreamTests
     public void SetUp()
     {
         _handler = Substitute.For<IQueryHandler<SearchProductsQuery, SearchProductsResult>>();
+        _similarHandler = Substitute.For<IQueryHandler<GetSimilarItemsQuery, GetSimilarItemsResult>>();
         _streamGateway = Substitute.For<IAiSearchStreamGateway>();
         _logger = Substitute.For<ILogger<SearchGrpcService>>();
         _callContext = Substitute.For<ServerCallContext>();
         _callContext.CancellationToken.Returns(CancellationToken.None);
     }
 
-    private SearchGrpcService BuildService() => new(_handler, _streamGateway, _logger);
+    private SearchGrpcService BuildService() => new(_handler, _similarHandler, _streamGateway, _logger);
 
     [Test]
     public void StreamSearch_WhenQueryIsEmpty_ShouldThrowInvalidArgument()

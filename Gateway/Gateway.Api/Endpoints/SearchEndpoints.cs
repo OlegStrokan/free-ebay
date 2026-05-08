@@ -43,6 +43,27 @@ public static class SearchEndpoints
                 string.IsNullOrEmpty(response.ParsedQueryDebug) ? null : response.ParsedQueryDebug));
         });
 
+        group.MapGet("/similar/{catalogItemId}", async (
+            string catalogItemId,
+            int? limit,
+            string? category,
+            string? condition,
+            GrpcSearch.SearchService.SearchServiceClient client) =>
+        {
+            var response = await client.GetSimilarItemsAsync(new GrpcSearch.GetSimilarItemsRequest
+            {
+                CatalogItemId = catalogItemId,
+                Limit = limit ?? 10,
+                Category = category ?? string.Empty,
+                Condition = condition ?? string.Empty
+            });
+
+            return Results.Ok(new SimilarItemsResponse(
+                response.Items.Select(i => new SimilarItemResponse(
+                    i.CatalogItemId,
+                    i.Score)).ToList()));
+        });
+
         group.MapGet("/stream", async (
             string q,
             int? page,
