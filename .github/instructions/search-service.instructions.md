@@ -15,13 +15,14 @@ Read-only gRPC service that provides product search. Supports hybrid search: Ela
 - **Application/** — Query handlers (`SearchProductsQuery`), Gateway interfaces, `ApplicationModule.cs`
 - **Domain/** — Value objects (`RelevanceScore`, `Money`), entities (`ProductSearchResult`), `IQuery`/`IQueryHandler` interfaces
 - **Infrastructure/** — Elasticsearch client + searcher, AI Search gRPC gateway (+ streaming), `NullAiSearchGateway`, `InfrastructureModule.cs`
+  - `AiSearch:GrpcUrl` is **always required** — needed by `AiSimilarItemsGateway` even when `AiSearch:Enabled = false`
 - **Protos/** — Separate class library (shared by Api and Infrastructure)
 
 ## Tech Stack & Conventions
 
 - .NET 8, gRPC with health checks (`Grpc.AspNetCore.HealthChecks`)
 - Elasticsearch 8.13 (Elastic.Clients.Elasticsearch)
-- AI Search: gRPC client to AiSearchService (optional, feature-flagged)
+- AI Search: gRPC client to AiSearchService — always required; `AiSearch:Enabled` flag controls only the text search path
 - Observability: OpenTelemetry
 - Testing: NUnit + NSubstitute (unit), xUnit + Testcontainers (integration)
 - Module pattern: `AddApplicationServices()`, `AddInfrastructureServices()`
@@ -34,13 +35,16 @@ Read-only gRPC service that provides product search. Supports hybrid search: Ela
 2. If `UseAi=false` or AI disabled:
    - Direct Elasticsearch query
 3. Streaming search (`SearchStream`): progressive results — keyword phase first, then merged
+4. `GetSimilarItems`: **always AI-backed** — no Elasticsearch equivalent; `AiSearch:Enabled` does not gate it
 
 ## Code Patterns
 
-- **Gateway pattern**: `IElasticsearchSearcher`, `IAiSearchGateway`, `IAiSearchStreamGateway`
-- **NullAiSearchGateway**: Intentionally throws — fallback is exception-driven by design
+- **Gateway pattern**: `IElasticsearchSearcher`, `IAiSearchGateway`, `IAiSearchStreamGateway`, `IAiSimilarItemsGateway`
+- **NullAiSearchGateway**: Intentionally throws — fallback is exception-driven by design; only used when `AiSearch:Enabled = false`
 - **Query handlers**: `IQuery<T>` + `IQueryHandler<TQuery, TResult>` (no MediatR)
+- **Queries**: `SearchProductsQuery`, `GetSimilarItemsQuery`
 - **Pagination**: Page is 1-based, PageSize validated 1-100 in gRPC layer
+- **Similar items limit**: validated 1-50, defaults to 10
 - **Index initialization**: `ElasticsearchIndexInitializer` runs on startup (`EnsureIndexAsync`)
 - **Elasticsearch total hits**: Read from `response.HitsMetadata.Total.Match(...)` — `response.Total` can be 0 even with hits
 - **Index existence check**: Uses `exists.ApiCallDetails.HttpStatusCode == 200` (no `Exists` property on `ExistsResponse`)
@@ -48,7 +52,8 @@ Read-only gRPC service that provides product search. Supports hybrid search: Ela
 ## Configuration
 
 - Elasticsearch URI
-- `AiSearch:Enabled` flag + AI Search gRPC URL
+- `AiSearch:GrpcUrl` — **always required** (used by `GetSimilarItems` even when AI text search is disabled)
+- `AiSearch:Enabled` — gates only `Search`/`StreamSearch` AI path; `false` = text search falls back to Elasticsearch
 - Health checks for k8s probes
 - OpenTelemetry Jaeger endpoint
 
@@ -63,5 +68,7 @@ Read-only gRPC service that provides product search. Supports hybrid search: Ela
 - Search is read-only — never writes to Elasticsearch (that's Catalog's job)
 - AI search timeout is 500ms — keep it fast, fallback is the safety net
 - `NullAiSearchGateway` throws by design — don't "fix" it to return empty results
+- `GetSimilarItems` is AI-only — never add an Elasticsearch fallback; there is no keyword equivalent for vector similarity
+- `AiSearch:Enabled = false` only disables AI text search; `AiSearch:GrpcUrl` must still be configured
 - Proto files are in a shared `Protos` class library — keep in sync with AI Search proto definitions
 - Namespaces are `Domain.*`, `Application.*`, `Infrastructure.*`, `Api.*` (no `Search.` prefix internally)
