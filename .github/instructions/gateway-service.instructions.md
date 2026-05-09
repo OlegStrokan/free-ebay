@@ -1,6 +1,6 @@
 ---
 applyTo: "Gateway/**"
-description: "Use when working on the Gateway — REST-to-gRPC API gateway with Minimal API endpoints, JWT auth, Swagger, and typed gRPC client factory for all backend services."
+description: "Use when working on the Gateway — REST-to-gRPC API gateway with Minimal API endpoints, JWT auth, Swagger, typed gRPC client factory for all backend services, and Kafka user event publishing."
 ---
 
 # Gateway Service
@@ -11,8 +11,9 @@ REST API gateway that translates HTTP requests to gRPC calls against backend ser
 
 ## Architecture (API Gateway Pattern)
 
-- **Endpoints/** — Minimal API route groups per domain: `ProductEndpoints`, `SearchEndpoints`, `OrderEndpoints`, `PaymentEndpoints`, `InventoryEndpoints`, `AuthEndpoints`, `UserEndpoints`, `RoleEndpoints`, `B2BOrderEndpoints`, `RecurringOrderEndpoints`
-- **Contracts/** — Immutable C# records organized by domain (REST DTOs)
+- **Endpoints/** — Minimal API route groups per domain: `ProductEndpoints`, `SearchEndpoints`, `OrderEndpoints`, `PaymentEndpoints`, `InventoryEndpoints`, `AuthEndpoints`, `UserEndpoints`, `RoleEndpoints`, `B2BOrderEndpoints`, `RecurringOrderEndpoints`, `UserEventEndpoints`
+- **Contracts/** — Immutable C# records organized by domain (REST DTOs), including `UserEvents/` for behavioral tracking
+- **Services/** — `KafkaUserEventPublisher` — publishes user behavioral events to Kafka `user.events` topic
 - **Mappers/** — `DecimalValueMapper` and proto ↔ DTO conversions
 - **Extensions/** — `ServiceCollectionExtensions` (gRPC client registration), `EndpointRouteBuilderExtensions` (health endpoints)
 - **Middleware/** — `GrpcExceptionHandler` maps `RpcException` StatusCode to HTTP ProblemDetails
@@ -22,6 +23,7 @@ REST API gateway that translates HTTP requests to gRPC calls against backend ser
 
 - .NET 8, ASP.NET Core Minimal APIs
 - gRPC: Grpc.Net.ClientFactory (typed client pool)
+- Kafka: Confluent.Kafka (user event publishing to `user.events` topic)
 - Auth: JWT Bearer (Microsoft.AspNetCore.Authentication.JwtBearer)
 - API docs: Swashbuckle/Swagger (dev only)
 - Observability: OpenTelemetry
@@ -47,19 +49,20 @@ REST API gateway that translates HTTP requests to gRPC calls against backend ser
 
 ## REST Surface
 
-~47 endpoints across 10 domain files + 2 health endpoints:
-- Auth (8), Users (6), Roles (5), Products (3), Orders (5), B2B Orders (5), Recurring Orders (6), Payments (2), Inventory (2), Search (3: search, similar, stream), Health (2)
+~51 endpoints across 11 domain files + 2 health endpoints:
+- Auth (8), Users (6), Roles (5), Products (3), Orders (5), B2B Orders (5), Recurring Orders (6), Payments (2), Inventory (2), Search (3: search, similar, stream), User Events (4: view, click, purchase, search-bounce), Health (2)
 
 ## Configuration
 
 - `GrpcServices` section: `AuthUrl`, `UserUrl`, `ProductUrl`, `OrderUrl`, `PaymentUrl`, `InventoryUrl`, `SearchUrl`
+- `Kafka` section: `BootstrapServers`, `UserEventsTopic`
 - JWT: Authority, SecretKey (dev)
 - Health: `/health/live`, `/health/ready`
 
 ## Key Rules
 
 - Gateway is mapping-only — no business logic, no database, no domain models
-- All backend communication is gRPC — never call backend services over HTTP
+- All backend communication is gRPC — never call backend services over HTTP (exception: Kafka for user event fire-and-forget publishing)
 - Proto files must stay in sync with backend service proto definitions
 - `DecimalValue` conversion is shared — always use the mapper, don't inline nanos math
 - `RpcException` must be caught and translated — never leak gRPC errors to REST clients
