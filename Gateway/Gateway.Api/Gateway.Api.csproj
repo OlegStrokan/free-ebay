@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Gateway.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Confluent.Kafka" Version="2.6.1" />
     <PackageReference Include="Google.Protobuf" Version="3.27.0" />
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
     <PackageReference Include="Grpc.Tools" Version="2.76.0" PrivateAssets="All" />

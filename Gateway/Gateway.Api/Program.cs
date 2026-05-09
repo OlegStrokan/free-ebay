@@ -1,6 +1,7 @@
 using Gateway.Api.Endpoints;
 using Gateway.Api.Extensions;
 using Gateway.Api.Middleware;
+using Gateway.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,6 +47,8 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddExceptionHandler<GrpcExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+builder.Services.AddSingleton<IUserEventPublisher, KafkaUserEventPublisher>();
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -71,5 +74,9 @@ app.MapRecurringOrderEndpoints();
 app.MapPaymentEndpoints();
 app.MapInventoryEndpoints();
 app.MapSearchEndpoints();
+app.MapUserEventEndpoints();
 
 app.Run();
+
+// Make the implicit Program class public so test projects can reference it
+public partial class Program { }

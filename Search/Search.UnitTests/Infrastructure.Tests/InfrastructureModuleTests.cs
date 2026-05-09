@@ -38,23 +38,25 @@ public sealed class InfrastructureModuleTests
         using var provider = services.BuildServiceProvider();
 
         var aiGateway = provider.GetRequiredService<IAiSearchGateway>();
+        var similarGateway = provider.GetRequiredService<IAiSimilarItemsGateway>();
         var searcher = provider.GetRequiredService<IElasticsearchSearcher>();
         var initializer = provider.GetRequiredService<ElasticsearchIndexInitializer>();
 
         Assert.That(aiGateway, Is.TypeOf<NullAiSearchGateway>());
+        Assert.That(similarGateway, Is.TypeOf<AiSimilarItemsGateway>());
         Assert.That(searcher, Is.TypeOf<ElasticsearchSearcher>());
         Assert.That(initializer, Is.Not.Null);
     }
 
     [Test]
-    public void AddInfrastructure_WhenAiEnabledWithoutGrpcUrl_ShouldThrow()
+    public void AddInfrastructure_WithoutGrpcUrl_ShouldThrow()
     {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Elasticsearch:Uri"] = "http://localhost:9200",
-                ["AiSearch:Enabled"] = "true"
+                ["AiSearch:Enabled"] = "false"
             })
             .Build();
 
@@ -69,6 +71,7 @@ public sealed class InfrastructureModuleTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Elasticsearch:Uri"] = "http://localhost:9200",
+                ["AiSearch:GrpcUrl"] = "http://localhost:50051",
                 ["AiSearch:Enabled"] = aiEnabled.ToString()
             })
             .Build();
