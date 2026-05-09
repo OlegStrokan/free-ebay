@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gateway.Api", "Gateway.Api\Gateway.Api.csproj", "{1E293B2A-C8FC-4CC6-862A-01AF85FFC677}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gateway.UnitTests", "Gateway.UnitTests\Gateway.UnitTests.csproj", "{FCAB5045-033E-4450-A75D-829B3D0C615C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{1E293B2A-C8FC-4CC6-862A-01AF85FFC677}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E293B2A-C8FC-4CC6-862A-01AF85FFC677}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E293B2A-C8FC-4CC6-862A-01AF85FFC677}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCAB5045-033E-4450-A75D-829B3D0C615C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCAB5045-033E-4450-A75D-829B3D0C615C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCAB5045-033E-4450-A75D-829B3D0C615C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCAB5045-033E-4450-A75D-829B3D0C615C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
