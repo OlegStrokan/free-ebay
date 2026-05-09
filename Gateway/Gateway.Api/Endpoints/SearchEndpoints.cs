@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Gateway.Api.Contracts.Search;
+using Grpc.Core;
 using GrpcSearch = Protos.Search;
 
 namespace Gateway.Api.Endpoints;
@@ -89,8 +90,8 @@ public static class SearchEndpoints
             {
                 var phase = msg.Phase switch
                 {
-                    GrpcSearch.SearchPhase.SearchPhaseKeyword => "keyword",
-                    GrpcSearch.SearchPhase.SearchPhaseMerged  => "merged",
+                    GrpcSearch.SearchPhase.Keyword => "keyword",
+                    GrpcSearch.SearchPhase.Merged  => "merged",
                     _ => "keyword"
                 };
 

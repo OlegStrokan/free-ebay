@@ -18,18 +18,26 @@ public sealed class KafkaUserEventPublisher : IUserEventPublisher
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public KafkaUserEventPublisher(IConfiguration configuration, ILogger<KafkaUserEventPublisher> logger)
+        : this(BuildProducer(configuration), configuration["Kafka:UserEventsTopic"] ?? "user.events", logger)
     {
-        _logger = logger;
-        _topic = configuration["Kafka:UserEventsTopic"] ?? "user.events";
+    }
 
+    internal KafkaUserEventPublisher(IProducer<string, string> producer, string topic, ILogger<KafkaUserEventPublisher> logger)
+    {
+        _producer = producer;
+        _topic = topic;
+        _logger = logger;
+    }
+
+    private static IProducer<string, string> BuildProducer(IConfiguration configuration)
+    {
         var config = new ProducerConfig
         {
             BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "localhost:9093",
             EnableIdempotence = true,
             Acks = Acks.All,
         };
-
-        _producer = new ProducerBuilder<string, string>(config).Build();
+        return new ProducerBuilder<string, string>(config).Build();
     }
 
     public async Task PublishAsync(string userId, string eventType, object payload, CancellationToken ct)
