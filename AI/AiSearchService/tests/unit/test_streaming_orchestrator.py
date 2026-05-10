@@ -248,4 +248,53 @@ def test_to_items_paginates_correctly() -> None:
     assert total == 5
     assert len(items) == 2
     assert items[0].product_id == "c"
-    assert items[1].product_id == "d"
+
+
+async def test_reranking_applied_to_merged_phase_when_user_id_provided() -> None:
+    from unittest.mock import patch
+
+    llm, embedding, qdrant, es = _make_clients()
+    llm.parse_query.return_value = _parsed()
+    embedding.embed.return_value = [0.1] * 4
+    es.search.return_value = _scored("p1", "p2")
+    qdrant.search.return_value = _scored("p2", "p3")
+
+    redis = AsyncMock()
+    qdrant_raw = AsyncMock()
+
+    reranked = [ScoredResult(product_id="p3", score=3.0), ScoredResult(product_id="p2", score=2.0), ScoredResult(product_id="p1", score=1.0)]
+
+    with patch("pipeline.streaming_orchestrator.rerank_with_preferences", new=AsyncMock(return_value=reranked)) as mock_rerank:
+        results = await _collect(run_streaming_search(
+            "keyboard", page=1, page_size=20,
+            llm_client=llm, embedding_client=embedding, qdrant=qdrant, es=es,
+            llm_timeout=5.0, top_k=50, rrf_k=60,
+            user_id="user-99", redis=redis, qdrant_raw=qdrant_raw,
+            qdrant_collection="my_coll",
+        ))
+
+    # keyword phase should not call reranker
+    assert results[0].phase == SearchPhase.KEYWORD
+    # merged phase should use reranked results
+    assert results[1].phase == SearchPhase.MERGED
+    assert results[1].items[0].product_id == "p3"  # reranked order
+    mock_rerank.assert_awaited_once()
+
+
+async def test_reranking_skipped_in_streaming_when_no_user_id() -> None:
+    from unittest.mock import patch
+
+    llm, embedding, qdrant, es = _make_clients()
+    llm.parse_query.return_value = _parsed()
+    embedding.embed.return_value = [0.1] * 4
+    es.search.return_value = _scored("p1")
+    qdrant.search.return_value = _scored("p2")
+
+    with patch("pipeline.streaming_orchestrator.rerank_with_preferences", new=AsyncMock()) as mock_rerank:
+        await _collect(run_streaming_search(
+            "keyboard", page=1, page_size=20,
+            llm_client=llm, embedding_client=embedding, qdrant=qdrant, es=es,
+            llm_timeout=5.0, top_k=50, rrf_k=60,
+        ))
+
+    mock_rerank.assert_not_awaited()

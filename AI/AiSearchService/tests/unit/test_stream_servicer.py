@@ -40,11 +40,12 @@ def _make_servicer():
 
 
 class _FakeStreamRequest:
-    def __init__(self, request_id: str = "req1", query: str = "keyboard", page: int = 1, page_size: int = 20):
+    def __init__(self, request_id: str = "req1", query: str = "keyboard", page: int = 1, page_size: int = 20, user_id: str = ""):
         self.request_id = request_id
         self.query = query
         self.page = page
         self.page_size = page_size
+        self.user_id = user_id
 
 
 async def _async_iter(items):
@@ -216,3 +217,23 @@ async def test_stream_defaults_page_and_page_size(monkeypatch) -> None:
 
     assert captured_kwargs["page"] == 1
     assert captured_kwargs["page_size"] == 20
+
+
+async def test_stream_passes_user_id_to_streaming_search(monkeypatch) -> None:
+    """user_id from the request should be forwarded to run_streaming_search."""
+    servicer = _make_servicer()
+    captured_kwargs = {}
+
+    async def capture_search(**kwargs):
+        captured_kwargs.update(kwargs)
+        yield _keyword_result()
+        yield _merged_result()
+
+    monkeypatch.setattr("grpc_server.run_streaming_search", lambda **kw: capture_search(**kw))
+
+    request_iter = _async_iter([_FakeStreamRequest(user_id="user-77")])
+    context = MagicMock()
+
+    await _collect_responses(servicer.SearchStream(request_iter, context))
+
+    assert captured_kwargs["user_id"] == "user-77"
