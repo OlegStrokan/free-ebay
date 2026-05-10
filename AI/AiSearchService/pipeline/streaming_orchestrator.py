@@ -14,12 +14,15 @@ from models import (
     ScoredResult,
 )
 from pipeline.rrf import rrf_merge
+from pipeline.reranker import rerank_with_preferences
 
 if TYPE_CHECKING:
     from clients.embedding_client import EmbeddingClient
     from clients.llm_query_client import LLMQueryClient
     from clients.qdrant_client import QdrantSearchClient
     from clients.es_client import ElasticsearchClient
+    from qdrant_client import AsyncQdrantClient
+    from redis.asyncio import Redis
 
 log = structlog.get_logger()
 
@@ -78,6 +81,10 @@ async def run_streaming_search(
     llm_timeout: float,
     top_k: int,
     rrf_k: int,
+    user_id: str = "",
+    redis: Redis | None = None,
+    qdrant_raw: AsyncQdrantClient | None = None,
+    qdrant_collection: str = "products",
 ) -> AsyncGenerator[PartialSearchResult, None]:
     """Yield partial results as they become available
 
@@ -129,6 +136,13 @@ async def run_streaming_search(
 
     # --- phase 2: RRF-merged results ---
     merged = rrf_merge(qdrant_results, es_results, k=rrf_k)
+
+    # personalized reranking - boost scores by user affinity (merged phase only)
+    if user_id and redis and qdrant_raw:
+        merged = await rerank_with_preferences(
+            merged, user_id, redis, qdrant_raw, qdrant_collection,
+        )
+
     merged_items, merged_total = _to_items(merged, page, page_size)
     yield PartialSearchResult(
         phase=SearchPhase.MERGED,
