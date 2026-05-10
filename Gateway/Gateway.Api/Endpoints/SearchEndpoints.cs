@@ -18,6 +18,7 @@ public static class SearchEndpoints
             int? page,
             int? pageSize,
             bool? useAi,
+            string? userId,
             GrpcSearch.SearchService.SearchServiceClient client) =>
         {
             var response = await client.SearchAsync(new GrpcSearch.SearchRequest
@@ -25,7 +26,8 @@ public static class SearchEndpoints
                 Query = q,
                 Page = page ?? 1,
                 PageSize = pageSize ?? 20,
-                UseAi = useAi ?? false
+                UseAi = useAi ?? false,
+                UserId = userId ?? string.Empty
             });
 
             return Results.Ok(new SearchResponse(
@@ -69,6 +71,7 @@ public static class SearchEndpoints
             string q,
             int? page,
             int? pageSize,
+            string? userId,
             GrpcSearch.SearchService.SearchServiceClient client,
             HttpContext httpContext) =>
         {
@@ -81,7 +84,8 @@ public static class SearchEndpoints
             {
                 Query = q,
                 Page = page ?? 1,
-                PageSize = pageSize ?? 20
+                PageSize = pageSize ?? 20,
+                UserId = userId ?? string.Empty
             };
 
             using var call = client.StreamSearch(request, cancellationToken: ct);

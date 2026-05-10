@@ -15,6 +15,7 @@ message SearchRequest {
   bool use_ai = 2;
   int32 page = 3;
   int32 page_size = 4;
+  string user_id = 5;
 }
 
 message SearchResponse {
@@ -45,6 +46,7 @@ message StreamSearchRequest {
   string query = 1;
   int32 page = 2;
   int32 page_size = 3;
+  string user_id = 4;
 }
 
 message StreamSearchResponse {
