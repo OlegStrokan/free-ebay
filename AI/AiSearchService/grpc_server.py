@@ -16,11 +16,14 @@ _PHASE_TO_PROTO = {
 
 
 class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
-    def __init__(self, llm_client, embedding_client, qdrant, es):
+    def __init__(self, llm_client, embedding_client, qdrant, es, redis=None, qdrant_collection="products"):
         self._llm = llm_client
         self._embedding = embedding_client
         self._qdrant = qdrant
         self._es = es
+        self._redis = redis
+        self._qdrant_raw = qdrant._client if qdrant else None
+        self._qdrant_collection = qdrant_collection
 
     async def GetSimilarItems(self, request, context):
         catalog_item_id = request.catalog_item_id
@@ -58,6 +61,10 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
             llm_timeout=settings.llm_timeout_seconds,
             top_k=settings.top_k,
             rrf_k=settings.rrf_k,
+            user_id=request.user_id,
+            redis=self._redis,
+            qdrant_raw=self._qdrant_raw,
+            qdrant_collection=self._qdrant_collection,
         )
 
         items = [
@@ -100,7 +107,7 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
         current_request_id: str | None = None
         send_queue: asyncio.Queue = asyncio.Queue()
 
-        async def _run_and_enqueue(request_id: str, query: str, page: int, page_size: int):
+        async def _run_and_enqueue(request_id: str, query: str, page: int, page_size: int, user_id: str):
             try:
                 async for partial in run_streaming_search(
                     query=query,
@@ -113,6 +120,10 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
                     llm_timeout=settings.llm_timeout_seconds,
                     top_k=settings.top_k,
                     rrf_k=settings.rrf_k,
+                    user_id=user_id,
+                    redis=self._redis,
+                    qdrant_raw=self._qdrant_raw,
+                    qdrant_collection=self._qdrant_collection,
                 ):
                     await send_queue.put((request_id, partial))
             except asyncio.CancelledError:
@@ -138,6 +149,7 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
                         req.query,
                         req.page or 1,
                         req.page_size or 20,
+                        req.user_id,
                     )
                 )
 

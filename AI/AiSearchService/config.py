@@ -24,4 +24,7 @@ class Settings(BaseSettings):
     top_k: int = 50
     rrf_k: int = 60
 
+    redis_url: str = "redis://localhost:6379"
+    reranking_enabled: bool = True
+
 settings = Settings()

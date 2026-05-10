@@ -18,6 +18,8 @@ services:
   #     AI_SEARCH_ES_INDEX: "products"
   #     AI_SEARCH_GRPC_PORT: "50051"
   #     AI_SEARCH_HTTP_PORT: "8003"
+  #     AI_SEARCH_REDIS_URL: "redis://redis:6379"
+  #     AI_SEARCH_RERANKING_ENABLED: "true"
   #   ports:
   #     - "50051:50051"
   #     - "8003:8003"

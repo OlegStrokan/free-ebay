@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
+import redis.asyncio as aioredis
 from clients.embedding_client import EmbeddingClient
 from clients.llm_query_client import LLMQueryClient
 from clients.qdrant_client import QdrantSearchClient
@@ -26,7 +27,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     qdrant = QdrantSearchClient(url=settings.qdrant_url, collection=settings.qdrant_collection)
     es = ElasticsearchClient(url=settings.es_url, index=settings.es_index)
 
-    servicer = AiSearchServicer(llm, embedding, qdrant, es)
+    redis_client = aioredis.from_url(settings.redis_url, decode_responses=True) if settings.reranking_enabled else None
+
+    servicer = AiSearchServicer(
+        llm, embedding, qdrant, es,
+        redis=redis_client,
+        qdrant_collection=settings.qdrant_collection,
+    )
     grpc_task = asyncio.create_task(serve(servicer))
 
     app.state.embedding = embedding
@@ -41,6 +48,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await embedding.aclose()
     await llm.aclose()
     await es.aclose()
+    if redis_client:
+        await redis_client.aclose()
 
 app = FastAPI(title="AISearchService", lifespan=lifespan)
 
