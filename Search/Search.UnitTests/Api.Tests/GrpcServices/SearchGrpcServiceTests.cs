@@ -153,6 +153,56 @@ public sealed class SearchGrpcServiceTests
         Page = 1,
         PageSize = 10
     };
+
+    [Test]
+    public async Task Search_ShouldForwardUserId_WhenProvided()
+    {
+        var request = ValidRequest();
+        request.UserId = "user-42";
+
+        var result = new SearchProductsResult(
+            Items: [],
+            TotalCount: 0,
+            Page: 1,
+            Size: 10,
+            WasAiSearch: false,
+            ParsedQueryDebug: null);
+
+        _handler
+            .HandleAsync(Arg.Any<SearchProductsQuery>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+
+        await BuildService().Search(request, _callContext);
+
+        await _handler.Received(1).HandleAsync(
+            Arg.Is<SearchProductsQuery>(q => q.UserId == "user-42"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Search_ShouldForwardNullUserId_WhenEmpty()
+    {
+        var request = ValidRequest();
+        request.UserId = "";
+
+        var result = new SearchProductsResult(
+            Items: [],
+            TotalCount: 0,
+            Page: 1,
+            Size: 10,
+            WasAiSearch: false,
+            ParsedQueryDebug: null);
+
+        _handler
+            .HandleAsync(Arg.Any<SearchProductsQuery>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+
+        await BuildService().Search(request, _callContext);
+
+        await _handler.Received(1).HandleAsync(
+            Arg.Is<SearchProductsQuery>(q => q.UserId == null),
+            Arg.Any<CancellationToken>());
+    }
 }
 
 [TestFixture]
@@ -223,7 +273,7 @@ public sealed class SearchGrpcServiceStreamTests
         };
 
         _streamGateway
-            .SearchStreamAsync("laptop", 1, 10, Arg.Any<CancellationToken>())
+            .SearchStreamAsync("laptop", 1, 10, Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(streamResults.ToAsyncEnumerable());
 
         await BuildService().StreamSearch(request, writer, _callContext);
@@ -244,7 +294,7 @@ public sealed class SearchGrpcServiceStreamTests
         };
 
         _streamGateway
-            .SearchStreamAsync("phone", 1, 20, Arg.Any<CancellationToken>())
+            .SearchStreamAsync("phone", 1, 20, Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(streamResults.ToAsyncEnumerable());
 
         var written = new List<StreamSearchResponse>();
@@ -263,11 +313,41 @@ public sealed class SearchGrpcServiceStreamTests
         var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
 
         _streamGateway
-            .SearchStreamAsync("test", 1, 20, Arg.Any<CancellationToken>())
+            .SearchStreamAsync("test", 1, 20, Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(AsyncEnumerable.Empty<StreamSearchResult>());
 
         await BuildService().StreamSearch(request, writer, _callContext);
 
-        _streamGateway.Received(1).SearchStreamAsync("test", 1, 20, Arg.Any<CancellationToken>());
+        _streamGateway.Received(1).SearchStreamAsync("test", 1, 20, Arg.Any<string?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task StreamSearch_ShouldForwardUserId_WhenProvided()
+    {
+        var request = new StreamSearchRequest { Query = "test", Page = 1, PageSize = 10, UserId = "user-99" };
+        var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
+
+        _streamGateway
+            .SearchStreamAsync("test", 1, 10, "user-99", Arg.Any<CancellationToken>())
+            .Returns(AsyncEnumerable.Empty<StreamSearchResult>());
+
+        await BuildService().StreamSearch(request, writer, _callContext);
+
+        _streamGateway.Received(1).SearchStreamAsync("test", 1, 10, "user-99", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task StreamSearch_ShouldForwardNullUserId_WhenEmpty()
+    {
+        var request = new StreamSearchRequest { Query = "test", Page = 1, PageSize = 10, UserId = "" };
+        var writer = Substitute.For<IServerStreamWriter<StreamSearchResponse>>();
+
+        _streamGateway
+            .SearchStreamAsync("test", 1, 10, null, Arg.Any<CancellationToken>())
+            .Returns(AsyncEnumerable.Empty<StreamSearchResult>());
+
+        await BuildService().StreamSearch(request, writer, _callContext);
+
+        _streamGateway.Received(1).SearchStreamAsync("test", 1, 10, null, Arg.Any<CancellationToken>());
     }
 }

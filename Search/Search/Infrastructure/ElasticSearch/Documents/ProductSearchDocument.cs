@@ -36,3 +36,4 @@ public sealed class ProductSearchDocument
 
     [JsonPropertyName("productType")]
     public string? ProductType { get; set; }
+}

@@ -50,7 +50,8 @@ public sealed class SearchGrpcService(
             QueryText: request.Query,
             UseAi: request.UseAi,
             Page: request.Page,
-            Size: request.PageSize);
+            Size: request.PageSize,
+            UserId: string.IsNullOrEmpty(request.UserId) ? null : request.UserId);
 
         var result = await handler.HandleAsync(query, context.CancellationToken);
 
@@ -99,10 +100,11 @@ public sealed class SearchGrpcService(
 
         var page = request.Page < 1 ? 1 : request.Page;
         var pageSize = request.PageSize is < 1 or > 100 ? 20 : request.PageSize;
+        var userId = string.IsNullOrEmpty(request.UserId) ? null : request.UserId;
         var ct = context.CancellationToken;
 
         await foreach (var partial in streamGateway
-                           .SearchStreamAsync(request.Query, page, pageSize, ct)
+                           .SearchStreamAsync(request.Query, page, pageSize, userId, ct)
                            .WithCancellation(ct))
         {
             var phase = partial.Phase switch

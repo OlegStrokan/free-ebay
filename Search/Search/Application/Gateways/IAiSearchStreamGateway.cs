@@ -5,7 +5,7 @@ namespace Application.Gateways;
 public interface IAiSearchStreamGateway
 {
     IAsyncEnumerable<StreamSearchResult> SearchStreamAsync(
-        string query, int page, int size, CancellationToken ct);
+        string query, int page, int size, string? userId, CancellationToken ct);
 }
 
 public sealed record StreamSearchResult(

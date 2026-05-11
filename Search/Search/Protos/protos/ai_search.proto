@@ -15,6 +15,7 @@ message AiSearchRequest {
   int32 page = 2;
   int32 page_size = 3;
   bool debug = 4;
+  string user_id = 5;
 }
 
 message AiSearchResponse {
@@ -44,6 +45,7 @@ message AiStreamSearchRequest {
   string query = 2;
   int32 page = 3;
   int32 page_size = 4;
+  string user_id = 5;
 }
 
 message AiStreamSearchResponse {
