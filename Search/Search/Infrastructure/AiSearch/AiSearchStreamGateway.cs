@@ -17,7 +17,7 @@ public sealed class AiSearchStreamGateway(
     ILogger<AiSearchStreamGateway> logger) : IAiSearchStreamGateway
 {
     public async IAsyncEnumerable<StreamSearchResult> SearchStreamAsync(
-        string query, int page, int size,
+        string query, int page, int size, string? userId,
         [EnumeratorCancellation] CancellationToken ct)
     {
         var requestId = Guid.NewGuid().ToString("N");
@@ -29,7 +29,8 @@ public sealed class AiSearchStreamGateway(
             RequestId = requestId,
             Query = query,
             Page = page,
-            PageSize = size
+            PageSize = size,
+            UserId = userId ?? string.Empty
         }, ct);
 
         await call.RequestStream.CompleteAsync();

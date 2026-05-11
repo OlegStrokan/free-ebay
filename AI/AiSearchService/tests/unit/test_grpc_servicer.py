@@ -34,11 +34,12 @@ from models import Filters, ParsedQuery, SearchPipelineResult, SearchResultItem
 # ---------------------------------------------------------------------------
 
 class _FakeRequest:
-    def __init__(self, query: str = "keyboard", page: int = 1, page_size: int = 20, debug: bool = False):
+    def __init__(self, query: str = "keyboard", page: int = 1, page_size: int = 20, debug: bool = False, user_id: str = ""):
         self.query = query
         self.page = page
         self.page_size = page_size
         self.debug = debug
+        self.user_id = user_id
 
 
 def _make_servicer():
@@ -139,3 +140,44 @@ async def test_search_used_ai_forwarded_from_pipeline_result() -> None:
     kwargs = _pb2.SearchResponse.call_args.kwargs
     assert kwargs["used_ai"] is False
     assert kwargs["total_count"] == 0
+
+
+async def test_search_passes_user_id_to_pipeline() -> None:
+    servicer = _make_servicer()
+    request = _FakeRequest(query="test", user_id="user-42")
+
+    with patch("grpc_server.run_search_pipeline", new=AsyncMock(return_value=_PIPELINE_RESULT)) as mock_pipeline:
+        await servicer.Search(request, MagicMock())
+
+    assert mock_pipeline.call_args.kwargs["user_id"] == "user-42"
+
+
+async def test_search_passes_empty_user_id_when_not_set() -> None:
+    servicer = _make_servicer()
+    request = _FakeRequest(query="test")
+
+    with patch("grpc_server.run_search_pipeline", new=AsyncMock(return_value=_PIPELINE_RESULT)) as mock_pipeline:
+        await servicer.Search(request, MagicMock())
+
+    assert mock_pipeline.call_args.kwargs["user_id"] == ""
+
+
+async def test_search_passes_redis_and_qdrant_raw_to_pipeline() -> None:
+    redis_mock = AsyncMock()
+    qdrant_mock = AsyncMock()
+    qdrant_mock._client = qdrant_mock  # simulate qdrant._client
+    servicer = AiSearchServicer(
+        llm_client=AsyncMock(),
+        embedding_client=AsyncMock(),
+        qdrant=qdrant_mock,
+        es=AsyncMock(),
+        redis=redis_mock,
+        qdrant_collection="test_coll",
+    )
+    request = _FakeRequest(query="test", user_id="user-1")
+
+    with patch("grpc_server.run_search_pipeline", new=AsyncMock(return_value=_PIPELINE_RESULT)) as mock_pipeline:
+        await servicer.Search(request, MagicMock())
+
+    assert mock_pipeline.call_args.kwargs["redis"] is redis_mock
+    assert mock_pipeline.call_args.kwargs["qdrant_collection"] == "test_coll"

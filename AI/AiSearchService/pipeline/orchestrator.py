@@ -13,12 +13,15 @@ from models import (
     ScoredResult,
 )
 from pipeline.rrf import rrf_merge
+from pipeline.reranker import rerank_with_preferences
 
 if TYPE_CHECKING:
     from clients.embedding_client import EmbeddingClient
     from clients.llm_query_client import LLMQueryClient
     from clients.qdrant_client import QdrantSearchClient
     from clients.es_client import ElasticsearchClient
+    from qdrant_client import AsyncQdrantClient
+    from redis.asyncio import Redis
 
 log = structlog.get_logger()
 
@@ -42,7 +45,11 @@ async def run_search_pipeline(
         es: ElasticsearchClient,
         llm_timeout: float,
         top_k: int,
-        rrf_k: int
+        rrf_k: int,
+        user_id: str = "",
+        redis: Redis | None = None,
+        qdrant_raw: AsyncQdrantClient | None = None,
+        qdrant_collection: str = "products",
 ) -> SearchPipelineResult:
 
     # llm query parsing - hard timeout so slow llm never blocks search
@@ -68,6 +75,12 @@ async def run_search_pipeline(
 
     # RRF type shit
     merged: list[ScoredResult] = rrf_merge(qdrant_results, es_results, k=rrf_k)
+
+    # personalized reranking — boost scores by user affinity
+    if user_id and redis and qdrant_raw:
+        merged = await rerank_with_preferences(
+            merged, user_id, redis, qdrant_raw, qdrant_collection,
+        )
 
     start = (page - 1) * page_size
     page_slice = merged[start : start + page_size]

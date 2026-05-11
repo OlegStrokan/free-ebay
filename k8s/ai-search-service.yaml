@@ -43,6 +43,10 @@ spec:
               value: "50051"
             - name: AI_SEARCH_HTTP_PORT
               value: "8003"
+            - name: AI_SEARCH_REDIS_URL
+              value: redis://redis:6379
+            - name: AI_SEARCH_RERANKING_ENABLED
+              value: "true"
           resources:
             requests:
               cpu: "200m"

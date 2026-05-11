@@ -18,7 +18,8 @@ public class AiSearchGateway(
             Query = query.QueryText,
             Page = query.Page,
             PageSize = query.Size,
-            Debug = false
+            Debug = false,
+            UserId = query.UserId ?? string.Empty
         };
 
 

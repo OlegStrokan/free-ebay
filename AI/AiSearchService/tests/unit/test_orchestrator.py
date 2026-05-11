@@ -127,3 +127,76 @@ def test_fallback_parse_returns_zero_confidence() -> None:
     assert result.confidence == 0.0
     assert result.keywords == ["red", "keyboard"]
     assert result.semantic_query == "red keyboard"
+
+
+async def test_reranking_called_when_user_id_and_redis_provided() -> None:
+    llm, embedding, qdrant, es = _make_clients()
+    llm.parse_query.return_value = ParsedQuery(
+        semantic_query="q", filters=Filters(), keywords=[], confidence=0.5, raw_query="q",
+    )
+    embedding.embed.return_value = [0.1] * 4
+    qdrant.search.return_value = _scored("p1")
+    es.search.return_value = _scored("p2")
+
+    redis = AsyncMock()
+    qdrant_raw = AsyncMock()
+
+    with patch("pipeline.orchestrator.rerank_with_preferences", new=AsyncMock(
+        return_value=[ScoredResult(product_id="p2", score=2.0), ScoredResult(product_id="p1", score=1.0)]
+    )) as mock_rerank:
+        result = await run_search_pipeline(
+            "q", page=1, page_size=20,
+            llm_client=llm, embedding_client=embedding, qdrant=qdrant, es=es,
+            llm_timeout=5.0, top_k=50, rrf_k=60,
+            user_id="user-42", redis=redis, qdrant_raw=qdrant_raw,
+            qdrant_collection="my_coll",
+        )
+
+    mock_rerank.assert_awaited_once()
+    call_kwargs = mock_rerank.call_args
+    assert call_kwargs[0][1] == "user-42"
+    assert call_kwargs[0][2] is redis
+    assert call_kwargs[0][3] is qdrant_raw
+    assert call_kwargs[0][4] == "my_coll"
+    # The reranked order should be reflected
+    assert result.items[0].product_id == "p2"
+
+
+async def test_reranking_skipped_when_user_id_empty() -> None:
+    llm, embedding, qdrant, es = _make_clients()
+    llm.parse_query.return_value = ParsedQuery(
+        semantic_query="q", filters=Filters(), keywords=[], confidence=0.5, raw_query="q",
+    )
+    embedding.embed.return_value = [0.1] * 4
+    qdrant.search.return_value = _scored("p1")
+    es.search.return_value = _scored("p2")
+
+    with patch("pipeline.orchestrator.rerank_with_preferences", new=AsyncMock()) as mock_rerank:
+        await run_search_pipeline(
+            "q", page=1, page_size=20,
+            llm_client=llm, embedding_client=embedding, qdrant=qdrant, es=es,
+            llm_timeout=5.0, top_k=50, rrf_k=60,
+            user_id="", redis=AsyncMock(), qdrant_raw=AsyncMock(),
+        )
+
+    mock_rerank.assert_not_awaited()
+
+
+async def test_reranking_skipped_when_redis_is_none() -> None:
+    llm, embedding, qdrant, es = _make_clients()
+    llm.parse_query.return_value = ParsedQuery(
+        semantic_query="q", filters=Filters(), keywords=[], confidence=0.5, raw_query="q",
+    )
+    embedding.embed.return_value = [0.1] * 4
+    qdrant.search.return_value = _scored("p1")
+    es.search.return_value = []
+
+    with patch("pipeline.orchestrator.rerank_with_preferences", new=AsyncMock()) as mock_rerank:
+        await run_search_pipeline(
+            "q", page=1, page_size=20,
+            llm_client=llm, embedding_client=embedding, qdrant=qdrant, es=es,
+            llm_timeout=5.0, top_k=50, rrf_k=60,
+            user_id="user-1", redis=None, qdrant_raw=AsyncMock(),
+        )
+
+    mock_rerank.assert_not_awaited()
