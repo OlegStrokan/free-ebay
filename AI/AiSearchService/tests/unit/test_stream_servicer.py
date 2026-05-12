@@ -17,8 +17,8 @@ _pb2_grpc = MagicMock()
 _pb2_grpc.AiSearchServiceServicer = type("AiSearchServiceServicer", (), {})
 _generated = MagicMock(ai_search_pb2=_pb2, ai_search_pb2_grpc=_pb2_grpc)
 sys.modules.setdefault("generated", _generated)
-sys.modules.setdefault("generated.ai_search_pb2", _pb2)
-sys.modules.setdefault("generated.ai_search_pb2_grpc", _pb2_grpc)
+_pb2 = sys.modules.setdefault("generated.ai_search_pb2", _pb2)
+_pb2_grpc = sys.modules.setdefault("generated.ai_search_pb2_grpc", _pb2_grpc)
 # -----------------------------------------------------------------------------
 
 from grpc_server import AiSearchServicer  # noqa: E402
@@ -165,6 +165,9 @@ async def test_stream_drops_stale_results(monkeypatch) -> None:
         yield _merged_result()
 
     monkeypatch.setattr("grpc_server.run_streaming_search", lambda **kw: instant_search(**kw))
+
+    # Reset shared mock call history before this test
+    _pb2.StreamSearchResponse.reset_mock()
 
     request_iter = _async_iter([
         _FakeStreamRequest(request_id="latest", query="keyboard")

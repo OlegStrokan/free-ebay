@@ -25,6 +25,29 @@ class AiSearchServicer(ai_search_pb2_grpc.AiSearchServiceServicer):
         self._qdrant_raw = qdrant._client if qdrant else None
         self._qdrant_collection = qdrant_collection
 
+    async def GetFrequentlyBoughtTogether(self, request, context):
+        catalog_item_id = request.catalog_item_id
+        if not catalog_item_id:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "catalog_item_id is required")
+
+        limit = request.limit or 10
+
+        if not self._redis:
+            return ai_search_pb2.GetFrequentlyBoughtTogetherResponse(items=[])
+
+        key = f"cooccurrence:purchase:{catalog_item_id}"
+        raw_results = await self._redis.zrevrange(key, 0, limit - 1, withscores=True)
+
+        items = [
+            ai_search_pb2.CoOccurrenceItem(
+                catalog_item_id=member,
+                score=score,
+            )
+            for member, score in raw_results
+        ]
+
+        return ai_search_pb2.GetFrequentlyBoughtTogetherResponse(items=items)
+
     async def GetSimilarItems(self, request, context):
         catalog_item_id = request.catalog_item_id
         if not catalog_item_id:
