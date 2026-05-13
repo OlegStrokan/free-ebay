@@ -29,3 +29,10 @@ public sealed record SimilarItemResponse(
 
 public sealed record SimilarItemsResponse(
     IReadOnlyList<SimilarItemResponse> Items);
+
+public sealed record CoOccurrenceItemResponse(
+    string CatalogItemId,
+    double Score);
+
+public sealed record FrequentlyBoughtTogetherResponse(
+    IReadOnlyList<CoOccurrenceItemResponse> Items);

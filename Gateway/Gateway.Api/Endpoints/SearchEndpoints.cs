@@ -67,6 +67,24 @@ public static class SearchEndpoints
                     i.Score)).ToList()));
         });
 
+        group.MapGet("/frequently-bought-together/{catalogItemId}", async (
+            string catalogItemId,
+            int? limit,
+            GrpcSearch.SearchService.SearchServiceClient client) =>
+        {
+            var response = await client.GetFrequentlyBoughtTogetherAsync(
+                new GrpcSearch.GetFrequentlyBoughtTogetherRequest
+                {
+                    CatalogItemId = catalogItemId,
+                    Limit = limit ?? 10,
+                });
+
+            return Results.Ok(new FrequentlyBoughtTogetherResponse(
+                response.Items.Select(i => new CoOccurrenceItemResponse(
+                    i.CatalogItemId,
+                    i.Score)).ToList()));
+        });
+
         group.MapGet("/stream", async (
             string q,
             int? page,
