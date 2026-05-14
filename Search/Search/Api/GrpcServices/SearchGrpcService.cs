@@ -1,4 +1,5 @@
 using Application.Gateways;
+using Application.Queries.GetFrequentlyBoughtTogether;
 using Application.Queries.GetSimilarItems;
 using Application.Queries.SearchProducts;
 using Domain.Common.Interfaces;
@@ -10,6 +11,7 @@ namespace Api.GrpcServices;
 public sealed class SearchGrpcService(
     IQueryHandler<SearchProductsQuery, SearchProductsResult> handler,
     IQueryHandler<GetSimilarItemsQuery, GetSimilarItemsResult> similarItemsHandler,
+    IQueryHandler<GetFrequentlyBoughtTogetherQuery, GetFrequentlyBoughtTogetherResult> frequentlyBoughtTogetherHandler,
     IAiSearchStreamGateway streamGateway,
     ILogger<SearchGrpcService> logger)
     : SearchService.SearchServiceBase
@@ -174,6 +176,40 @@ public sealed class SearchGrpcService(
 
         logger.LogDebug(
             "GetSimilarItems returned {Count} items for [{CatalogItemId}].",
+            result.Items.Count,
+            request.CatalogItemId);
+
+        return response;
+    }
+
+    public override async Task<GetFrequentlyBoughtTogetherResponse> GetFrequentlyBoughtTogether(
+        GetFrequentlyBoughtTogetherRequest request,
+        ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.CatalogItemId))
+        {
+            throw new RpcException(new Status(
+                StatusCode.InvalidArgument,
+                "catalog_item_id is required."));
+        }
+
+        var limit = request.Limit is < 1 or > 50 ? 10 : request.Limit;
+
+        var query = new GetFrequentlyBoughtTogetherQuery(
+            CatalogItemId: request.CatalogItemId,
+            Limit: limit);
+
+        var result = await frequentlyBoughtTogetherHandler.HandleAsync(query, context.CancellationToken);
+
+        var response = new GetFrequentlyBoughtTogetherResponse();
+        response.Items.AddRange(result.Items.Select(i => new CoOccurrenceItem
+        {
+            CatalogItemId = i.CatalogItemId,
+            Score = i.Score
+        }));
+
+        logger.LogDebug(
+            "GetFrequentlyBoughtTogether returned {Count} items for [{CatalogItemId}].",
             result.Items.Count,
             request.CatalogItemId);
 
