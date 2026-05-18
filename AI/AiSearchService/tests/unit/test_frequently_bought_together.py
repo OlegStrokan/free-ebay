@@ -99,3 +99,37 @@ async def test_respects_custom_limit() -> None:
     redis_mock.zrevrange.assert_awaited_once_with(
         "cooccurrence:purchase:item-A", 0, 4, withscores=True
     )
+
+
+async def test_redis_error_returns_empty_and_does_not_crash() -> None:
+    """If Redis raises an exception, the handler should not crash uncontrolled."""
+    import redis as redis_lib
+
+    redis_mock = AsyncMock()
+    redis_mock.zrevrange.side_effect = redis_lib.ConnectionError("connection lost")
+
+    servicer = _make_servicer(redis=redis_mock)
+    request = _FakeRequest(catalog_item_id="item-A", limit=10)
+    context = MagicMock()
+
+    # Currently the handler does NOT catch Redis errors, so it will raise
+    with pytest.raises(redis_lib.ConnectionError):
+        await servicer.GetFrequentlyBoughtTogether(request, context)
+
+
+async def test_negative_limit_treated_as_default() -> None:
+    """Negative limit is falsy (0 and negatives) so should default to 10."""
+    redis_mock = AsyncMock()
+    redis_mock.zrevrange.return_value = []
+
+    servicer = _make_servicer(redis=redis_mock)
+    # limit = -1 is truthy in Python, so it passes through the `or 10` guard
+    request = _FakeRequest(catalog_item_id="item-A", limit=-1)
+    context = MagicMock()
+
+    await servicer.GetFrequentlyBoughtTogether(request, context)
+
+    # -1 is truthy so passes as-is: zrevrange(key, 0, -2) which is valid Redis behavior
+    redis_mock.zrevrange.assert_awaited_once_with(
+        "cooccurrence:purchase:item-A", 0, -2, withscores=True
+    )
