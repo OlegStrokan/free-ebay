@@ -121,3 +121,29 @@ async def test_recent_purchases_key_has_ttl(tracker, redis_client):
 
     ttl = await redis_client.ttl("user:user-1:recent_purchases")
     assert ttl > 0
+
+
+async def test_cooccurrence_key_has_ttl(tracker, redis_client):
+    """The co-occurrence sorted set keys should have a TTL set."""
+    await tracker.record_purchase("user-1", "item-A")
+    await tracker.record_purchase("user-1", "item-B")
+
+    ttl_a = await redis_client.ttl("cooccurrence:purchase:item-A")
+    ttl_b = await redis_client.ttl("cooccurrence:purchase:item-B")
+    assert ttl_a > 0
+    assert ttl_b > 0
+
+
+async def test_purchase_history_trimmed_to_max(tracker, redis_client):
+    """Purchase history list is capped at 50 items."""
+    for i in range(55):
+        await tracker.record_purchase("user-1", f"item-{i}")
+
+    length = await redis_client.llen("user:user-1:recent_purchases")
+    assert length == 50
+
+
+async def test_get_co_occurrences_for_unknown_item_returns_empty(tracker):
+    """Querying a never-seen item returns an empty list."""
+    results = await tracker.get_co_occurrences("never-purchased-item")
+    assert results == []
