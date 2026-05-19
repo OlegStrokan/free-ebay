@@ -13,6 +13,12 @@ def aggregator() -> AsyncMock:
     return mock
 
 
+@pytest.fixture
+def cooccurrence() -> AsyncMock:
+    mock = AsyncMock()
+    return mock
+
+
 def _make_message(event_type: str, payload: dict) -> MagicMock:
     msg = MagicMock()
     msg.headers.return_value = [("event-type", event_type.encode())]
@@ -59,7 +65,7 @@ async def test_process_product_clicked_event(aggregator):
     assert call_args.query_text == "headphones"
 
 
-async def test_process_purchase_completed_event(aggregator):
+async def test_process_purchase_completed_event(aggregator, cooccurrence):
     payload = {
         "user_id": "user-3",
         "catalog_item_id": "item-3",
@@ -71,12 +77,14 @@ async def test_process_purchase_completed_event(aggregator):
     }
     msg = _make_message(EventType.PURCHASE_COMPLETED, payload)
 
-    await process_event(msg, aggregator)
+    await process_event(msg, aggregator, cooccurrence)
 
     aggregator.record_purchase.assert_called_once()
     call_args = aggregator.record_purchase.call_args[0][0]
     assert call_args.user_id == "user-3"
     assert call_args.listing_id == "listing-1"
+
+    cooccurrence.record_purchase.assert_called_once_with("user-3", "item-3")
 
 
 async def test_process_search_bounced_event(aggregator):
@@ -101,6 +109,27 @@ async def test_process_unknown_event_type(aggregator):
     # should not raise
     await process_event(msg, aggregator)
 
+
+async def test_purchase_without_cooccurrence_still_records_purchase(aggregator):
+    """When cooccurrence is None, purchase event still records via aggregator without crashing."""
+    payload = {
+        "user_id": "user-5",
+        "catalog_item_id": "item-5",
+        "listing_id": "listing-5",
+        "price": 200.0,
+        "category": "Books",
+        "brand": "Penguin",
+        "condition": "New",
+    }
+    msg = _make_message(EventType.PURCHASE_COMPLETED, payload)
+
+    await process_event(msg, aggregator, cooccurrence=None)
+
+    aggregator.record_purchase.assert_called_once()
+    call_args = aggregator.record_purchase.call_args[0][0]
+    assert call_args.user_id == "user-5"
+    assert call_args.catalog_item_id == "item-5"
+
+    # cooccurrence was None, so no crash and no co-occurrence call needed
     aggregator.record_view.assert_not_called()
     aggregator.record_click.assert_not_called()
-    aggregator.record_purchase.assert_not_called()

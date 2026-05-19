@@ -50,7 +50,7 @@ REST API gateway that translates HTTP requests to gRPC calls against backend ser
 ## REST Surface
 
 ~51 endpoints across 11 domain files + 2 health endpoints:
-- Auth (8), Users (6), Roles (5), Products (3), Orders (5), B2B Orders (5), Recurring Orders (6), Payments (2), Inventory (2), Search (3: search, similar, stream), User Events (4: view, click, purchase, search-bounce), Health (2)
+- Auth (8), Users (6), Roles (5), Products (3), Orders (5), B2B Orders (5), Recurring Orders (6), Payments (2), Inventory (2), Search (4: search, similar, stream, frequently-bought-together), User Events (4: view, click, purchase, search-bounce), Health (2)
 
 ## Configuration
 

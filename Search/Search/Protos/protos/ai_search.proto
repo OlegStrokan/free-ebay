@@ -8,6 +8,7 @@ service AiSearchService {
   rpc Search(AiSearchRequest) returns (AiSearchResponse);
   rpc SearchStream(stream AiStreamSearchRequest) returns (stream AiStreamSearchResponse);
   rpc GetSimilarItems(AiGetSimilarItemsRequest) returns (AiGetSimilarItemsResponse);
+  rpc GetFrequentlyBoughtTogether(AiGetFrequentlyBoughtTogetherRequest) returns (AiGetFrequentlyBoughtTogetherResponse);
 }
 
 message AiSearchRequest {
@@ -70,4 +71,18 @@ message AiSimilarItem {
 
 message AiGetSimilarItemsResponse {
   repeated AiSimilarItem items = 1;
+}
+
+message AiGetFrequentlyBoughtTogetherRequest {
+  string catalog_item_id = 1;
+  int32 limit = 2;
+}
+
+message AiCoOccurrenceItem {
+  string catalog_item_id = 1;
+  double score = 2;
+}
+
+message AiGetFrequentlyBoughtTogetherResponse {
+  repeated AiCoOccurrenceItem items = 1;
 }

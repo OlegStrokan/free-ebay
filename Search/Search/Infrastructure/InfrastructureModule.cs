@@ -65,6 +65,7 @@ public static class InfrastructureModule
 
         // GetSimilarItems is always AI-backed — no Elasticsearch equivalent exists.
         services.AddScoped<IAiSimilarItemsGateway, AiSimilarItemsGateway>();
+        services.AddScoped<IAiFrequentlyBoughtTogetherGateway, AiFrequentlyBoughtTogetherGateway>();
 
         var enabled = configuration.GetValue<bool>("AiSearch:Enabled");
 

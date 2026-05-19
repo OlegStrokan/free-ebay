@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Application.Queries.GetFrequentlyBoughtTogether;
 using Application.Queries.GetSimilarItems;
 using Application.Queries.SearchProducts;
 using Domain.Common.Interfaces;
@@ -17,6 +18,10 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<GetSimilarItemsQuery, GetSimilarItemsResult>,
             GetSimilarItemsQueryHandler>();
+
+        services.AddScoped<
+            IQueryHandler<GetFrequentlyBoughtTogetherQuery, GetFrequentlyBoughtTogetherResult>,
+            GetFrequentlyBoughtTogetherQueryHandler>();
 
         return services;
     }

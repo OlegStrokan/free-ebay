@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import asyncio
 import structlog
+from typing import TYPE_CHECKING
 from confluent_kafka import Consumer, Message, KafkaError
 from aggregator import PreferenceAggregator
 from models import (
@@ -10,6 +13,9 @@ from models import (
     PurchaseCompletedEvent,
 )
 from config import settings
+
+if TYPE_CHECKING:
+    from cooccurrence import CoOccurrenceTracker
 
 log = structlog.get_logger()
 
@@ -23,7 +29,9 @@ def make_consumer() -> Consumer:
     })
 
 
-async def process_event(msg: Message, aggregator: PreferenceAggregator) -> None:
+async def process_event(
+    msg: Message, aggregator: PreferenceAggregator, cooccurrence: CoOccurrenceTracker | None = None,
+) -> None:
     headers = {k.decode() if isinstance(k, bytes) else k: v for k, v in (msg.headers() or [])}
     raw_event_type = headers.get("event-type") or headers.get("EventType") or b""
     if isinstance(raw_event_type, bytes):
@@ -45,6 +53,8 @@ async def process_event(msg: Message, aggregator: PreferenceAggregator) -> None:
         case EventType.PURCHASE_COMPLETED:
             event = PurchaseCompletedEvent(**payload)
             await aggregator.record_purchase(event)
+            if cooccurrence:
+                await cooccurrence.record_purchase(event.user_id, event.catalog_item_id)
 
         case EventType.SEARCH_BOUNCED:
             # negative signal - tracked but not yet used for reranking @todo
@@ -54,7 +64,7 @@ async def process_event(msg: Message, aggregator: PreferenceAggregator) -> None:
             log.warning("unknown_event_type", event_type=event_type)
 
 
-async def run_consumer(aggregator: PreferenceAggregator) -> None:
+async def run_consumer(aggregator: PreferenceAggregator, cooccurrence: CoOccurrenceTracker | None = None) -> None:
     consumer = make_consumer()
     consumer.subscribe(settings.kafka_topics)
     log.info("consumer_started", topics=settings.kafka_topics)
@@ -71,7 +81,7 @@ async def run_consumer(aggregator: PreferenceAggregator) -> None:
                 log.error("kafka_error", error=str(msg.error()))
                 continue
             try:
-                await process_event(msg, aggregator)
+                await process_event(msg, aggregator, cooccurrence)
                 consumer.commit(message=msg, asynchronous=False)
             except Exception:
                 log.exception("event_processing_failed", offset=msg.offset())

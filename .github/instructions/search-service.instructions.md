@@ -36,13 +36,14 @@ Read-only gRPC service that provides product search. Supports hybrid search: Ela
    - Direct Elasticsearch query
 3. Streaming search (`SearchStream`): progressive results — keyword phase first, then merged
 4. `GetSimilarItems`: **always AI-backed** — no Elasticsearch equivalent; `AiSearch:Enabled` does not gate it
+5. `GetFrequentlyBoughtTogether`: **always AI-backed** — reads co-occurrence data from Redis via AiSearchService; validates limit 1-50 (default 10)
 
 ## Code Patterns
 
-- **Gateway pattern**: `IElasticsearchSearcher`, `IAiSearchGateway`, `IAiSearchStreamGateway`, `IAiSimilarItemsGateway`
+- **Gateway pattern**: `IElasticsearchSearcher`, `IAiSearchGateway`, `IAiSearchStreamGateway`, `IAiSimilarItemsGateway`, `IAiFrequentlyBoughtTogetherGateway`
 - **NullAiSearchGateway**: Intentionally throws — fallback is exception-driven by design; only used when `AiSearch:Enabled = false`
 - **Query handlers**: `IQuery<T>` + `IQueryHandler<TQuery, TResult>` (no MediatR)
-- **Queries**: `SearchProductsQuery`, `GetSimilarItemsQuery`
+- **Queries**: `SearchProductsQuery`, `GetSimilarItemsQuery`, `GetFrequentlyBoughtTogetherQuery`
 - **Pagination**: Page is 1-based, PageSize validated 1-100 in gRPC layer
 - **Similar items limit**: validated 1-50, defaults to 10
 - **Index initialization**: `ElasticsearchIndexInitializer` runs on startup (`EnsureIndexAsync`)
@@ -69,6 +70,7 @@ Read-only gRPC service that provides product search. Supports hybrid search: Ela
 - AI search timeout is 500ms — keep it fast, fallback is the safety net
 - `NullAiSearchGateway` throws by design — don't "fix" it to return empty results
 - `GetSimilarItems` is AI-only — never add an Elasticsearch fallback; there is no keyword equivalent for vector similarity
+- `GetFrequentlyBoughtTogether` is AI-only — reads co-occurrence data accumulated by UserPreferenceWorker, no Elasticsearch fallback
 - `AiSearch:Enabled = false` only disables AI text search; `AiSearch:GrpcUrl` must still be configured
 - Proto files are in a shared `Protos` class library — keep in sync with AI Search proto definitions
 - Namespaces are `Domain.*`, `Application.*`, `Infrastructure.*`, `Api.*` (no `Search.` prefix internally)

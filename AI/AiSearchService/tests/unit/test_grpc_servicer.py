@@ -21,8 +21,8 @@ _pb2_grpc = MagicMock()
 _pb2_grpc.AiSearchServiceServicer = type("AiSearchServiceServicer", (), {})
 _generated = MagicMock(ai_search_pb2=_pb2, ai_search_pb2_grpc=_pb2_grpc)
 sys.modules.setdefault("generated", _generated)
-sys.modules.setdefault("generated.ai_search_pb2", _pb2)
-sys.modules.setdefault("generated.ai_search_pb2_grpc", _pb2_grpc)
+_pb2 = sys.modules.setdefault("generated.ai_search_pb2", _pb2)
+_pb2_grpc = sys.modules.setdefault("generated.ai_search_pb2_grpc", _pb2_grpc)
 # -----------------------------------------------------------------------------
 
 from grpc_server import AiSearchServicer  # noqa: E402 — must come after injection
